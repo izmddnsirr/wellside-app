@@ -8,14 +8,80 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+  }>;
+};
+
+const login = async (formData: FormData) => {
+  "use server";
+
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+
+  if (!email || !password) {
+    redirect("/login?error=missing");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    redirect("/login?error=invalid");
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?error=invalid");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile?.role) {
+    redirect("/login?error=profile");
+  }
+
+  if (profile.role !== "customer") {
+    await supabase.auth.signOut();
+    redirect("/login?error=unauthorized");
+  }
+
+  redirect("/home");
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  const errorMessage =
+    params?.error === "missing"
+      ? "Email and password are required."
+      : params?.error === "invalid"
+      ? "Invalid email or password."
+      : params?.error === "profile"
+      ? "Account profile not found."
+      : params?.error === "unauthorized"
+      ? "This account is not a customer."
+      : null;
+
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm md:max-w-4xl">
         <Card className="overflow-hidden p-0">
           <CardContent className="grid p-0 md:grid-cols-2">
-            <form className="p-6 md:p-8">
+            <form className="p-6 md:p-8" action={login}>
               <FieldGroup>
                 <div className="flex flex-col items-center gap-2 text-center">
                   <h1 className="text-2xl font-bold">Welcome back</h1>
@@ -27,6 +93,7 @@ export default function LoginPage() {
                   <FieldLabel htmlFor="email">Email</FieldLabel>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="m@example.com"
                     required
@@ -42,8 +109,18 @@ export default function LoginPage() {
                       Forgot your password?
                     </a>
                   </div>
-                  <Input id="password" type="password" required />
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                  />
                 </Field>
+                {errorMessage ? (
+                  <FieldDescription className="text-center text-red-600">
+                    {errorMessage}
+                  </FieldDescription>
+                ) : null}
                 <Field>
                   <Button type="submit">Login</Button>
                 </Field>
