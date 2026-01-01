@@ -1,27 +1,20 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
-  IconCamera,
+  IconCashBanknote,
   IconChartBar,
   IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
   IconFolder,
-  IconHelp,
   IconInnerShadowTop,
   IconListDetails,
   IconReport,
-  IconSearch,
-  IconSettings,
+  IconScissors,
   IconUsers,
 } from "@tabler/icons-react";
 
-import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "./nav-main";
-import { NavSecondary } from "./nav-secondary";
 import { NavUser } from "./nav-user";
 import {
   Sidebar,
@@ -41,111 +34,64 @@ const data = {
   },
   navMain: [
     {
-      title: "Dashboard",
-      url: "#",
-      icon: IconDashboard,
+      label: "Overview",
+      items: [
+        {
+          title: "Dashboard",
+          url: "/admin",
+          icon: IconDashboard,
+        },
+        {
+          title: "Bookings",
+          url: "/admin/bookings",
+          icon: IconFolder,
+        },
+      ],
     },
     {
-      title: "Products",
-      url: "#",
-      icon: IconListDetails,
+      label: "Catalog",
+      items: [
+        {
+          title: "Services",
+          url: "/admin/services",
+          icon: IconChartBar,
+        },
+        {
+          title: "Products",
+          url: "/admin/products",
+          icon: IconListDetails,
+        },
+      ],
     },
     {
-      title: "Services",
-      url: "#",
-      icon: IconChartBar,
+      label: "Users",
+      items: [
+        {
+          title: "Customers",
+          url: "/admin/customers",
+          icon: IconUsers,
+        },
+        {
+          title: "Barbers",
+          url: "/admin/barbers",
+          icon: IconScissors,
+        },
+      ],
     },
     {
-      title: "Bookings",
-      url: "#",
-      icon: IconFolder,
-    },
-    {
-      title: "User Management",
-      url: "#",
-      icon: IconUsers,
-    },
-  ],
-  // navClouds: [
-  //   {
-  //     title: "Capture",
-  //     icon: IconCamera,
-  //     isActive: true,
-  //     url: "#",
-  //     items: [
-  //       {
-  //         title: "Active Proposals",
-  //         url: "#",
-  //       },
-  //       {
-  //         title: "Archived",
-  //         url: "#",
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     title: "Proposal",
-  //     icon: IconFileDescription,
-  //     url: "#",
-  //     items: [
-  //       {
-  //         title: "Active Proposals",
-  //         url: "#",
-  //       },
-  //       {
-  //         title: "Archived",
-  //         url: "#",
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     title: "Prompts",
-  //     icon: IconFileAi,
-  //     url: "#",
-  //     items: [
-  //       {
-  //         title: "Active Proposals",
-  //         url: "#",
-  //       },
-  //       {
-  //         title: "Archived",
-  //         url: "#",
-  //       },
-  //     ],
-  //   },
-  // ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
+      label: "Operations",
+      items: [
+        {
+          title: "POS",
+          url: "/admin/pos",
+          icon: IconCashBanknote,
+        },
+        {
+          title: "Report",
+          url: "/admin/report",
+          icon: IconReport,
+        },
+      ],
     },
   ],
 };
@@ -160,20 +106,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="#">
+              <Link href="/admin">
                 <IconInnerShadowTop className="size-5!" />
                 <span className="text-base font-semibold">Wellside Inc.</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        {/* <NavDocuments items={data.documents} /> */}
-        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
+        <NavMain groups={data.navMain} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border rounded-2xl bg-white shadow">
         <NavUser user={data.user} />
       </SidebarFooter>
     </Sidebar>
