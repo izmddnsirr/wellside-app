@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   IconDashboard,
   IconFolder,
-  IconInnerShadowTop,
 } from "@tabler/icons-react";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
@@ -18,7 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { createClient } from "@/utils/supabase/client";
+import { createBarberClient } from "@/utils/supabase/client";
 
 const data = {
   user: {
@@ -52,7 +52,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     let isMounted = true;
 
     const fetchUser = async () => {
-      const supabase = createClient();
+      const supabase = createBarberClient();
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
@@ -97,8 +97,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <Link href="/barber">
-                <IconInnerShadowTop className="size-5!" />
-                <span className="text-base font-semibold">Wellside Inc.</span>
+                <Image
+                  src="/wellside-logo.png"
+                  alt="Wellside"
+                  width={120}
+                  height={32}
+                  className="h-6 w-auto"
+                  priority
+                />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

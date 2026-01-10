@@ -1,10 +1,5 @@
-import { AdminShell } from "../components/admin-shell";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return (
-    <AdminShell
-      title="POS"
-      description="Track transactions and daily cash flow."
-    />
-  );
+  redirect("/admin/pos/transactions");
 }

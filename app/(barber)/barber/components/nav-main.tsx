@@ -32,7 +32,9 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
       {groups.map((group, groupIndex) => (
         <SidebarGroup key={group.label ?? groupIndex}>
           {group.label ? (
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-slate-500">
+              {group.label}
+            </SidebarGroupLabel>
           ) : null}
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
@@ -40,7 +42,7 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     className={cn(
-                      "data-[active=true]:bg-white data-[active=true]:shadow-xs data-[active=true]:text-foreground data-[active=true]:border data-[active=true]:border-neutral-200"
+                      "border border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-900 [&>svg]:text-slate-500 data-[active=true]:bg-slate-50 data-[active=true]:text-slate-900 data-[active=true]:border-slate-200 data-[active=true]:shadow-sm data-[active=true]:[&>svg]:text-slate-700"
                     )}
                     tooltip={item.title}
                     isActive={

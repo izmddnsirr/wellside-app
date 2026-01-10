@@ -8,6 +8,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react"
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 import {
   Avatar,
@@ -29,7 +30,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { createClient } from "@/utils/supabase/client"
+import { createAdminClient } from "@/utils/supabase/client"
 
 export function NavUser({
   user,
@@ -42,6 +43,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const initials = user.name
     .split(" ")
     .filter(Boolean)
@@ -49,11 +51,42 @@ export function NavUser({
     .map((part) => part[0]?.toUpperCase())
     .join("")
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const handleLogout = async () => {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     await supabase.auth.signOut()
     router.push("/staff")
     router.refresh()
+  }
+
+  const menuButton = (
+    <SidebarMenuButton
+      size="lg"
+      className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+    >
+      <Avatar className="h-8 w-8 rounded-lg">
+        <AvatarImage src={user.avatar} alt={user.name} />
+        <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+      </Avatar>
+      <div className="grid flex-1 text-left text-sm leading-tight">
+        <span className="truncate font-medium">{user.name}</span>
+        <span className="text-muted-foreground truncate text-xs">
+          {user.email}
+        </span>
+      </div>
+      <IconDotsVertical className="ml-auto size-4" />
+    </SidebarMenuButton>
+  )
+
+  if (!mounted) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>{menuButton}</SidebarMenuItem>
+      </SidebarMenu>
+    )
   }
 
   return (
@@ -61,22 +94,7 @@ export function NavUser({
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="text-muted-foreground truncate text-xs">
-                  {user.email}
-                </span>
-              </div>
-              <IconDotsVertical className="ml-auto size-4" />
-            </SidebarMenuButton>
+            {menuButton}
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
@@ -114,7 +132,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={handleLogout}>
+            <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

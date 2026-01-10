@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   IconCashBanknote,
   IconChartBar,
   IconDashboard,
   IconFolder,
-  IconInnerShadowTop,
   IconListDetails,
   IconReport,
   IconScissors,
@@ -25,7 +25,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { createClient } from "@/utils/supabase/client";
+import { createAdminClient } from "@/utils/supabase/client";
 
 const data = {
   user: {
@@ -46,6 +46,29 @@ const data = {
           title: "Bookings",
           url: "/admin/bookings",
           icon: IconFolder,
+        },
+        {
+          title: "POS",
+          icon: IconCashBanknote,
+          items: [
+            {
+              title: "Transactions",
+              url: "/admin/pos/transactions",
+            },
+            {
+              title: "Shift history",
+              url: "/admin/pos/shifts",
+            },
+            {
+              title: "Ticket history",
+              url: "/admin/pos/tickets",
+            },
+          ],
+        },
+        {
+          title: "Report",
+          url: "/admin/report",
+          icon: IconReport,
         },
       ],
     },
@@ -79,21 +102,6 @@ const data = {
         },
       ],
     },
-    {
-      label: "Operations",
-      items: [
-        {
-          title: "POS",
-          url: "/admin/pos",
-          icon: IconCashBanknote,
-        },
-        {
-          title: "Report",
-          url: "/admin/report",
-          icon: IconReport,
-        },
-      ],
-    },
   ],
 };
 
@@ -104,7 +112,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     let isMounted = true;
 
     const fetchUser = async () => {
-      const supabase = createClient();
+      const supabase = createAdminClient();
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
@@ -149,8 +157,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <Link href="/admin">
-                <IconInnerShadowTop className="size-5!" />
-                <span className="text-base font-semibold">Wellside Inc.</span>
+                {/* <IconInnerShadowTop className="size-5!" /> */}
+                <Image
+                  src="/wellside-logo.png"
+                  alt="Wellside"
+                  width={120}
+                  height={32}
+                  className="h-6 w-auto"
+                  priority
+                />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -159,7 +174,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain groups={data.navMain} />
       </SidebarContent>
-      <SidebarFooter className="border rounded-2xl bg-white shadow">
+      <SidebarFooter className="shadow-sm rounded-2xl bg-white">
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

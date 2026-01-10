@@ -29,3 +29,7 @@ export const createClient = async () => {
     },
   });
 };
+
+export const createBarberClient = async () => createClient();
+
+export const createAdminClient = async () => createClient();
