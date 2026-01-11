@@ -15,30 +15,36 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 
-const chartData = [
-  { day: "Mon", bookings: 18 },
-  { day: "Tue", bookings: 22 },
-  { day: "Wed", bookings: 16 },
-  { day: "Thu", bookings: 28 },
-  { day: "Fri", bookings: 31 },
-  { day: "Sat", bookings: 26 },
-  { day: "Sun", bookings: 20 },
-];
-
 const chartConfig = {
-  bookings: {
-    label: "Bookings",
+  sales: {
+    label: "Sales",
     color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
-export function BookingsChartCard() {
+type SalesChartPoint = {
+  day: string;
+  sales: number;
+};
+
+type BookingsChartCardProps = {
+  data: SalesChartPoint[];
+};
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-MY", {
+    style: "currency",
+    currency: "MYR",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+export function BookingsChartCard({ data }: BookingsChartCardProps) {
   return (
     <Card className="border-slate-200/70 bg-slate-50/60">
       <CardHeader>
-        <CardTitle className="text-slate-900">Bookings trend</CardTitle>
+        <CardTitle className="text-slate-900">Ticket sales trend</CardTitle>
         <CardDescription className="text-slate-600">
-          Last 7 days.
+          This month.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-4">
@@ -46,11 +52,11 @@ export function BookingsChartCard() {
           config={chartConfig}
           className="aspect-auto h-[240px] w-full"
         >
-          <AreaChart data={chartData} margin={{ left: 12, right: 12 }}>
+          <AreaChart data={data} margin={{ left: 12, right: 12 }}>
             <defs>
-              <linearGradient id="fillBookings" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-bookings)" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="var(--color-bookings)" stopOpacity={0.05} />
+              <linearGradient id="fillSales" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-sales)" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="var(--color-sales)" stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -62,13 +68,22 @@ export function BookingsChartCard() {
             />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
+              content={
+                <ChartTooltipContent
+                  hideLabel
+                  formatter={(value) => (
+                    <span className="font-medium text-slate-900">
+                      {formatCurrency(Number(value))}
+                    </span>
+                  )}
+                />
+              }
             />
             <Area
-              dataKey="bookings"
+              dataKey="sales"
               type="monotone"
-              stroke="var(--color-bookings)"
-              fill="url(#fillBookings)"
+              stroke="var(--color-sales)"
+              fill="url(#fillSales)"
               strokeWidth={2}
             />
           </AreaChart>

@@ -11,7 +11,14 @@ export default async function Page() {
     )
     .order("start_at", { ascending: false });
 
-  const shiftIds = (shifts ?? []).map((shift) => shift.id);
+  const normalizedShifts = (shifts ?? []).map((shift) => ({
+    ...shift,
+    profiles: Array.isArray(shift.profiles)
+      ? shift.profiles[0] ?? null
+      : shift.profiles ?? null,
+  }));
+
+  const shiftIds = normalizedShifts.map((shift) => shift.id);
   const { data: tickets } =
     shiftIds.length > 0
       ? await supabase
@@ -34,7 +41,7 @@ export default async function Page() {
   return (
     <AdminShell title="Shift history" description="Past shifts and totals.">
       <div className="px-4 lg:px-6">
-        <ShiftsTable shifts={shifts ?? []} salesByShift={salesByShift} />
+        <ShiftsTable shifts={normalizedShifts} salesByShift={salesByShift} />
       </div>
     </AdminShell>
   );

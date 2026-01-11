@@ -47,8 +47,19 @@ const data = {
         },
         {
           title: "Bookings",
-          url: "/admin/bookings",
           icon: IconFolder,
+          items: [
+            {
+              title: "Active",
+              url: "/admin/bookings/active",
+              icon: IconListDetails,
+            },
+            {
+              title: "Past",
+              url: "/admin/bookings/past",
+              icon: IconTimeline,
+            },
+          ],
         },
         {
           title: "POS",

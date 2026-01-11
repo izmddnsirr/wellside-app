@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pencil, Plus, Search, UserX } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/client";
 
@@ -75,30 +75,108 @@ const getStatusTone = (isActive: boolean | null) =>
       };
 
 export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
-  const [query, setQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filters, setFilters] = useState({ status: "all", level: "all" });
+  const [sort, setSort] = useState("name_asc");
   const [isActive, setIsActive] = useState(true);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedBarberLevel, setSelectedBarberLevel] = useState<string>("");
   const [updateError, setUpdateError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim().toLowerCase());
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
+
+  const levelOptions = useMemo(() => {
+    const levels = new Set<string>();
+    barbers.forEach((barber) => {
+      if (barber.barber_level) {
+        levels.add(barber.barber_level);
+      }
+    });
+    const preferred = ["Junior", "Senior", "Professional"];
+    const ordered = preferred.filter((level) => levels.has(level));
+    levels.forEach((level) => {
+      if (!preferred.includes(level)) {
+        ordered.push(level);
+      }
+    });
+    return ordered;
+  }, [barbers]);
+  const hasUnassignedLevel = useMemo(
+    () => barbers.some((barber) => !barber.barber_level),
+    [barbers]
+  );
+
   const filteredBarbers = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) {
-      return barbers;
-    }
-    return barbers.filter((barber) => {
+    const matchesSearch = (barber: Barber) => {
+      if (!debouncedSearch) {
+        return true;
+      }
       const name = [barber.first_name, barber.last_name]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return (
-        name.includes(trimmed) ||
-        barber.email?.toLowerCase().includes(trimmed) ||
-        barber.phone?.toLowerCase().includes(trimmed)
+        name.includes(debouncedSearch) ||
+        barber.email?.toLowerCase().includes(debouncedSearch) ||
+        barber.phone?.toLowerCase().includes(debouncedSearch)
       );
+    };
+
+    const matchesStatus = (barber: Barber) => {
+      if (filters.status === "all") {
+        return true;
+      }
+      const isActiveValue = Boolean(barber.is_active);
+      return filters.status === "active" ? isActiveValue : !isActiveValue;
+    };
+
+    const matchesLevel = (barber: Barber) => {
+      if (filters.level === "all") {
+        return true;
+      }
+      if (filters.level === "unassigned") {
+        return !barber.barber_level;
+      }
+      return barber.barber_level === filters.level;
+    };
+
+    return barbers.filter(
+      (barber) =>
+        matchesSearch(barber) && matchesStatus(barber) && matchesLevel(barber)
+    );
+  }, [barbers, debouncedSearch, filters.level, filters.status]);
+
+  const sortedBarbers = useMemo(() => {
+    const sorted = filteredBarbers.slice();
+    sorted.sort((a, b) => {
+      const nameA = [a.first_name, a.last_name].filter(Boolean).join(" ");
+      const nameB = [b.first_name, b.last_name].filter(Boolean).join(" ");
+      const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      if (sort === "name_asc") {
+        return nameA.localeCompare(nameB);
+      }
+      if (sort === "name_desc") {
+        return nameB.localeCompare(nameA);
+      }
+      if (sort === "joined_desc") {
+        return createdB - createdA;
+      }
+      if (sort === "joined_asc") {
+        return createdA - createdB;
+      }
+      return 0;
     });
-  }, [barbers, query]);
+    return sorted;
+  }, [filteredBarbers, sort]);
 
   const openUpdateDialog = (barber: Barber) => {
     setSelectedBarber(barber);
@@ -156,143 +234,203 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
     router.refresh();
   };
 
+  const resetFilters = () => {
+    setFilters({ status: "all", level: "all" });
+    setSort("name_asc");
+    setSearchInput("");
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Barber directory</h3>
-          <p className="text-xs text-muted-foreground">
-            Track staff profiles and contact details.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              name="barber-search"
-              placeholder="Search barbers"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="w-56 pl-9"
-            />
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={filters.status}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, status: value }))
+              }
+            >
+              <SelectTrigger className="h-9 w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.level}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, level: value }))
+              }
+            >
+              <SelectTrigger className="h-9 w-[160px]">
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All levels</SelectItem>
+                {levelOptions.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level}
+                  </SelectItem>
+                ))}
+                {hasUnassignedLevel ? (
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus />
-                Add barber
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add barber</DialogTitle>
-                <DialogDescription>
-                  Create a barber profile and invite them later.
-                </DialogDescription>
-              </DialogHeader>
-              <form className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-9 w-[200px]">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name_asc">Name: A {"->"} Z</SelectItem>
+                <SelectItem value="name_desc">Name: Z {"->"} A</SelectItem>
+                <SelectItem value="joined_desc">
+                  Joined: Newest {"->"} Oldest
+                </SelectItem>
+                <SelectItem value="joined_asc">
+                  Joined: Oldest {"->"} Newest
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                name="barber-search"
+                placeholder="Search barbers"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                className="w-full pl-9"
+              />
+            </div>
+            <Button variant="ghost" size="sm" onClick={resetFilters}>
+              Reset
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus />
+                  Add barber
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add barber</DialogTitle>
+                  <DialogDescription>
+                    Create a barber profile and invite them later.
+                  </DialogDescription>
+                </DialogHeader>
+                <form className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="barber-first-name">First name</Label>
+                      <Input
+                        id="barber-first-name"
+                        name="first_name"
+                        placeholder="Haziq"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="barber-last-name">Last name</Label>
+                      <Input
+                        id="barber-last-name"
+                        name="last_name"
+                        placeholder="Azman"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="barber-first-name">First name</Label>
+                    <Label htmlFor="barber-email">Email</Label>
                     <Input
-                      id="barber-first-name"
-                      name="first_name"
+                      id="barber-email"
+                      name="email"
+                      type="email"
+                      placeholder="haziq@wellside.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="barber-phone">Phone</Label>
+                    <Input
+                      id="barber-phone"
+                      name="phone"
+                      placeholder="+60 12-345 6789"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="barber-display-name">Display name</Label>
+                    <Input
+                      id="barber-display-name"
+                      name="display_name"
                       placeholder="Haziq"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barber-last-name">Last name</Label>
-                    <Input
-                      id="barber-last-name"
-                      name="last_name"
-                      placeholder="Azman"
-                    />
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="barber-working-start-time">
+                        Working start time
+                      </Label>
+                      <Input
+                        id="barber-working-start-time"
+                        name="working_start_time"
+                        type="time"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="barber-working-end-time">
+                        Working end time
+                      </Label>
+                      <Input
+                        id="barber-working-end-time"
+                        name="working_end_time"
+                        type="time"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="barber-level">Barber level</Label>
+                      <Select name="barber_level">
+                        <SelectTrigger id="barber-level">
+                          <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Junior">Junior</SelectItem>
+                          <SelectItem value="Senior">Senior</SelectItem>
+                          <SelectItem value="Professional">
+                            Professional
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="barber-email">Email</Label>
-                  <Input
-                    id="barber-email"
-                    name="email"
-                    type="email"
-                    placeholder="haziq@wellside.com"
+                  <input
+                    type="hidden"
+                    name="is_active"
+                    value={isActive ? "on" : ""}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="barber-phone">Phone</Label>
-                  <Input
-                    id="barber-phone"
-                    name="phone"
-                    placeholder="+60 12-345 6789"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="barber-display-name">Display name</Label>
-                  <Input
-                    id="barber-display-name"
-                    name="display_name"
-                    placeholder="Haziq"
-                  />
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="barber-working-start-time">
-                      Working start time
+                  <div className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      id="barber-active"
+                      checked={isActive}
+                      onCheckedChange={(value) => setIsActive(value === true)}
+                    />
+                    <Label htmlFor="barber-active" className="text-sm">
+                      Active barber
                     </Label>
-                    <Input
-                      id="barber-working-start-time"
-                      name="working_start_time"
-                      type="time"
-                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barber-working-end-time">
-                      Working end time
-                    </Label>
-                    <Input
-                      id="barber-working-end-time"
-                      name="working_end_time"
-                      type="time"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barber-level">Barber level</Label>
-                    <Select name="barber_level">
-                      <SelectTrigger id="barber-level">
-                        <SelectValue placeholder="Select level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Junior">Junior</SelectItem>
-                        <SelectItem value="Senior">Senior</SelectItem>
-                        <SelectItem value="Professional">Professional</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <input
-                  type="hidden"
-                  name="is_active"
-                  value={isActive ? "on" : ""}
-                />
-                <div className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    id="barber-active"
-                    checked={isActive}
-                    onCheckedChange={(value) => setIsActive(value === true)}
-                  />
-                  <Label htmlFor="barber-active" className="text-sm">
-                    Active barber
-                  </Label>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">
-                    <Plus />
-                    Add barber
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter>
+                    <Button type="submit">
+                      <Plus />
+                      Add barber
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
       <Dialog
@@ -402,7 +540,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
 
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
-      ) : filteredBarbers.length > 0 ? (
+      ) : sortedBarbers.length > 0 ? (
         <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
           <Table>
             <TableHeader className="bg-muted/40">
@@ -437,7 +575,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBarbers.map((barber) => {
+              {sortedBarbers.map((barber) => {
                 const tone = getStatusTone(barber.is_active);
                 return (
                   <TableRow key={barber.id} className="bg-white hover:bg-slate-50/70">
@@ -492,9 +630,15 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
             <UserX className="size-8 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-semibold">No barbers found yet</p>
+            <p className="text-sm font-semibold">
+              {debouncedSearch
+                ? "No barbers match your search"
+                : "No barbers found yet"}
+            </p>
             <p className="text-sm text-muted-foreground">
-              Add a barber to start building your team.
+              {debouncedSearch
+                ? "Try a different name, email, or phone."
+                : "Add a barber to start building your team."}
             </p>
           </div>
         </div>

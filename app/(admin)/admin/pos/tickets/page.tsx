@@ -18,8 +18,8 @@ export default async function Page() {
       shifts:shift_id (shift_code, label),
       ticket_items (
         qty,
-        services:service_id (name),
-        products:product_id (name)
+        services:service_id (name, price),
+        products:product_id (name, price)
       )
     `
     )
@@ -28,6 +28,22 @@ export default async function Page() {
   const errorMessage = error
     ? "Failed to load tickets. Please try again."
     : null;
+  const normalizedTickets = (tickets ?? []).map((ticket) => ({
+    ...ticket,
+    shifts: Array.isArray(ticket.shifts)
+      ? ticket.shifts[0] ?? null
+      : ticket.shifts ?? null,
+    ticket_items:
+      ticket.ticket_items?.map((item) => ({
+        ...item,
+        services: Array.isArray(item.services)
+          ? item.services[0] ?? null
+          : item.services ?? null,
+        products: Array.isArray(item.products)
+          ? item.products[0] ?? null
+          : item.products ?? null,
+      })) ?? null,
+  }));
 
   return (
     <AdminShell title="Ticket history" description="All recorded tickets.">
@@ -35,7 +51,7 @@ export default async function Page() {
         {errorMessage ? (
           <p className="text-sm text-red-600">{errorMessage}</p>
         ) : (
-          <TicketsTable tickets={tickets ?? []} />
+          <TicketsTable tickets={normalizedTickets} />
         )}
       </div>
     </AdminShell>

@@ -2,9 +2,9 @@ import { BarberShell } from "../components/barber-shell";
 import { createBarberClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import {
-  BookingsCard,
   type BookingRow,
 } from "../../../(admin)/admin/bookings/bookings-card";
+import { BookingsClient } from "../../../(admin)/admin/bookings/bookings-client";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +91,7 @@ export default async function Page() {
       description="Monitor appointments, walk-ins, and reschedules."
     >
       <div className="flex flex-col gap-4 px-4 lg:px-6">
-        <BookingsCard
+        <BookingsClient
           bookings={bookings}
           errorMessage={errorMessage}
           allowedStatuses={[...allowedStatuses]}

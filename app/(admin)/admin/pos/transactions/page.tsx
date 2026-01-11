@@ -541,7 +541,7 @@ export default function Page() {
 
   return (
     <AdminShell>
-      <div className="flex flex-col gap-4 px-4 md:px-6 lg:px-8">
+      <div className="flex flex-col gap-4 px-4 lg:px-6">
         {isShiftOpen ? (
           <>
             <div className="space-y-5">

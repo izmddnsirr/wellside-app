@@ -15,6 +15,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -23,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PackageX, Pencil, Plus, Save, Search, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Service = {
   id: string;
@@ -145,63 +152,166 @@ export function ServicesCard({
   updateService,
   deleteService,
 }: ServicesCardProps) {
-  const [query, setQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filters, setFilters] = useState({ status: "all" });
+  const [sort, setSort] = useState("code_asc");
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim().toLowerCase());
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
+
   const filteredServices = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) {
-      return services;
-    }
-    return services.filter((service) => {
-      const nameMatch = service.name.toLowerCase().includes(trimmed);
+    const matchesSearch = (service: Service) => {
+      if (!debouncedSearch) {
+        return true;
+      }
+      const nameMatch = service.name.toLowerCase().includes(debouncedSearch);
       const codeMatch =
-        service.service_code?.toLowerCase().includes(trimmed) ?? false;
+        service.service_code?.toLowerCase().includes(debouncedSearch) ?? false;
       return nameMatch || codeMatch;
+    };
+
+    const matchesStatus = (service: Service) => {
+      if (filters.status === "all") {
+        return true;
+      }
+      return filters.status === "active"
+        ? service.is_active
+        : !service.is_active;
+    };
+
+    const filtered = services.filter(
+      (service) => matchesSearch(service) && matchesStatus(service)
+    );
+
+    const sorted = filtered.slice();
+    sorted.sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      const codeA = (a.service_code ?? "").toLowerCase();
+      const codeB = (b.service_code ?? "").toLowerCase();
+      const priceA = a.price ?? 0;
+      const priceB = b.price ?? 0;
+      const durationA = a.duration_minutes ?? 0;
+      const durationB = b.duration_minutes ?? 0;
+      if (sort === "code_asc") {
+        return codeA.localeCompare(codeB);
+      }
+      if (sort === "code_desc") {
+        return codeB.localeCompare(codeA);
+      }
+      if (sort === "name_asc") {
+        return nameA.localeCompare(nameB);
+      }
+      if (sort === "name_desc") {
+        return nameB.localeCompare(nameA);
+      }
+      if (sort === "price_desc") {
+        return priceB - priceA;
+      }
+      if (sort === "price_asc") {
+        return priceA - priceB;
+      }
+      if (sort === "duration_desc") {
+        return durationB - durationA;
+      }
+      if (sort === "duration_asc") {
+        return durationA - durationB;
+      }
+      return 0;
     });
-  }, [query, services]);
+
+    return sorted;
+  }, [debouncedSearch, filters.status, services, sort]);
+
+  const resetFilters = () => {
+    setFilters({ status: "all" });
+    setSort("code_asc");
+    setSearchInput("");
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Service catalog</h3>
-          <p className="text-xs text-muted-foreground">
-            Add, update, or delete services.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              name="service-search"
-              placeholder="Search services"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="w-56 pl-9"
-            />
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={filters.status}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, status: value }))
+              }
+            >
+              <SelectTrigger className="h-9 w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="hidden">Hidden</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus />
-                Add service
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add service</DialogTitle>
-                <DialogDescription>Create a new service entry.</DialogDescription>
-              </DialogHeader>
-              <form action={createService} className="space-y-4">
-                <ServiceFormFields />
-                <DialogFooter>
-                  <Button type="submit">
-                    <Save />
-                    Save service
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-9 w-[200px]">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="code_asc">Code: A {"->"} Z</SelectItem>
+                <SelectItem value="code_desc">Code: Z {"->"} A</SelectItem>
+                <SelectItem value="name_asc">Name: A {"->"} Z</SelectItem>
+                <SelectItem value="name_desc">Name: Z {"->"} A</SelectItem>
+                <SelectItem value="price_desc">Price: High {"->"} Low</SelectItem>
+                <SelectItem value="price_asc">Price: Low {"->"} High</SelectItem>
+                <SelectItem value="duration_desc">
+                  Duration: Long {"->"} Short
+                </SelectItem>
+                <SelectItem value="duration_asc">
+                  Duration: Short {"->"} Long
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                name="service-search"
+                placeholder="Search services"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                className="w-full pl-9"
+              />
+            </div>
+            <Button variant="ghost" size="sm" onClick={resetFilters}>
+              Reset
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus />
+                  Add service
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add service</DialogTitle>
+                  <DialogDescription>Create a new service entry.</DialogDescription>
+                </DialogHeader>
+                <form action={createService} className="space-y-4">
+                  <ServiceFormFields />
+                  <DialogFooter>
+                    <Button type="submit">
+                      <Save />
+                      Save service
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
       {errorMessage ? (
@@ -303,9 +413,15 @@ export function ServicesCard({
             <PackageX className="size-8 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-semibold">No services found yet</p>
+            <p className="text-sm font-semibold">
+              {debouncedSearch
+                ? "No services match your search"
+                : "No services found yet"}
+            </p>
             <p className="text-sm text-muted-foreground">
-              Add a service to start building your catalog.
+              {debouncedSearch
+                ? "Try a different name or code."
+                : "Add a service to start building your catalog."}
             </p>
           </div>
         </div>
