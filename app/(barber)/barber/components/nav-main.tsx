@@ -42,7 +42,7 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     className={cn(
-                      "border border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-900 [&>svg]:text-slate-500 data-[active=true]:bg-slate-50 data-[active=true]:text-slate-900 data-[active=true]:border-slate-200 data-[active=true]:shadow-sm data-[active=true]:[&>svg]:text-slate-700"
+                      "border border-transparent text-slate-700 hover:bg-slate-50 hover:text-slate-900 [&>svg]:text-slate-500 data-[active=true]:bg-slate-50 data-[active=true]:text-slate-900 data-[active=true]:border-slate-200 data-[active=true]:[&>svg]:text-slate-700"
                     )}
                     tooltip={item.title}
                     isActive={

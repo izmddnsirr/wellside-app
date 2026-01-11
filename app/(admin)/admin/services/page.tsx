@@ -88,7 +88,9 @@ export default async function Page() {
   const supabase = await createAdminClient();
   const { data: services, error } = await supabase
     .from("services")
-    .select("id, name, price, duration_minutes, is_active, created_at")
+    .select(
+      "id, name, service_code, price, duration_minutes, is_active, created_at"
+    )
     .order("created_at", { ascending: false });
   const errorMessage = error
     ? "Failed to load services. Please try again."

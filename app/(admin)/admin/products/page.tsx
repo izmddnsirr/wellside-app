@@ -92,7 +92,9 @@ export default async function Page() {
   const supabase = await createAdminClient();
   const { data: products, error } = await supabase
     .from("products")
-    .select("id, name, description, price, stock_qty, is_active, created_at")
+    .select(
+      "id, name, sku, description, price, stock_qty, is_active, created_at"
+    )
     .order("created_at", { ascending: false });
   const errorMessage = error
     ? "Failed to load products. Please try again."

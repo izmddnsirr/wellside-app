@@ -56,7 +56,7 @@ export default function Page() {
                     <TableRow>
                       <TableHead>Service</TableHead>
                       <TableHead>Bookings</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead>Revenue</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -69,7 +69,7 @@ export default function Page() {
                       <TableRow key={row.service}>
                         <TableCell className="font-medium">{row.service}</TableCell>
                         <TableCell>{row.bookings}</TableCell>
-                        <TableCell className="text-right">{row.revenue}</TableCell>
+                        <TableCell>{row.revenue}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -104,7 +104,7 @@ export default function Page() {
                     <TableRow>
                       <TableHead>Barber</TableHead>
                       <TableHead>Bookings</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead>Revenue</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -117,7 +117,7 @@ export default function Page() {
                       <TableRow key={row.name}>
                         <TableCell className="font-medium">{row.name}</TableCell>
                         <TableCell>{row.bookings}</TableCell>
-                        <TableCell className="text-right">{row.revenue}</TableCell>
+                        <TableCell>{row.revenue}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -152,7 +152,7 @@ export default function Page() {
                     <TableRow>
                       <TableHead>Week</TableHead>
                       <TableHead>Bookings</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead>Revenue</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -165,7 +165,7 @@ export default function Page() {
                       <TableRow key={row.week}>
                         <TableCell className="font-medium">{row.week}</TableCell>
                         <TableCell>{row.bookings}</TableCell>
-                        <TableCell className="text-right">{row.revenue}</TableCell>
+                        <TableCell>{row.revenue}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

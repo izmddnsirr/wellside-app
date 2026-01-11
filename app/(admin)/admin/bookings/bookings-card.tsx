@@ -3,14 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -138,18 +130,18 @@ const formatStatusLabel = (status: string | null) => {
     .join(" ");
 };
 
-const statusBadgeClass = (status: string | null) => {
+const getStatusTone = (status: string | null) => {
   switch (status) {
     case "scheduled":
-      return "bg-blue-100 text-blue-900 border-blue-200";
+      return { badge: "bg-blue-100 text-blue-900 border-blue-200", dot: "bg-blue-500" };
     case "in_progress":
-      return "bg-amber-100 text-amber-900 border-amber-200";
+      return { badge: "bg-amber-100 text-amber-900 border-amber-200", dot: "bg-amber-500" };
     case "completed":
-      return "bg-emerald-100 text-emerald-900 border-emerald-200";
+      return { badge: "bg-emerald-100 text-emerald-900 border-emerald-200", dot: "bg-emerald-500" };
     case "cancelled":
-      return "bg-rose-100 text-rose-900 border-rose-200";
+      return { badge: "bg-rose-100 text-rose-900 border-rose-200", dot: "bg-rose-500" };
     default:
-      return "bg-muted text-foreground border-border";
+      return { badge: "bg-muted text-foreground border-border", dot: "bg-muted-foreground" };
   }
 };
 
@@ -256,38 +248,73 @@ export function BookingsCard({
   );
 
   if (errorMessage) {
-    return (
-      <Card>
-        <CardContent className="py-6 text-sm text-red-600">
-          {errorMessage}
-        </CardContent>
-      </Card>
-    );
+    return <p className="text-sm text-red-600">{errorMessage}</p>;
   }
 
   if (sortedBookings.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Active bookings</CardTitle>
-          <CardDescription>
-            Sorted by date, time, then customer name.
-          </CardDescription>
-          <CardAction>
-            <div className="relative w-full sm:w-64">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                name="booking-search"
-                placeholder="Search bookings"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="w-full pl-9"
-              />
-            </div>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">Active bookings</h3>
+            <p className="text-xs text-muted-foreground">
+              Sorted by date, time, then customer name.
+            </p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              name="booking-search"
+              placeholder="Search bookings"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-full pl-9"
+            />
+          </div>
+        </div>
+        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+            <CalendarX className="size-8 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">
+              {query ? "No bookings match your search" : "No bookings found yet"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {query
+                ? "Try a different name, service, or status."
+                : "Bookings will appear here once customers start booking."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">Active bookings</h3>
+            <p className="text-xs text-muted-foreground">
+              Sorted by date, time, then customer name.
+            </p>
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              name="booking-search"
+              placeholder="Search bookings"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-full pl-9"
+            />
+          </div>
+        </div>
+        {upcomingBookings.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
             <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
               <CalendarX className="size-8 text-muted-foreground" />
@@ -295,396 +322,405 @@ export function BookingsCard({
             <div>
               <p className="text-sm font-semibold">
                 {query
-                  ? "No bookings match your search"
-                  : "No bookings found yet"}
+                  ? "No active bookings match your search"
+                  : "No active bookings right now"}
               </p>
               <p className="text-sm text-muted-foreground">
                 {query
                   ? "Try a different name, service, or status."
-                  : "Bookings will appear here once customers start booking."}
+                  : "Completed bookings are listed below."}
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Active bookings</CardTitle>
-          <CardDescription className="mt-1">
-            Sorted by date, time, then customer name.
-          </CardDescription>
-          <CardAction>
-            <div className="relative w-full sm:w-64">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                name="booking-search"
-                placeholder="Search bookings"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="w-full pl-9"
-              />
-            </div>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {upcomingBookings.length === 0 ? (
-            <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-              <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-                <CalendarX className="size-8 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">
-                  {query
-                    ? "No active bookings match your search"
-                    : "No active bookings right now"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {query
-                    ? "Try a different name, service, or status."
-                    : "Completed bookings are listed below."}
-                </p>
-              </div>
-            </div>
-          ) : (
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[12%]">Date</TableHead>
-                  <TableHead className="w-[14%]">Time</TableHead>
-                  <TableHead className="w-[22%]">Customer</TableHead>
-                  <TableHead className="w-[18%]">Service</TableHead>
-                  <TableHead className="w-[14%]">Barber</TableHead>
-                  <TableHead className="w-[10%]">Status</TableHead>
-                  <TableHead className="w-[10%] text-right">Actions</TableHead>
+              <TableHeader className="bg-muted/40">
+                <TableRow className="border-border/60">
+                  <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Date
+                  </TableHead>
+                  <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Time
+                  </TableHead>
+                  <TableHead className="w-[22%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Customer
+                  </TableHead>
+                  <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Service
+                  </TableHead>
+                  <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Barber
+                  </TableHead>
+                  <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {upcomingBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="w-[12%]">
-                      {formatDate(booking.booking_date ?? booking.start_at)}
-                    </TableCell>
-                    <TableCell className="w-[14%] font-medium">
-                      {formatTimeRange(booking.start_at, booking.end_at)}
-                    </TableCell>
-                    <TableCell className="w-[22%]">
-                      {joinName(
-                        booking.customer?.first_name ?? null,
-                        booking.customer?.last_name ?? null
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        {booking.customer?.phone ||
-                          booking.customer?.email ||
-                          "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[18%]">
-                      {booking.service?.name ?? "-"}
-                      <div className="text-xs text-muted-foreground">
-                        {booking.service?.duration_minutes
-                          ? `${booking.service.duration_minutes} min`
-                          : "Duration not set"}{" "}
-                        · {formatMoney(booking.service?.price ?? null)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[14%]">
-                      {joinName(
-                        booking.barber?.first_name ?? null,
-                        booking.barber?.last_name ?? null
-                      )}
-                    </TableCell>
-                    <TableCell className="w-[10%]">
-                      <Badge
-                        variant="outline"
-                        className={statusBadgeClass(booking.status ?? null)}
-                      >
-                        {formatStatusLabel(booking.status ?? null)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="w-[10%] text-right">
-                      <Dialog
-                        open={openDialogId === booking.id}
-                        onOpenChange={(open) =>
-                          setOpenDialogId(open ? booking.id : null)
-                        }
-                      >
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setOpenDialogId(booking.id)}
-                          >
-                            <Pencil />
-                            Manage
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Manage booking</DialogTitle>
-                            <DialogDescription>
-                              Update status or cancel this booking.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="w-full rounded-xl border border-border bg-muted/40 p-4">
-                            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-                              <div className="min-w-0">
-                                <p className="text-lg font-semibold leading-tight">
-                                  {joinName(
-                                    booking.customer?.first_name ?? null,
-                                    booking.customer?.last_name ?? null
-                                  )}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {booking.customer?.phone ||
-                                    booking.customer?.email ||
-                                    "-"}
-                                </p>
-                              </div>
-                              <div className="flex justify-start sm:justify-end">
-                                <Badge
-                                  variant="outline"
-                                  className={`${statusBadgeClass(booking.status ?? null)} shrink-0`}
-                                >
-                                  {formatStatusLabel(booking.status ?? null)}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Date</p>
-                                <p className="font-medium">
-                                  {formatDate(booking.booking_date ?? booking.start_at)}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Time</p>
-                                <p className="font-medium">
-                                  {formatTimeRange(booking.start_at, booking.end_at)}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Service</p>
-                                <p className="font-medium">
-                                  {booking.service?.name ?? "-"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {booking.service?.duration_minutes
-                                    ? `${booking.service.duration_minutes} min`
-                                    : "Duration not set"}{" "}
-                                  · {formatMoney(booking.service?.price ?? null)}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Barber</p>
-                                <p className="font-medium">
-                                  {joinName(
-                                    booking.barber?.first_name ?? null,
-                                    booking.barber?.last_name ?? null
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
-                              <label
-                                className="text-sm font-semibold"
-                                htmlFor={`status-${booking.id}`}
-                              >
-                                Update status
-                              </label>
-                              <form
-                                id={`update-booking-${booking.id}`}
-                                action={updateBookingStatus}
-                                className="contents"
-                                onSubmit={() => setOpenDialogId(null)}
-                              >
-                                <input type="hidden" name="id" value={booking.id} />
-                                <input
-                                  type="hidden"
-                                  name="status"
-                                  value={
-                                    statusSelections[booking.id] ??
-                                    booking.status ??
-                                    "scheduled"
-                                  }
-                                />
-                                <Select
-                                  value={
-                                    statusSelections[booking.id] ??
-                                    booking.status ??
-                                    "scheduled"
-                                  }
-                                  onValueChange={(value) =>
-                                    setStatusSelections((prev) => ({
-                                      ...prev,
-                                      [booking.id]: value,
-                                    }))
-                                  }
-                                >
-                                  <SelectTrigger
-                                    id={`status-${booking.id}`}
-                                    className={`${statusSelectClass(
-                                      statusSelections[booking.id] ??
-                                        booking.status ??
-                                        "scheduled"
-                                    )} w-full`}
+                {upcomingBookings.map((booking) => {
+                  const tone = getStatusTone(booking.status ?? null);
+                  return (
+                    <TableRow
+                      key={booking.id}
+                      className="bg-white hover:bg-slate-50/70"
+                    >
+                      <TableCell className="w-[12%] px-4 py-3 text-slate-600">
+                        {formatDate(booking.booking_date ?? booking.start_at)}
+                      </TableCell>
+                      <TableCell className="w-[14%] px-4 py-3 font-semibold text-slate-900">
+                        {formatTimeRange(booking.start_at, booking.end_at)}
+                      </TableCell>
+                      <TableCell className="w-[22%] px-4 py-3 text-slate-700">
+                        {joinName(
+                          booking.customer?.first_name ?? null,
+                          booking.customer?.last_name ?? null
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          {booking.customer?.phone ||
+                            booking.customer?.email ||
+                            "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[18%] px-4 py-3 text-slate-700">
+                        {booking.service?.name ?? "-"}
+                        <div className="text-xs text-muted-foreground">
+                          {booking.service?.duration_minutes
+                            ? `${booking.service.duration_minutes} min`
+                            : "Duration not set"}{" "}
+                          · {formatMoney(booking.service?.price ?? null)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[14%] px-4 py-3 text-slate-700">
+                        {joinName(
+                          booking.barber?.first_name ?? null,
+                          booking.barber?.last_name ?? null
+                        )}
+                      </TableCell>
+                      <TableCell className="w-[10%] px-4 py-3">
+                        <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
+                          <span className={`size-2 rounded-full ${tone.dot}`} />
+                          {formatStatusLabel(booking.status ?? null)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="w-[10%] px-4 py-3">
+                        <Dialog
+                          open={openDialogId === booking.id}
+                          onOpenChange={(open) =>
+                            setOpenDialogId(open ? booking.id : null)
+                          }
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setOpenDialogId(booking.id)}
+                            >
+                              <Pencil />
+                              Manage
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Manage booking</DialogTitle>
+                              <DialogDescription>
+                                Update status or cancel this booking.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="w-full rounded-xl border border-border bg-muted/40 p-4">
+                              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                                <div className="min-w-0">
+                                  <p className="text-lg font-semibold leading-tight">
+                                    {joinName(
+                                      booking.customer?.first_name ?? null,
+                                      booking.customer?.last_name ?? null
+                                    )}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {booking.customer?.phone ||
+                                      booking.customer?.email ||
+                                      "-"}
+                                  </p>
+                                </div>
+                                <div className="flex justify-start sm:justify-end">
+                                  <Badge
+                                    variant="outline"
+                                    className={`gap-2 ${tone.badge} shrink-0`}
                                   >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {statusOptions.map((status) => (
-                                      <SelectItem key={status} value={status}>
-                                        {formatStatusLabel(status)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </form>
-                              <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                                <Button
-                                  variant="outline"
-                                  type="submit"
-                                  form={`update-booking-${booking.id}`}
+                                    <span
+                                      className={`size-2 rounded-full ${tone.dot}`}
+                                    />
+                                    {formatStatusLabel(booking.status ?? null)}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Date
+                                  </p>
+                                  <p className="font-medium">
+                                    {formatDate(
+                                      booking.booking_date ?? booking.start_at
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Time
+                                  </p>
+                                  <p className="font-medium">
+                                    {formatTimeRange(
+                                      booking.start_at,
+                                      booking.end_at
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Service
+                                  </p>
+                                  <p className="font-medium">
+                                    {booking.service?.name ?? "-"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {booking.service?.duration_minutes
+                                      ? `${booking.service.duration_minutes} min`
+                                      : "Duration not set"}{" "}
+                                    · {formatMoney(booking.service?.price ?? null)}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Barber
+                                  </p>
+                                  <p className="font-medium">
+                                    {joinName(
+                                      booking.barber?.first_name ?? null,
+                                      booking.barber?.last_name ?? null
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
+                                <label
+                                  className="text-sm font-semibold"
+                                  htmlFor={`status-${booking.id}`}
                                 >
                                   Update status
-                                </Button>
-                                {allowCancel && cancelBooking ? (
-                                  <form
-                                    id={`cancel-booking-${booking.id}`}
-                                    action={cancelBooking}
-                                    onSubmit={() => setOpenDialogId(null)}
+                                </label>
+                                <form
+                                  id={`update-booking-${booking.id}`}
+                                  action={updateBookingStatus}
+                                  className="contents"
+                                  onSubmit={() => setOpenDialogId(null)}
+                                >
+                                  <input
+                                    type="hidden"
+                                    name="id"
+                                    value={booking.id}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="status"
+                                    value={
+                                      statusSelections[booking.id] ??
+                                      booking.status ??
+                                      "scheduled"
+                                    }
+                                  />
+                                  <Select
+                                    value={
+                                      statusSelections[booking.id] ??
+                                      booking.status ??
+                                      "scheduled"
+                                    }
+                                    onValueChange={(value) =>
+                                      setStatusSelections((prev) => ({
+                                        ...prev,
+                                        [booking.id]: value,
+                                      }))
+                                    }
                                   >
-                                    <input
-                                      type="hidden"
-                                      name="id"
-                                      value={booking.id}
-                                    />
-                                    <Button variant="destructive" type="submit">
-                                      Cancel booking
-                                    </Button>
-                                  </form>
-                                ) : null}
+                                    <SelectTrigger
+                                      id={`status-${booking.id}`}
+                                      className={`${statusSelectClass(
+                                        statusSelections[booking.id] ??
+                                          booking.status ??
+                                          "scheduled"
+                                      )} w-full`}
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {statusOptions.map((status) => (
+                                        <SelectItem key={status} value={status}>
+                                          {formatStatusLabel(status)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </form>
+                                <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                                  <Button
+                                    variant="outline"
+                                    type="submit"
+                                    form={`update-booking-${booking.id}`}
+                                  >
+                                    Update status
+                                  </Button>
+                                  {allowCancel && cancelBooking ? (
+                                    <form
+                                      id={`cancel-booking-${booking.id}`}
+                                      action={cancelBooking}
+                                      onSubmit={() => setOpenDialogId(null)}
+                                    >
+                                      <input
+                                        type="hidden"
+                                        name="id"
+                                        value={booking.id}
+                                      />
+                                      <Button variant="destructive" type="submit">
+                                        Cancel booking
+                                      </Button>
+                                    </form>
+                                  ) : null}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Past bookings</CardTitle>
-          <CardDescription className="mt-1">
-            Completed and cancelled bookings.
-          </CardDescription>
-          {query ? (
-            <CardAction>
-              <Badge variant="secondary">Filtered</Badge>
-            </CardAction>
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          {pastBookings.length === 0 ? (
-            <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-              <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-                <CalendarX className="size-8 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">
-                  No completed or cancelled bookings yet
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Completed bookings will show up here.
-                </p>
-              </div>
+          </div>
+        )}
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">Past bookings</h3>
+            <p className="text-xs text-muted-foreground">
+              Completed and cancelled bookings.
+            </p>
+          </div>
+          {query ? <Badge variant="secondary">Filtered</Badge> : null}
+        </div>
+        {pastBookings.length === 0 ? (
+          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+            <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+              <CalendarX className="size-8 text-muted-foreground" />
             </div>
-          ) : (
+            <div>
+              <p className="text-sm font-semibold">
+                No completed or cancelled bookings yet
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Completed bookings will show up here.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[12%]">Date</TableHead>
-                  <TableHead className="w-[14%]">Time</TableHead>
-                  <TableHead className="w-[22%]">Customer</TableHead>
-                  <TableHead className="w-[18%]">Service</TableHead>
-                  <TableHead className="w-[14%]">Barber</TableHead>
-                  <TableHead className="w-[10%]">Status</TableHead>
-                  <TableHead className="w-[10%] text-right">Actions</TableHead>
+              <TableHeader className="bg-muted/40">
+                <TableRow className="border-border/60">
+                  <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Date
+                  </TableHead>
+                  <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Time
+                  </TableHead>
+                  <TableHead className="w-[22%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Customer
+                  </TableHead>
+                  <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Service
+                  </TableHead>
+                  <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Barber
+                  </TableHead>
+                  <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pastBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="w-[12%]">
-                      {formatDate(booking.booking_date ?? booking.start_at)}
-                    </TableCell>
-                    <TableCell className="w-[14%] font-medium">
-                      {formatTimeRange(booking.start_at, booking.end_at)}
-                    </TableCell>
-                    <TableCell className="w-[22%]">
-                      {joinName(
-                        booking.customer?.first_name ?? null,
-                        booking.customer?.last_name ?? null
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        {booking.customer?.phone ||
-                          booking.customer?.email ||
-                          "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[18%]">
-                      {booking.service?.name ?? "-"}
-                      <div className="text-xs text-muted-foreground">
-                        {booking.service?.duration_minutes
-                          ? `${booking.service.duration_minutes} min`
-                          : "Duration not set"}{" "}
-                        · {formatMoney(booking.service?.price ?? null)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[14%]">
-                      {joinName(
-                        booking.barber?.first_name ?? null,
-                        booking.barber?.last_name ?? null
-                      )}
-                    </TableCell>
-                    <TableCell className="w-[10%]">
-                      <Badge
-                        variant="outline"
-                        className={statusBadgeClass(booking.status ?? null)}
-                      >
-                        {formatStatusLabel(booking.status ?? null)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="w-[10%] text-right">
-                      {allowDelete && deleteBooking ? (
-                        <form action={deleteBooking}>
-                          <input type="hidden" name="id" value={booking.id} />
-                          <Button variant="destructive" size="sm" type="submit">
-                            <Trash2 />
-                            Delete
-                          </Button>
-                        </form>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {pastBookings.map((booking) => {
+                  const tone = getStatusTone(booking.status ?? null);
+                  return (
+                    <TableRow
+                      key={booking.id}
+                      className="bg-white hover:bg-slate-50/70"
+                    >
+                      <TableCell className="w-[12%] px-4 py-3 text-slate-600">
+                        {formatDate(booking.booking_date ?? booking.start_at)}
+                      </TableCell>
+                      <TableCell className="w-[14%] px-4 py-3 font-semibold text-slate-900">
+                        {formatTimeRange(booking.start_at, booking.end_at)}
+                      </TableCell>
+                      <TableCell className="w-[22%] px-4 py-3 text-slate-700">
+                        {joinName(
+                          booking.customer?.first_name ?? null,
+                          booking.customer?.last_name ?? null
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          {booking.customer?.phone ||
+                            booking.customer?.email ||
+                            "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[18%] px-4 py-3 text-slate-700">
+                        {booking.service?.name ?? "-"}
+                        <div className="text-xs text-muted-foreground">
+                          {booking.service?.duration_minutes
+                            ? `${booking.service.duration_minutes} min`
+                            : "Duration not set"}{" "}
+                          · {formatMoney(booking.service?.price ?? null)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[14%] px-4 py-3 text-slate-700">
+                        {joinName(
+                          booking.barber?.first_name ?? null,
+                          booking.barber?.last_name ?? null
+                        )}
+                      </TableCell>
+                      <TableCell className="w-[10%] px-4 py-3">
+                        <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
+                          <span className={`size-2 rounded-full ${tone.dot}`} />
+                          {formatStatusLabel(booking.status ?? null)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="w-[10%] px-4 py-3">
+                        {allowDelete && deleteBooking ? (
+                          <form action={deleteBooking}>
+                            <input type="hidden" name="id" value={booking.id} />
+                            <Button variant="destructive" size="sm" type="submit">
+                              <Trash2 />
+                              Delete
+                            </Button>
+                          </form>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
-    </>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

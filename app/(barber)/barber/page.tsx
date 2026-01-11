@@ -131,36 +131,38 @@ export default async function Page() {
           </CardHeader>
           <CardContent>
             {upcomingBookings.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {upcomingBookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="font-medium">
-                        {formatTime(booking.start_at)}
-                      </TableCell>
-                      <TableCell>
-                        {[booking.customer?.first_name, booking.customer?.last_name]
-                          .filter(Boolean)
-                          .join(" ") || "-"}
-                      </TableCell>
-                      <TableCell>{booking.service?.name ?? "-"}</TableCell>
-                      <TableCell>
-                        <Badge className="border-blue-200 bg-blue-100 text-blue-900">
-                          {formatStatusLabel(booking.status)}
-                        </Badge>
-                      </TableCell>
+              <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+                <Table>
+                  <TableHeader className="bg-muted/40">
+                    <TableRow className="border-border/60">
+                      <TableHead>Time</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {upcomingBookings.map((booking) => (
+                      <TableRow key={booking.id} className="bg-white hover:bg-slate-50/70">
+                        <TableCell className="font-medium">
+                          {formatTime(booking.start_at)}
+                        </TableCell>
+                        <TableCell>
+                          {[booking.customer?.first_name, booking.customer?.last_name]
+                            .filter(Boolean)
+                            .join(" ") || "-"}
+                        </TableCell>
+                        <TableCell>{booking.service?.name ?? "-"}</TableCell>
+                        <TableCell>
+                          <Badge className="border-blue-200 bg-blue-100 text-blue-900">
+                            {formatStatusLabel(booking.status)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
               <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
                 <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">

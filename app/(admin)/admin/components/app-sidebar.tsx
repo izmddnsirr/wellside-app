@@ -11,6 +11,9 @@ import {
   IconListDetails,
   IconReport,
   IconScissors,
+  IconTicket,
+  IconTimeline,
+  IconReceipt,
   IconUsers,
 } from "@tabler/icons-react";
 
@@ -54,14 +57,17 @@ const data = {
             {
               title: "Transactions",
               url: "/admin/pos/transactions",
+              icon: IconReceipt,
             },
             {
-              title: "Shift history",
+              title: "Shifts",
               url: "/admin/pos/shifts",
+              icon: IconTimeline,
             },
             {
-              title: "Ticket history",
+              title: "Tickets",
               url: "/admin/pos/tickets",
+              icon: IconTicket,
             },
           ],
         },
@@ -174,7 +180,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain groups={data.navMain} />
       </SidebarContent>
-      <SidebarFooter className="shadow-sm rounded-2xl bg-white">
+      <SidebarFooter className="rounded-2xl bg-white">
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

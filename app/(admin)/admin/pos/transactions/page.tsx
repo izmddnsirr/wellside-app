@@ -1,18 +1,19 @@
 "use client";
 
 import { AdminShell } from "../../components/admin-shell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -20,8 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ShoppingCart, SlidersHorizontal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CalendarX, Search, ShoppingCart } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { createAdminClient } from "@/utils/supabase/client";
+import { createUnpaidTicket, payTicket } from "./actions";
+import { toast } from "sonner";
 
 type CatalogItem = {
   id: string;
@@ -30,11 +34,27 @@ type CatalogItem = {
   name: string;
   price: number;
   meta: string;
+  stockQty?: number | null;
 };
 
 type CartItem = {
   item: CatalogItem;
   qty: number;
+};
+
+type ShiftSummary = {
+  id: string;
+  shift_code: string | null;
+  label: string | null;
+  start_at: string | null;
+  status: string | null;
+};
+
+type BarberSummary = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  is_active: boolean | null;
 };
 
 const formatMoney = (value: number) =>
@@ -44,110 +64,300 @@ const formatMoney = (value: number) =>
     minimumFractionDigits: 2,
   }).format(value);
 
+const formatTime = (value: string | null) => {
+  if (!value) {
+    return "-";
+  }
+  return new Intl.DateTimeFormat("en-MY", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+};
+
+const getLocalDateValue = () =>
+  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+
 export default function Page() {
   const [isShiftOpen, setIsShiftOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const services: CatalogItem[] = [
-    {
-      id: "service-haircut",
-      type: "service",
-      code: "S001",
-      name: "Haircut",
-      price: 25,
-      meta: "30m",
-    },
-    {
-      id: "service-beard-trim",
-      type: "service",
-      code: "S002",
-      name: "Beard Trim",
-      price: 15,
-      meta: "15m",
-    },
-    {
-      id: "service-haircut-wash",
-      type: "service",
-      code: "S003",
-      name: "Haircut + Wash",
-      price: 45,
-      meta: "45m",
-    },
-    {
-      id: "service-kids-cut",
-      type: "service",
-      code: "S004",
-      name: "Kids Cut",
-      price: 20,
-      meta: "25m",
-    },
-    {
-      id: "service-skin-fade",
-      type: "service",
-      code: "S005",
-      name: "Skin Fade",
-      price: 35,
-      meta: "40m",
-    },
-    {
-      id: "service-hair-color",
-      type: "service",
-      code: "S006",
-      name: "Hair Color",
-      price: 60,
-      meta: "60m",
-    },
-  ];
-  const products: CatalogItem[] = [
-    {
-      id: "product-pomade",
-      type: "product",
-      code: "P001",
-      name: "Pomade",
-      price: 30,
-      meta: "Stok 15",
-    },
-    {
-      id: "product-razor-refill",
-      type: "product",
-      code: "P002",
-      name: "Razor Refill",
-      price: 12,
-      meta: "Stok 20",
-    },
-    {
-      id: "product-sea-salt",
-      type: "product",
-      code: "P003",
-      name: "Sea Salt Spray",
-      price: 28,
-      meta: "Stok 8",
-    },
-    {
-      id: "product-clay",
-      type: "product",
-      code: "P004",
-      name: "Texturizing Clay",
-      price: 38,
-      meta: "Stok 10",
-    },
-    {
-      id: "product-shampoo",
-      type: "product",
-      code: "P005",
-      name: "Daily Shampoo",
-      price: 22,
-      meta: "Stok 18",
-    },
-    {
-      id: "product-beard-oil",
-      type: "product",
-      code: "P006",
-      name: "Beard Oil",
-      price: 25,
-      meta: "Stok 12",
-    },
-  ];
+  const [activeShift, setActiveShift] = useState<ShiftSummary | null>(null);
+  const [shiftError, setShiftError] = useState<string | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [openShiftDialogOpen, setOpenShiftDialogOpen] = useState(false);
+  const [closeShiftDialogOpen, setCloseShiftDialogOpen] = useState(false);
+  const [openShiftLoading, setOpenShiftLoading] = useState(false);
+  const [closeShiftLoading, setCloseShiftLoading] = useState(false);
+  const [shiftActionError, setShiftActionError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "ewallet">("cash");
+  const [ticketLoading, setTicketLoading] = useState(false);
+  const [ticketError, setTicketError] = useState<string | null>(null);
+  const [heldTicketId, setHeldTicketId] = useState<string | null>(null);
+  const [heldTicketNo, setHeldTicketNo] = useState<string | null>(null);
+  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [cashReceived, setCashReceived] = useState("");
+  const [cartError, setCartError] = useState<string | null>(null);
+  const [services, setServices] = useState<CatalogItem[]>([]);
+  const [servicesError, setServicesError] = useState<string | null>(null);
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [products, setProducts] = useState<CatalogItem[]>([]);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [barbers, setBarbers] = useState<BarberSummary[]>([]);
+  const [barbersLoading, setBarbersLoading] = useState(true);
+  const [barbersError, setBarbersError] = useState<string | null>(null);
+  const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
+  useEffect(() => {
+    let isMounted = true;
+    const today = getLocalDateValue();
+
+    const fetchShift = async () => {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from("shifts")
+        .select("id, shift_code, label, start_at, status")
+        .eq("shift_date", today)
+        .eq("status", "active")
+        .order("start_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load shift", error);
+        setShiftError("Failed to load shift.");
+        setActiveShift(null);
+        setShiftLoading(false);
+        return;
+      }
+
+      setActiveShift(data ?? null);
+      setShiftError(null);
+      setShiftLoading(false);
+
+      setIsShiftOpen(Boolean(data));
+    };
+
+    const fetchServices = async () => {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, price, duration_minutes, service_code, is_active")
+        .eq("is_active", true)
+        .order("service_code", { ascending: true });
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load services", error);
+        setServicesError("Failed to load services.");
+        setServices([]);
+        setServicesLoading(false);
+        return;
+      }
+
+      const mapped =
+        data?.map((service) => ({
+          id: service.id,
+          type: "service" as const,
+          code: service.service_code || service.id,
+          name: service.name,
+          price: Number(service.price ?? 0),
+          meta:
+            typeof service.duration_minutes === "number"
+              ? `${service.duration_minutes}m`
+              : "-",
+        })) ?? [];
+
+      mapped.sort((a, b) => a.code.localeCompare(b.code));
+      setServices(mapped);
+      setServicesError(null);
+      setServicesLoading(false);
+    };
+
+    const fetchProducts = async () => {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, price, stock_qty, sku, is_active")
+        .eq("is_active", true)
+        .order("sku", { ascending: true });
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load products", error);
+        setProductsError("Failed to load products.");
+        setProducts([]);
+        setProductsLoading(false);
+        return;
+      }
+
+      const mapped =
+        data?.map((product) => ({
+          id: product.id,
+          type: "product" as const,
+          code: product.sku || product.id,
+          name: product.name,
+          price: Number(product.price ?? 0),
+          meta:
+            typeof product.stock_qty === "number"
+              ? `Stock ${product.stock_qty}`
+              : "Stock -",
+          stockQty:
+            typeof product.stock_qty === "number" ? product.stock_qty : null,
+        })) ?? [];
+
+      mapped.sort((a, b) => a.code.localeCompare(b.code));
+      setProducts(mapped);
+      setProductsError(null);
+      setProductsLoading(false);
+    };
+
+    const fetchBarbers = async () => {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, is_active")
+        .eq("role", "barber")
+        .eq("is_active", true)
+        .order("first_name", { ascending: true });
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        console.error("Failed to load barbers", error);
+        setBarbersError("Failed to load barbers.");
+        setBarbers([]);
+        setBarbersLoading(false);
+        return;
+      }
+
+      setBarbers(data ?? []);
+      setBarbersError(null);
+      setBarbersLoading(false);
+    };
+
+    fetchServices();
+    fetchProducts();
+    fetchShift();
+    fetchBarbers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleOpenShift = async () => {
+    if (isShiftOpen || activeShift) {
+      setShiftActionError("Shift is already active.");
+      return;
+    }
+    setOpenShiftLoading(true);
+    setShiftActionError(null);
+    const now = new Date();
+    const shiftDateValue = getLocalDateValue();
+    const supabase = createAdminClient();
+    let nextLabel: string | null = null;
+
+    const { data: lastShift, error: lastShiftError } = await supabase
+      .from("shifts")
+      .select("label")
+      .eq("shift_date", shiftDateValue)
+      .order("label", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastShiftError) {
+      console.error("Failed to fetch last shift label", lastShiftError);
+      const errorMessage =
+        lastShiftError.message ||
+        lastShiftError.details ||
+        "Failed to open shift.";
+      setShiftActionError(errorMessage);
+      setOpenShiftLoading(false);
+      return;
+    }
+
+    if (!lastShift?.label) {
+      nextLabel = "A";
+    } else {
+      const lastChar = lastShift.label.trim().toUpperCase();
+      const nextChar = lastChar.charCodeAt(0) + 1;
+      if (nextChar > "Z".charCodeAt(0)) {
+        setShiftActionError("Shift label exceeded Z for today.");
+        setOpenShiftLoading(false);
+        return;
+      }
+      nextLabel = String.fromCharCode(nextChar);
+    }
+
+    const { data, error } = await supabase
+      .from("shifts")
+      .insert({
+        shift_date: shiftDateValue,
+        label: nextLabel,
+        start_at: now.toISOString(),
+        end_at: new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString(),
+        status: "active",
+      })
+      .select("id, shift_code, label, start_at, status")
+      .single();
+
+    if (error) {
+      console.error("Failed to open shift", error);
+      const errorMessage =
+        error.message || error.details || "Failed to open shift.";
+      setShiftActionError(errorMessage);
+      setOpenShiftLoading(false);
+      return;
+    }
+
+    setActiveShift(data);
+    setIsShiftOpen(true);
+    setOpenShiftDialogOpen(false);
+    setOpenShiftLoading(false);
+  };
+
+  const handleCloseShift = async () => {
+    if (!activeShift?.id) {
+      setShiftActionError("No active shift to close.");
+      return;
+    }
+    setCloseShiftLoading(true);
+    setShiftActionError(null);
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("shifts")
+      .update({
+        end_at: new Date().toISOString(),
+        status: "inactive",
+      })
+      .eq("id", activeShift.id);
+
+    if (error) {
+      console.error("Failed to close shift", error);
+      const errorMessage =
+        error.message || error.details || "Failed to close shift.";
+      setShiftActionError(errorMessage);
+      setCloseShiftLoading(false);
+      return;
+    }
+
+    setActiveShift(null);
+    setIsShiftOpen(false);
+    setCloseShiftDialogOpen(false);
+    setCloseShiftLoading(false);
+  };
 
   const filteredServices = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
@@ -186,11 +396,27 @@ export default function Page() {
     setCartItems((prev) => {
       const existing = prev.find((entry) => entry.item.id === item.id);
       if (existing) {
+        if (
+          item.type === "product" &&
+          typeof item.stockQty === "number" &&
+          existing.qty >= item.stockQty
+        ) {
+          setCartError("Insufficient stock.");
+          return prev;
+        }
         return prev.map((entry) =>
           entry.item.id === item.id
             ? { ...entry, qty: entry.qty + 1 }
             : entry
         );
+      }
+      if (
+        item.type === "product" &&
+        typeof item.stockQty === "number" &&
+        item.stockQty <= 0
+      ) {
+        setCartError("Out of stock.");
+        return prev;
       }
       return [...prev, { item, qty: 1 }];
     });
@@ -199,32 +425,210 @@ export default function Page() {
   const updateQty = (itemId: string, delta: number) => {
     setCartItems((prev) =>
       prev
-        .map((entry) =>
-          entry.item.id === itemId
-            ? { ...entry, qty: entry.qty + delta }
-            : entry
-        )
+        .map((entry) => {
+          if (entry.item.id !== itemId) {
+            return entry;
+          }
+          const nextQty = entry.qty + delta;
+          if (
+            entry.item.type === "product" &&
+            typeof entry.item.stockQty === "number" &&
+            nextQty > entry.item.stockQty
+          ) {
+            setCartError("Insufficient stock.");
+            return entry;
+          }
+          return { ...entry, qty: nextQty };
+        })
         .filter((entry) => entry.qty > 0)
     );
   };
 
+  const handleClearCart = () => {
+    setCartItems([]);
+    setCartError(null);
+    setTicketError(null);
+  };
+
+  const handleOpenCheckout = () => {
+    if (!activeShift?.id) {
+      setTicketError("No active shift.");
+      return;
+    }
+    if (cartItems.length === 0) {
+      setTicketError("Cart is empty.");
+      return;
+    }
+    setTicketError(null);
+    setCheckoutDialogOpen(true);
+  };
+
+  const cashReceivedValue = Number(cashReceived || 0);
+  const changeDue = cashReceivedValue - subtotal;
+
+  const handleCharge = async () => {
+    if (!activeShift?.id) {
+      setTicketError("No active shift.");
+      return;
+    }
+    if (cartItems.length === 0) {
+      setTicketError("Cart is empty.");
+      return;
+    }
+    if (paymentMethod === "cash" && changeDue < 0) {
+      setTicketError("Cash received is insufficient.");
+      return;
+    }
+
+    setTicketLoading(true);
+    setTicketError(null);
+
+    let ticketId = heldTicketId;
+    let ticketNo = heldTicketNo;
+
+    if (!ticketId) {
+      const itemsPayload = cartItems.map((entry) => ({
+        item_type: entry.item.type,
+        service_id: entry.item.type === "service" ? entry.item.id : null,
+        product_id: entry.item.type === "product" ? entry.item.id : null,
+        qty: entry.qty,
+        unit_price: entry.item.price,
+      }));
+
+      const result = await createUnpaidTicket({
+        shiftId: activeShift.id,
+        barberId: selectedBarberId,
+        items: itemsPayload,
+      });
+
+      if (!result.ok) {
+        setTicketError(result.error ?? "Failed to create ticket.");
+        setTicketLoading(false);
+        return;
+      }
+
+      ticketId = result.ticketId ?? null;
+      ticketNo = result.ticketNo ?? null;
+      setHeldTicketId(result.ticketId ?? null);
+      setHeldTicketNo(result.ticketNo ?? null);
+    }
+
+    if (!ticketId) {
+      setTicketError("Failed to create ticket.");
+      setTicketLoading(false);
+      return;
+    }
+
+    const payResult = await payTicket({
+      ticketId,
+      paymentMethod,
+    });
+
+    if (!payResult.ok) {
+      setTicketError(payResult.error ?? "Failed to pay ticket.");
+      setTicketLoading(false);
+      return;
+    }
+
+    setCartItems([]);
+    setHeldTicketId(null);
+    setHeldTicketNo(null);
+    setCashReceived("");
+    setCheckoutDialogOpen(false);
+    toast.success(`Payment confirmed for ${ticketNo ?? ticketId ?? "-"}.`);
+    setTicketLoading(false);
+  };
+
   return (
     <AdminShell>
-      <div className="flex flex-col gap-3 px-3 md:px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 md:px-6 lg:px-8">
         {isShiftOpen ? (
           <>
-            <Card>
-              <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
-                  <CardTitle>Create ticket</CardTitle>
-                  <CardDescription>Build a cart for checkout.</CardDescription>
+            <div className="space-y-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0 text-sm">
+                  <p className="font-semibold">
+                    {shiftLoading
+                      ? "Loading shift..."
+                      : shiftError
+                      ? "Shift unavailable"
+                      : activeShift?.shift_code ||
+                        activeShift?.label ||
+                        activeShift?.id ||
+                        "No shift code"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {shiftLoading
+                      ? "Loading shift time..."
+                      : shiftError
+                      ? "Unable to load shift time"
+                      : `Opened at ${formatTime(activeShift?.start_at ?? null)}`}
+                  </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-                  <div className="text-right text-sm">
-                    <p className="font-semibold">SHIFT-2024-09-12</p>
-                    <p className="text-xs text-muted-foreground">Opened at 9:00 AM</p>
-                  </div>
-                  <Button onClick={() => setIsShiftOpen(false)}>Close shift</Button>
+                  <Dialog
+                    open={closeShiftDialogOpen}
+                    onOpenChange={setCloseShiftDialogOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button>Close shift</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Close shift</DialogTitle>
+                        <DialogDescription>
+                          Confirm closing the current shift.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">
+                            Shift
+                          </p>
+                          <p className="font-semibold">
+                            {activeShift?.shift_code ||
+                              activeShift?.label ||
+                              activeShift?.id ||
+                              "-"}
+                          </p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Opened at
+                            </p>
+                            <p>{formatTime(activeShift?.start_at ?? null)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Close at
+                            </p>
+                            <p>{formatTime(new Date().toISOString())}</p>
+                          </div>
+                        </div>
+                        {shiftActionError ? (
+                          <p className="text-xs text-red-500">
+                            {shiftActionError}
+                          </p>
+                        ) : null}
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => setCloseShiftDialogOpen(false)}
+                          disabled={closeShiftLoading}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleCloseShift}
+                          disabled={closeShiftLoading}
+                        >
+                          {closeShiftLoading ? "Closing..." : "Close shift"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   <Button variant="outline" size="icon" className="sm:hidden">
                     <Search className="size-4" />
                   </Button>
@@ -238,35 +642,51 @@ export default function Page() {
                     />
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-[1.4fr_0.9fr]">
-                <div className="space-y-3">
-                  <div className="rounded-2xl border border-border p-3">
+              </div>
+              <div className="grid gap-5 md:grid-cols-[1.4fr_0.9fr]">
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                     <h3 className="text-sm font-semibold">Catalog</h3>
-                    <div className="mt-3 space-y-3">
+                    <div className="mt-4 space-y-4">
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground">
                           Services
                         </p>
-                        <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                          {filteredServices.map((service) => (
-                            <button
-                              key={service.code}
-                              type="button"
-                              className="flex flex-col items-start gap-2 rounded-xl bg-slate-950 px-4 py-3 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                              onClick={() => addToCart(service)}
-                            >
-                              <span className="text-xs text-slate-300">
-                                {service.code}
-                              </span>
-                              <span className="text-sm font-semibold">
-                                {service.name}
-                              </span>
-                              <span className="text-xs text-slate-300">
-                                {formatMoney(service.price)} · {service.meta}
-                              </span>
-                            </button>
-                          ))}
+                        <div className="mt-3">
+                          {servicesLoading ? (
+                            <p className="text-xs text-muted-foreground">
+                              Loading services...
+                            </p>
+                          ) : servicesError ? (
+                            <p className="text-xs text-red-500">
+                              {servicesError}
+                            </p>
+                          ) : filteredServices.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              No services available.
+                            </p>
+                          ) : (
+                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                              {filteredServices.map((service) => (
+                                <button
+                                  key={service.code}
+                                  type="button"
+                                  className="flex flex-col items-start gap-2 rounded-xl bg-slate-950 px-5 py-4 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                  onClick={() => addToCart(service)}
+                                >
+                                  <span className="text-xs text-slate-300">
+                                    {service.code}
+                                  </span>
+                                  <span className="text-sm font-semibold">
+                                    {service.name}
+                                  </span>
+                                  <span className="text-xs text-slate-300">
+                                    {formatMoney(service.price)} · {service.meta}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -274,33 +694,49 @@ export default function Page() {
                         <p className="text-xs font-semibold text-muted-foreground">
                           Products
                         </p>
-                        <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                          {filteredProducts.map((product) => (
-                            <button
-                              key={product.code}
-                              type="button"
-                              className="flex flex-col items-start gap-2 rounded-xl bg-slate-950 px-4 py-3 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                              onClick={() => addToCart(product)}
-                            >
-                              <span className="text-xs text-slate-300">
-                                {product.code}
-                              </span>
-                              <span className="text-sm font-semibold">
-                                {product.name}
-                              </span>
-                              <span className="text-xs text-slate-300">
-                                {formatMoney(product.price)} · {product.meta}
-                              </span>
-                            </button>
-                          ))}
+                        <div className="mt-3">
+                          {productsLoading ? (
+                            <p className="text-xs text-muted-foreground">
+                              Loading products...
+                            </p>
+                          ) : productsError ? (
+                            <p className="text-xs text-red-500">
+                              {productsError}
+                            </p>
+                          ) : filteredProducts.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              No products available.
+                            </p>
+                          ) : (
+                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                              {filteredProducts.map((product) => (
+                                <button
+                                  key={product.code}
+                                  type="button"
+                                  className="flex flex-col items-start gap-2 rounded-xl bg-slate-950 px-5 py-4 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                  onClick={() => addToCart(product)}
+                                >
+                                  <span className="text-xs text-slate-300">
+                                    {product.code}
+                                  </span>
+                                  <span className="text-sm font-semibold">
+                                    {product.name}
+                                  </span>
+                                  <span className="text-xs text-slate-300">
+                                    {formatMoney(product.price)} · {product.meta}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="h-full rounded-2xl border border-border bg-white p-3 shadow-sm">
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-sm font-semibold">Cart</h3>
@@ -308,58 +744,91 @@ export default function Page() {
                           {cartItems.length} item(s)
                         </p>
                       </div>
-                      <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
-                        <ShoppingCart className="size-4 text-muted-foreground" />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearCart}
+                          disabled={cartItems.length === 0}
+                        >
+                          Clear cart
+                        </Button>
+                        <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
+                          <ShoppingCart className="size-4 text-muted-foreground" />
+                        </div>
                       </div>
                     </div>
                     {cartItems.length === 0 ? (
-                      <div className="mt-4 rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-                        <div className="mx-auto mb-2 flex size-10 items-center justify-center rounded-full border border-border bg-white shadow-sm">
-                          <ShoppingCart className="size-4 text-muted-foreground" />
+                      <div className="mt-4 overflow-hidden rounded-2xl border border-dashed border-border bg-linear-to-br from-muted/40 via-white to-muted/30 px-6 py-6 text-left">
+                        <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:text-left">
+                          <div className="flex size-12 items-center justify-center rounded-full border border-border/70 bg-white shadow-sm">
+                            <div className="flex size-9 items-center justify-center rounded-full bg-muted/40">
+                              <ShoppingCart className="size-4 text-muted-foreground" />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">
+                              Cart is empty
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Add items from the catalog to start a ticket.
+                            </p>
+                          </div>
                         </div>
-                        Cart is empty. Add items from the catalog.
                       </div>
                     ) : (
-                      <div className="mt-4 space-y-3">
+                      <div className="mt-4 space-y-4">
                         {cartItems.map((entry) => (
                           <div
                             key={entry.item.id}
-                            className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-3 py-2 text-sm"
+                            className="flex items-center justify-between rounded-xl border border-slate-900/80 bg-slate-950 px-4 py-3 text-sm text-white"
                           >
                             <div className="min-w-0">
                               <p className="truncate font-medium">
                                 {entry.item.name}
                               </p>
-                              <p className="text-xs text-muted-foreground">
-                                {entry.item.code} · {formatMoney(entry.item.price)}
-                              </p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                                <span>{entry.item.code}</span>
+                                <span className="h-1 w-1 rounded-full bg-slate-500" />
+                                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-slate-200">
+                                  {formatMoney(entry.item.price)}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="h-8 w-8 rounded-full border-white/10 bg-white/10 text-white hover:bg-white/15"
                                 onClick={() => updateQty(entry.item.id, -1)}
                               >
                                 -
                               </Button>
-                              <span className="min-w-[18px] text-center text-sm">
+                              <span className="min-w-[20px] text-center text-sm font-medium text-white">
                                 {entry.qty}
                               </span>
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="h-8 w-8 rounded-full border-white/10 bg-white/10 text-white hover:bg-white/15"
                                 onClick={() => updateQty(entry.item.id, 1)}
+                                disabled={
+                                  entry.item.type === "product" &&
+                                  typeof entry.item.stockQty === "number" &&
+                                  entry.qty >= entry.item.stockQty
+                                }
                               >
                                 +
                               </Button>
                             </div>
                           </div>
                         ))}
+                        {cartError ? (
+                          <p className="text-xs text-red-500">{cartError}</p>
+                        ) : null}
                       </div>
                     )}
-                    <Separator className="my-4" />
+                    <Separator className="my-5" />
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center justify-between text-muted-foreground">
                         <span>Subtotal</span>
@@ -370,66 +839,249 @@ export default function Page() {
                         <span>{formatMoney(subtotal)}</span>
                       </div>
                     </div>
-                    <div className="mt-4 rounded-xl border border-border bg-muted/20 p-3">
+                    <div className="mt-5 rounded-xl border border-border bg-muted/20 p-4">
                       <div className="flex items-center justify-between text-sm">
-                        <Label htmlFor="payment-method">Payment Method</Label>
-                        <span className="text-xs text-muted-foreground">Required</span>
+                        <Label>Checkout details</Label>
                       </div>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2 sm:items-stretch">
-                        <Select defaultValue="cash">
-                          <SelectTrigger
-                            id="payment-method"
-                            className="h-10 min-h-10 w-full bg-white"
-                          >
-                            <SelectValue placeholder="Select method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="ewallet">E-wallet</SelectItem>
-                            <SelectItem value="card">Card</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          className="h-10 min-h-10 w-full"
-                          disabled={cartItems.length === 0}
+                      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-end">
+                        <div className="grid gap-3">
+                          <div>
+                            <Label htmlFor="barber-id" className="text-xs">
+                              Optional barber
+                            </Label>
+                            {barbersLoading ? (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Loading barbers...
+                              </p>
+                            ) : barbersError ? (
+                              <p className="mt-2 text-xs text-red-500">
+                                {barbersError}
+                              </p>
+                            ) : (
+                              <Select
+                                value={selectedBarberId ?? "none"}
+                                onValueChange={(value) =>
+                                  setSelectedBarberId(
+                                    value === "none" ? null : value
+                                  )
+                                }
+                              >
+                                <SelectTrigger
+                                  id="barber-id"
+                                  className="mt-2 h-10 min-h-10 w-full bg-white"
+                                >
+                                  <SelectValue placeholder="No barber selected" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">No barber</SelectItem>
+                                  {barbers.length === 0 ? (
+                                    <SelectItem value="no-barbers" disabled>
+                                      No active barbers
+                                    </SelectItem>
+                                  ) : (
+                                    barbers.map((barber) => (
+                                      <SelectItem key={barber.id} value={barber.id}>
+                                        {[barber.first_name, barber.last_name]
+                                          .filter(Boolean)
+                                          .join(" ") || "Unnamed barber"}
+                                      </SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        </div>
+                        <Dialog
+                          open={checkoutDialogOpen}
+                          onOpenChange={(open) => {
+                            setCheckoutDialogOpen(open);
+                            if (!open) {
+                              setCashReceived("");
+                              setPaymentMethod("cash");
+                              setTicketError(null);
+                            }
+                          }}
                         >
-                          Checkout
-                        </Button>
+                          <Button
+                            className="h-10 min-h-10 w-full"
+                            disabled={
+                              cartItems.length === 0 ||
+                              ticketLoading ||
+                              !activeShift
+                            }
+                            onClick={handleOpenCheckout}
+                          >
+                            {ticketLoading ? "Processing..." : "Checkout"}
+                          </Button>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Charge customer</DialogTitle>
+                              <DialogDescription>
+                                Select payment method and confirm charge.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div className="rounded-2xl bg-muted/30 px-4 py-6 text-center">
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                  Total
+                                </p>
+                                <p className="mt-2 text-3xl font-semibold">
+                                  {formatMoney(subtotal)}
+                                </p>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs">Payment method</Label>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <Button
+                                    type="button"
+                                    variant={paymentMethod === "cash" ? "default" : "outline"}
+                                    className="h-11 w-full"
+                                    onClick={() => setPaymentMethod("cash")}
+                                  >
+                                    Cash
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      paymentMethod === "ewallet" ? "default" : "outline"
+                                    }
+                                    className="h-11 w-full"
+                                    onClick={() => setPaymentMethod("ewallet")}
+                                  >
+                                    E-wallet
+                                  </Button>
+                                </div>
+                              </div>
+                              {paymentMethod === "cash" ? (
+                                <div className="space-y-2">
+                                  <Label htmlFor="cash-received" className="text-xs">
+                                    Cash received
+                                  </Label>
+                                  <div className="rounded-2xl border border-border bg-white px-4 py-3 text-center">
+                                    <Input
+                                      id="cash-received"
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      placeholder="0.00"
+                                      value={cashReceived}
+                                      onChange={(event) =>
+                                        setCashReceived(event.target.value)
+                                      }
+                                      className="h-12 border-0 p-0 text-center text-2xl font-semibold shadow-none focus-visible:ring-0"
+                                    />
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Enter amount given by customer
+                                    </p>
+                                  </div>
+                                  <div className="rounded-2xl bg-muted/30 px-4 py-5 text-center">
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                      Balance
+                                    </p>
+                                    <p className="mt-2 text-2xl font-semibold">
+                                      {changeDue >= 0
+                                        ? formatMoney(changeDue)
+                                        : `-${formatMoney(Math.abs(changeDue))}`}
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : null}
+                              {ticketError ? (
+                                <p className="text-xs text-red-500">
+                                  {ticketError}
+                                </p>
+                              ) : null}
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                className="w-full"
+                                onClick={handleCharge}
+                                disabled={
+                                  ticketLoading ||
+                                  (paymentMethod === "cash" &&
+                                    (cashReceived.trim() === "" || changeDue < 0))
+                                }
+                              >
+                                {ticketLoading ? "Charging..." : "Charge"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
-                      <Button
-                        variant="outline"
-                        className="mt-3 h-10 w-full border-dashed"
-                        onClick={() => setCartItems([])}
-                        disabled={cartItems.length === 0}
-                      >
-                        Clear Cart
-                      </Button>
+                      {ticketError ? (
+                        <p className="mt-2 text-xs text-red-500">
+                          {ticketError}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Create ticket</CardTitle>
-              <CardDescription>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold">Create ticket</h3>
+              <p className="text-xs text-muted-foreground">
                 Open a shift to start a new transaction.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+              </p>
+            </div>
+            <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+              <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+                <CalendarX className="size-8 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm font-semibold">No active shift yet</p>
                 <p className="text-sm text-muted-foreground">
                   Click “Open shift” to unlock ticket creation.
                 </p>
-                <Button onClick={() => setIsShiftOpen(true)}>
-                  Open shift
-                </Button>
               </div>
-            </CardContent>
-          </Card>
+              <Dialog
+                open={openShiftDialogOpen}
+                onOpenChange={setOpenShiftDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button>Open shift</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Open shift</DialogTitle>
+                    <DialogDescription>Start a new shift for today.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="shift-date">Shift date</Label>
+                      <Input
+                        id="shift-date"
+                        value={getLocalDateValue()}
+                        readOnly
+                      />
+                    </div>
+                    {shiftActionError ? (
+                      <p className="text-xs text-red-500">{shiftActionError}</p>
+                    ) : null}
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setOpenShiftDialogOpen(false)}
+                      disabled={openShiftLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleOpenShift}
+                      disabled={openShiftLoading}
+                    >
+                      {openShiftLoading ? "Opening..." : "Open shift"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         )}
       </div>
     </AdminShell>

@@ -3,14 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -35,6 +27,7 @@ import { useMemo, useState } from "react";
 type Product = {
   id: string;
   name: string;
+  sku: string | null;
   description: string | null;
   price: number | null;
   stock_qty: number | null;
@@ -72,29 +65,34 @@ const getStockStatus = (stockQty: number | null, isActive: boolean) => {
     return {
       label: "Hidden",
       className: "bg-slate-100 text-slate-900 border-slate-200",
+      dot: "bg-slate-500",
     };
   }
   if (stockQty === null || Number.isNaN(stockQty)) {
     return {
       label: "Active",
       className: "bg-blue-100 text-blue-900 border-blue-200",
+      dot: "bg-blue-500",
     };
   }
   if (stockQty <= 0) {
     return {
       label: "Out of stock",
       className: "bg-rose-100 text-rose-900 border-rose-200",
+      dot: "bg-rose-500",
     };
   }
   if (stockQty <= 5) {
     return {
       label: "Low stock",
       className: "bg-amber-100 text-amber-900 border-amber-200",
+      dot: "bg-amber-500",
     };
   }
   return {
     label: "In stock",
     className: "bg-emerald-100 text-emerald-900 border-emerald-200",
+    dot: "bg-emerald-500",
   };
 };
 
@@ -178,67 +176,83 @@ export function ProductsCard({
     }
     return products.filter((product) => {
       const nameMatch = product.name.toLowerCase().includes(trimmed);
+      const skuMatch = product.sku?.toLowerCase().includes(trimmed) ?? false;
       const descriptionMatch =
         product.description?.toLowerCase().includes(trimmed) ?? false;
-      return nameMatch || descriptionMatch;
+      return nameMatch || skuMatch || descriptionMatch;
     });
   }, [products, query]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Product inventory</CardTitle>
-        <CardDescription>Update pricing and stock quantities.</CardDescription>
-        <CardAction>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                name="product-search"
-                placeholder="Search products"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="w-56 pl-9"
-              />
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus />
-                  Add product
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add product</DialogTitle>
-                  <DialogDescription>Create a new product entry.</DialogDescription>
-                </DialogHeader>
-                <form action={createProduct} className="space-y-4">
-                  <ProductFormFields />
-                  <DialogFooter>
-                    <Button type="submit">
-                      <Save />
-                      Save product
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold">Product inventory</h3>
+          <p className="text-xs text-muted-foreground">
+            Update pricing and stock quantities.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              name="product-search"
+              placeholder="Search products"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="w-56 pl-9"
+            />
           </div>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        {errorMessage ? (
-          <p className="text-sm text-red-600">{errorMessage}</p>
-        ) : filteredProducts.length > 0 ? (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus />
+                Add product
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add product</DialogTitle>
+                <DialogDescription>Create a new product entry.</DialogDescription>
+              </DialogHeader>
+              <form action={createProduct} className="space-y-4">
+                <ProductFormFields />
+                <DialogFooter>
+                  <Button type="submit">
+                    <Save />
+                    Save product
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+      {errorMessage ? (
+        <p className="text-sm text-red-600">{errorMessage}</p>
+      ) : filteredProducts.length > 0 ? (
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[32%]">Product</TableHead>
-                <TableHead className="w-[16%]">Price</TableHead>
-                <TableHead className="w-[16%]">Stock</TableHead>
-                <TableHead className="w-[16%]">Status</TableHead>
-                <TableHead className="w-[20%] text-right">Actions</TableHead>
+            <TableHeader className="bg-muted/40">
+              <TableRow className="border-border/60">
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  SKU
+                </TableHead>
+                <TableHead className="w-[28%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Product
+                </TableHead>
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Price
+                </TableHead>
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Stock
+                </TableHead>
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Status
+                </TableHead>
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -248,23 +262,27 @@ export function ProductsCard({
                   product.is_active
                 );
                 return (
-                  <TableRow key={product.id}>
-                    <TableCell className="w-[32%] font-medium">
+                  <TableRow key={product.id} className="bg-white hover:bg-slate-50/70">
+                    <TableCell className="w-[16%] px-4 py-3 text-slate-600">
+                      {product.sku || "-"}
+                    </TableCell>
+                    <TableCell className="w-[28%] px-4 py-3 font-semibold text-slate-900">
                       {product.name}
                     </TableCell>
-                    <TableCell className="w-[16%]">
+                    <TableCell className="w-[16%] px-4 py-3 text-slate-900">
                       {formatPrice(product.price)}
                     </TableCell>
-                    <TableCell className="w-[16%]">
+                    <TableCell className="w-[16%] px-4 py-3 text-slate-600">
                       {formatStock(product.stock_qty)}
                     </TableCell>
-                    <TableCell className="w-[16%]">
-                      <Badge variant="outline" className={status.className}>
+                    <TableCell className="w-[16%] px-4 py-3">
+                      <Badge variant="outline" className={`gap-2 ${status.className}`}>
+                        <span className={`size-2 rounded-full ${status.dot}`} />
                         {status.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="w-[20%] text-right">
-                      <div className="flex justify-end gap-2">
+                    <TableCell className="w-[20%] px-4 py-3">
+                      <div className="flex gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button variant="outline" size="sm">
@@ -305,20 +323,20 @@ export function ProductsCard({
               })}
             </TableBody>
           </Table>
-        ) : (
-          <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
-            <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background shadow-sm">
-              <PackageX className="size-8 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">No products found yet</p>
-              <p className="text-sm text-muted-foreground">
-                Add a product to start tracking inventory.
-              </p>
-            </div>
+        </div>
+      ) : (
+        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
+          <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background shadow-sm">
+            <PackageX className="size-8 text-muted-foreground" />
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <div>
+            <p className="text-sm font-semibold">No products found yet</p>
+            <p className="text-sm text-muted-foreground">
+              Add a product to start tracking inventory.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
