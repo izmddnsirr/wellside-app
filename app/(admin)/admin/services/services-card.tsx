@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogClose,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -29,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PackageX, Pencil, Plus, Save, Search, Trash2 } from "lucide-react";
+import { Pencil, Plus, Save, Scissors, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Service = {
@@ -317,7 +318,7 @@ export function ServicesCard({
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
       ) : filteredServices.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
@@ -345,17 +346,17 @@ export function ServicesCard({
               {filteredServices.map((service) => {
                 const tone = getStatusTone(service.is_active);
                 return (
-                  <TableRow key={service.id} className="bg-white hover:bg-slate-50/70">
-                    <TableCell className="w-[16%] px-4 py-3 text-slate-600">
+                  <TableRow key={service.id} className="bg-background hover:bg-muted/50">
+                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {service.service_code || "-"}
                     </TableCell>
-                    <TableCell className="w-[28%] px-4 py-3 font-semibold text-slate-900">
+                    <TableCell className="w-[28%] px-4 py-3 font-semibold text-foreground">
                       {service.name}
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {formatDuration(service.duration_minutes)}
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-slate-900">
+                    <TableCell className="w-[16%] px-4 py-3 text-foreground">
                       {formatPrice(service.price)}
                     </TableCell>
                     <TableCell className="w-[12%] px-4 py-3">
@@ -392,13 +393,43 @@ export function ServicesCard({
                             </form>
                           </DialogContent>
                         </Dialog>
-                        <form action={deleteService}>
-                          <input type="hidden" name="id" value={service.id} />
-                          <Button variant="destructive" size="sm" type="submit">
-                            <Trash2 />
-                            Delete
-                          </Button>
-                        </form>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 />
+                              Delete
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Delete service</DialogTitle>
+                              <DialogDescription>
+                                This will permanently delete the service.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="text-sm text-foreground">
+                              <p>
+                                Service:{" "}
+                                <span className="font-medium text-foreground">
+                                  {service.name}
+                                </span>
+                              </p>
+                            </div>
+                            <form action={deleteService}>
+                              <input type="hidden" name="id" value={service.id} />
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                  <Button variant="ghost" type="button">
+                                    Cancel
+                                  </Button>
+                                </DialogClose>
+                                <Button variant="destructive" type="submit">
+                                  Delete service
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -410,7 +441,7 @@ export function ServicesCard({
       ) : (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-            <PackageX className="size-8 text-muted-foreground" />
+            <Scissors className="size-8 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-semibold">

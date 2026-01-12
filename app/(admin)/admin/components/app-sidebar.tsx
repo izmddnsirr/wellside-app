@@ -71,14 +71,14 @@ const data = {
               icon: IconReceipt,
             },
             {
-              title: "Shifts",
-              url: "/admin/pos/shifts",
-              icon: IconTimeline,
-            },
-            {
               title: "Tickets",
               url: "/admin/pos/tickets",
               icon: IconTicket,
+            },
+            {
+              title: "Shifts",
+              url: "/admin/pos/shifts",
+              icon: IconTimeline,
             },
           ],
         },
@@ -152,7 +152,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         setUser({
           name: displayName,
           email: authUser.email ?? data.user.email,
-          avatar: "",
+          avatar: data.user.avatar,
         });
       }
     };
@@ -180,7 +180,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   alt="Wellside"
                   width={120}
                   height={32}
-                  className="h-6 w-auto"
+                  className="h-6 w-auto dark:hidden"
+                  priority
+                />
+                <Image
+                  src="/wellside-logo-white.png"
+                  alt="Wellside"
+                  width={120}
+                  height={32}
+                  className="hidden h-6 w-auto dark:block"
                   priority
                 />
               </Link>
@@ -191,7 +199,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain groups={data.navMain} />
       </SidebarContent>
-      <SidebarFooter className="rounded-2xl bg-white">
+      <SidebarFooter className="rounded-2xl">
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

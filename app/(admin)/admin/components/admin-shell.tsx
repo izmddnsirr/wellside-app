@@ -13,7 +13,7 @@ type AdminShellProps = {
 export function AdminShell({ title, description, children }: AdminShellProps) {
   return (
     <SidebarProvider
-      className="bg-white"
+      className="bg-background"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 64)",

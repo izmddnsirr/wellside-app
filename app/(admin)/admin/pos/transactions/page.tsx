@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarX, Search, ShoppingCart } from "lucide-react";
+import { Clock, Package, Scissors, Search, ShoppingCart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createAdminClient } from "@/utils/supabase/client";
 import { createUnpaidTicket, payTicket } from "./actions";
@@ -64,14 +64,22 @@ const formatMoney = (value: number) =>
     minimumFractionDigits: 2,
   }).format(value);
 
+const timeFormatter = new Intl.DateTimeFormat("en-MY", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
 const formatTime = (value: string | null) => {
   if (!value) {
     return "-";
   }
-  return new Intl.DateTimeFormat("en-MY", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return timeFormatter
+    .formatToParts(new Date(value))
+    .map((part) =>
+      part.type === "dayPeriod" ? part.value.toUpperCase() : part.value
+    )
+    .join("");
 };
 
 const getLocalDateValue = () =>
@@ -307,7 +315,7 @@ export default function Page() {
         shift_date: shiftDateValue,
         label: nextLabel,
         start_at: now.toISOString(),
-        end_at: new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString(),
+        end_at: null,
         status: "active",
       })
       .select("id, shift_code, label, start_at, status")
@@ -522,6 +530,7 @@ export default function Page() {
     const payResult = await payTicket({
       ticketId,
       paymentMethod,
+      cashReceived: paymentMethod === "cash" ? cashReceivedValue : null,
     });
 
     if (!payResult.ok) {
@@ -645,7 +654,7 @@ export default function Page() {
               </div>
               <div className="grid gap-5 md:grid-cols-[1.4fr_0.9fr]">
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                  <div className="rounded-2xl border border-border bg-card p-4">
                     <h3 className="text-sm font-semibold">Catalog</h3>
                     <div className="mt-4 space-y-4">
                       <div>
@@ -662,25 +671,35 @@ export default function Page() {
                               {servicesError}
                             </p>
                           ) : filteredServices.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">
-                              No services available.
-                            </p>
+                            <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
+                              <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+                                <Scissors className="size-6 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold">
+                                  No services available
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Services will appear here once they are added.
+                                </p>
+                              </div>
+                            </div>
                           ) : (
                             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                               {filteredServices.map((service) => (
                                 <button
                                   key={service.code}
                                   type="button"
-                                  className="flex flex-col items-start gap-2 rounded-xl bg-slate-950 px-5 py-4 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                  className="flex flex-col items-start gap-2 rounded-xl border border-border bg-muted/40 px-5 py-4 text-left text-foreground transition hover:bg-muted/60"
                                   onClick={() => addToCart(service)}
                                 >
-                                  <span className="text-xs text-slate-300">
+                                  <span className="text-xs text-muted-foreground">
                                     {service.code}
                                   </span>
                                   <span className="text-sm font-semibold">
                                     {service.name}
                                   </span>
-                                  <span className="text-xs text-slate-300">
+                                  <span className="text-xs text-muted-foreground">
                                     {formatMoney(service.price)} · {service.meta}
                                   </span>
                                 </button>
@@ -704,25 +723,35 @@ export default function Page() {
                               {productsError}
                             </p>
                           ) : filteredProducts.length === 0 ? (
-                            <p className="text-xs text-muted-foreground">
-                              No products available.
-                            </p>
+                            <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
+                              <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+                                <Package className="size-6 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold">
+                                  No products available
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Products will appear here once they are added.
+                                </p>
+                              </div>
+                            </div>
                           ) : (
                             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                               {filteredProducts.map((product) => (
                                 <button
                                   key={product.code}
                                   type="button"
-                                  className="flex flex-col items-start gap-2 rounded-xl bg-slate-950 px-5 py-4 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                  className="flex flex-col items-start gap-2 rounded-xl border border-border bg-muted/40 px-5 py-4 text-left text-foreground transition hover:bg-muted/60"
                                   onClick={() => addToCart(product)}
                                 >
-                                  <span className="text-xs text-slate-300">
+                                  <span className="text-xs text-muted-foreground">
                                     {product.code}
                                   </span>
                                   <span className="text-sm font-semibold">
                                     {product.name}
                                   </span>
-                                  <span className="text-xs text-slate-300">
+                                  <span className="text-xs text-muted-foreground">
                                     {formatMoney(product.price)} · {product.meta}
                                   </span>
                                 </button>
@@ -736,35 +765,33 @@ export default function Page() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                  <div className="rounded-2xl border border-border bg-card p-4">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold">Cart</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {cartItems.length} item(s)
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleClearCart}
-                          disabled={cartItems.length === 0}
-                        >
-                          Clear cart
-                        </Button>
+                      <div className="flex items-center gap-3">
                         <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
                           <ShoppingCart className="size-4 text-muted-foreground" />
                         </div>
+                        <div>
+                          <h3 className="text-sm font-semibold">Cart</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {cartItems.length} item(s)
+                          </p>
+                        </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearCart}
+                        disabled={cartItems.length === 0}
+                      >
+                        Clear cart
+                      </Button>
                     </div>
                     {cartItems.length === 0 ? (
-                      <div className="mt-4 overflow-hidden rounded-2xl border border-dashed border-border bg-linear-to-br from-muted/40 via-white to-muted/30 px-6 py-6 text-left">
+                      <div className="mt-4 overflow-hidden rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-4 text-left">
                         <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:text-left">
-                          <div className="flex size-12 items-center justify-center rounded-full border border-border/70 bg-white shadow-sm">
-                            <div className="flex size-9 items-center justify-center rounded-full bg-muted/40">
-                              <ShoppingCart className="size-4 text-muted-foreground" />
-                            </div>
+                          <div className="flex size-10 items-center justify-center rounded-full border border-border/70 bg-background shadow-sm">
+                            <ShoppingCart className="size-4 text-muted-foreground" />
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-foreground">
@@ -777,20 +804,20 @@ export default function Page() {
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-4 space-y-4">
+                      <div className="mt-4 space-y-2">
                         {cartItems.map((entry) => (
                           <div
                             key={entry.item.id}
-                            className="flex items-center justify-between rounded-xl border border-slate-900/80 bg-slate-950 px-4 py-3 text-sm text-white"
+                            className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-5 py-4 text-sm text-foreground"
                           >
                             <div className="min-w-0">
-                              <p className="truncate font-medium">
+                              <p className="truncate font-semibold">
                                 {entry.item.name}
                               </p>
-                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 <span>{entry.item.code}</span>
-                                <span className="h-1 w-1 rounded-full bg-slate-500" />
-                                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-slate-200">
+                                <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                                <span className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground">
                                   {formatMoney(entry.item.price)}
                                 </span>
                               </div>
@@ -799,18 +826,18 @@ export default function Page() {
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8 rounded-full border-white/10 bg-white/10 text-white hover:bg-white/15"
+                                className="h-8 w-8 rounded-full"
                                 onClick={() => updateQty(entry.item.id, -1)}
                               >
                                 -
                               </Button>
-                              <span className="min-w-[20px] text-center text-sm font-medium text-white">
+                              <span className="min-w-[20px] text-center text-sm font-medium text-foreground">
                                 {entry.qty}
                               </span>
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-8 w-8 rounded-full border-white/10 bg-white/10 text-white hover:bg-white/15"
+                                className="h-8 w-8 rounded-full"
                                 onClick={() => updateQty(entry.item.id, 1)}
                                 disabled={
                                   entry.item.type === "product" &&
@@ -868,7 +895,7 @@ export default function Page() {
                               >
                                 <SelectTrigger
                                   id="barber-id"
-                                  className="mt-2 h-10 min-h-10 w-full bg-white"
+                                  className="mt-2 h-10 min-h-10 w-full bg-background"
                                 >
                                   <SelectValue placeholder="No barber selected" />
                                 </SelectTrigger>
@@ -958,7 +985,7 @@ export default function Page() {
                                   <Label htmlFor="cash-received" className="text-xs">
                                     Cash received
                                   </Label>
-                                  <div className="rounded-2xl border border-border bg-white px-4 py-3 text-center">
+                                  <div className="rounded-2xl border border-border bg-background px-4 py-3 text-center">
                                     <Input
                                       id="cash-received"
                                       type="number"
@@ -1030,7 +1057,7 @@ export default function Page() {
             </div>
             <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
               <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-                <CalendarX className="size-8 text-muted-foreground" />
+                <Clock className="size-8 text-muted-foreground" />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-semibold">No active shift yet</p>

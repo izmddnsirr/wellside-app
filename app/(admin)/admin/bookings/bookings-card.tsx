@@ -34,9 +34,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  CalendarX,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
+  History,
   Pencil,
   Search,
   Trash2,
@@ -51,6 +52,7 @@ export type BookingRow = {
   start_at: string | null;
   end_at: string | null;
   booking_date: string | null;
+  created_at: string | null;
   customer: {
     first_name: string | null;
     last_name: string | null;
@@ -270,7 +272,7 @@ export function BookingsCard({
     dateTo: "",
     month: "",
   });
-  const [sort, setSort] = useState("date_desc");
+  const [sort, setSort] = useState("created_desc");
   const [range, setRange] = useState<DateRange | undefined>();
   const [monthPickerYear, setMonthPickerYear] = useState(
     filters.month ? Number(filters.month.split("-")[0]) : new Date().getFullYear()
@@ -396,6 +398,8 @@ export function BookingsCard({
       const dateValueB = b.start_at ?? b.booking_date ?? "";
       const dateA = dateValueA ? new Date(dateValueA).getTime() : 0;
       const dateB = dateValueB ? new Date(dateValueB).getTime() : 0;
+      const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
       const nameA = joinName(
         a.customer?.first_name ?? null,
         a.customer?.last_name ?? null
@@ -419,6 +423,10 @@ export function BookingsCard({
       if (sort === "customer_asc") {
         return nameA.localeCompare(nameB);
       }
+      if (sort === "created_desc") {
+        const diff = createdB - createdA;
+        return diff !== 0 ? diff : nameA.localeCompare(nameB);
+      }
       return 0;
     });
   }, [filteredBookings, sort]);
@@ -436,7 +444,7 @@ export function BookingsCard({
     filters.dateFrom !== "" ||
     filters.dateTo !== "" ||
     filters.month !== "" ||
-    sort !== "date_desc";
+    sort !== "created_desc";
   const noBookings = bookings.length === 0;
 
   const toolbar = (
@@ -606,6 +614,9 @@ export function BookingsCard({
               <SelectItem value="date_desc">Date: Newest → Oldest</SelectItem>
               <SelectItem value="customer_asc">Customer: A → Z</SelectItem>
               <SelectItem value="customer_desc">Customer: Z → A</SelectItem>
+              <SelectItem value="created_desc">
+                Created: Newest → Oldest
+              </SelectItem>
             </SelectContent>
           </Select>
           <div className="relative w-full sm:w-64">
@@ -630,7 +641,7 @@ export function BookingsCard({
                 dateTo: "",
                 month: "",
               });
-              setSort("date_desc");
+              setSort("created_desc");
               setSearchInput("");
               setRange(undefined);
               setMonthPickerYear(new Date().getFullYear());
@@ -675,7 +686,7 @@ export function BookingsCard({
     upcomingBookings.length === 0 ? (
       <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
         <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-          <CalendarX className="size-8 text-muted-foreground" />
+          <CalendarClock className="size-8 text-muted-foreground" />
         </div>
         <div>
           <p className="text-sm font-semibold">{activeEmptyTitle}</p>
@@ -685,7 +696,7 @@ export function BookingsCard({
         </div>
       </div>
     ) : (
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow className="border-border/60">
@@ -718,15 +729,15 @@ export function BookingsCard({
               return (
                 <TableRow
                   key={booking.id}
-                  className="bg-white hover:bg-slate-50/70"
+                  className="bg-background hover:bg-muted/50"
                 >
-                  <TableCell className="w-[12%] px-4 py-3 text-slate-600">
+                  <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
                     {formatDate(booking.booking_date ?? booking.start_at)}
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 font-semibold text-slate-900">
+                  <TableCell className="w-[14%] px-4 py-3 font-semibold text-foreground">
                     {formatTimeRange(booking.start_at, booking.end_at)}
                   </TableCell>
-                  <TableCell className="w-[22%] px-4 py-3 text-slate-700">
+                  <TableCell className="w-[22%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.customer?.first_name ?? null,
                       booking.customer?.last_name ?? null
@@ -737,7 +748,7 @@ export function BookingsCard({
                         "-"}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[18%] px-4 py-3 text-slate-700">
+                  <TableCell className="w-[18%] px-4 py-3 text-foreground">
                     {booking.service?.name ?? "-"}
                     <div className="text-xs text-muted-foreground">
                       {booking.service?.duration_minutes
@@ -746,7 +757,7 @@ export function BookingsCard({
                       · {formatMoney(booking.service?.price ?? null)}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 text-slate-700">
+                  <TableCell className="w-[14%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.barber?.first_name ?? null,
                       booking.barber?.last_name ?? null
@@ -937,7 +948,7 @@ export function BookingsCard({
     pastBookings.length === 0 ? (
       <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
         <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-          <CalendarX className="size-8 text-muted-foreground" />
+          <History className="size-8 text-muted-foreground" />
         </div>
         <div>
           <p className="text-sm font-semibold">{pastEmptyTitle}</p>
@@ -947,7 +958,7 @@ export function BookingsCard({
         </div>
       </div>
     ) : (
-      <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow className="border-border/60">
@@ -980,15 +991,15 @@ export function BookingsCard({
               return (
                 <TableRow
                   key={booking.id}
-                  className="bg-white hover:bg-slate-50/70"
+                  className="bg-background hover:bg-muted/50"
                 >
-                  <TableCell className="w-[12%] px-4 py-3 text-slate-600">
+                  <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
                     {formatDate(booking.booking_date ?? booking.start_at)}
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 font-semibold text-slate-900">
+                  <TableCell className="w-[14%] px-4 py-3 font-semibold text-foreground">
                     {formatTimeRange(booking.start_at, booking.end_at)}
                   </TableCell>
-                  <TableCell className="w-[22%] px-4 py-3 text-slate-700">
+                  <TableCell className="w-[22%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.customer?.first_name ?? null,
                       booking.customer?.last_name ?? null
@@ -999,7 +1010,7 @@ export function BookingsCard({
                         "-"}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[18%] px-4 py-3 text-slate-700">
+                  <TableCell className="w-[18%] px-4 py-3 text-foreground">
                     {booking.service?.name ?? "-"}
                     <div className="text-xs text-muted-foreground">
                       {booking.service?.duration_minutes
@@ -1008,7 +1019,7 @@ export function BookingsCard({
                       · {formatMoney(booking.service?.price ?? null)}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 text-slate-700">
+                  <TableCell className="w-[14%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.barber?.first_name ?? null,
                       booking.barber?.last_name ?? null

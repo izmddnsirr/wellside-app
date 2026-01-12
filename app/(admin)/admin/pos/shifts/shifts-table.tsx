@@ -17,6 +17,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,9 +40,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarX, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
+import { useRouter } from "next/navigation";
+import { deleteShift } from "./actions";
 
 type ShiftSummary = {
   id: string;
@@ -38,19 +56,62 @@ type ShiftSummary = {
   profiles: { first_name: string | null; last_name: string | null } | null;
 };
 
+type ShiftItemSummary = {
+  key: string;
+  label: string;
+  type: "service" | "product";
+  qty: number;
+  total: number;
+};
+
 type ShiftsTableProps = {
   shifts: ShiftSummary[];
   salesByShift: Record<string, number>;
+  ticketsCountByShift: Record<string, number>;
+  itemsByShift: Record<string, ShiftItemSummary[]>;
+};
+
+const dateFormatter = new Intl.DateTimeFormat("en-MY", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const timeFormatter = new Intl.DateTimeFormat("en-MY", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const formatDate = (value: Date) => {
+  const parts = dateFormatter.formatToParts(value);
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  return [day, month, year].filter(Boolean).join(" ");
+};
+
+const formatTime = (value: Date) => {
+  const parts = timeFormatter.formatToParts(value);
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "";
+  const dayPeriod =
+    parts.find((part) => part.type === "dayPeriod")?.value ?? "";
+  const periodSuffix = dayPeriod ? ` ${dayPeriod.toUpperCase()}` : "";
+  return `${hour}:${minute}${periodSuffix}`.trim();
 };
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
     return "-";
   }
-  return new Intl.DateTimeFormat("en-MY", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+  return `${formatDate(date)}, ${formatTime(date)}`.trim();
 };
 
 const formatMoney = (value: number) =>
@@ -62,24 +123,30 @@ const formatMoney = (value: number) =>
 
 const normalizeStatus = (status: string | null) => status?.toLowerCase() ?? "";
 
-const isOpenStatus = (status: string | null) => {
+const isOpenStatus = (status: string | null, endAt: string | null) => {
+  if (!endAt) {
+    return true;
+  }
   const normalized = normalizeStatus(status);
   return normalized === "open" || normalized === "active";
 };
 
-const isClosedStatus = (status: string | null) => {
+const isClosedStatus = (status: string | null, endAt: string | null) => {
+  if (!endAt) {
+    return false;
+  }
   const normalized = normalizeStatus(status);
-  return normalized === "closed" || normalized === "inactive";
+  return normalized === "closed" || normalized === "inactive" || Boolean(endAt);
 };
 
-const getStatusTone = (status: string | null) => {
-  if (isOpenStatus(status)) {
+const getStatusTone = (status: string | null, endAt: string | null) => {
+  if (isOpenStatus(status, endAt)) {
     return {
       badge: "bg-emerald-100 text-emerald-900 border-emerald-200",
       dot: "bg-emerald-500",
     };
   }
-  if (isClosedStatus(status)) {
+  if (isClosedStatus(status, endAt)) {
     return {
       badge: "bg-rose-100 text-rose-900 border-rose-200",
       dot: "bg-rose-500",
@@ -91,11 +158,11 @@ const getStatusTone = (status: string | null) => {
   };
 };
 
-const formatStatusLabel = (status: string | null) => {
-  if (isOpenStatus(status)) {
+const formatStatusLabel = (status: string | null, endAt: string | null) => {
+  if (isOpenStatus(status, endAt)) {
     return "Open";
   }
-  if (isClosedStatus(status)) {
+  if (isClosedStatus(status, endAt)) {
     return "Closed";
   }
   return status ?? "Unknown";
@@ -164,7 +231,13 @@ const formatMonthLabel = (value: string) => {
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
+export function ShiftsTable({
+  shifts,
+  salesByShift,
+  ticketsCountByShift,
+  itemsByShift,
+}: ShiftsTableProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -178,6 +251,18 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
   const [monthPickerYear, setMonthPickerYear] = useState(
     filters.month ? Number(filters.month.split("-")[0]) : new Date().getFullYear()
   );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (filters.date !== "month" || filters.month) {
@@ -195,6 +280,32 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
     }, 300);
     return () => clearTimeout(handle);
   }, [searchInput]);
+
+  const handleDeleteDialogOpenChange = (open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setDeleteError(null);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleDeleteShift = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError(null);
+    const result = await deleteShift(deleteTarget.id);
+    if (!result?.ok) {
+      setDeleteError(result?.error ?? "Failed to delete shift.");
+      setDeleteLoading(false);
+      return;
+    }
+    setDeleteLoading(false);
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+    router.refresh();
+  };
 
   const filteredShifts = useMemo(() => {
     const now = new Date();
@@ -222,7 +333,7 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
         shift.profiles?.first_name ?? null,
         shift.profiles?.last_name ?? null
       );
-      const statusLabel = formatStatusLabel(shift.status);
+      const statusLabel = formatStatusLabel(shift.status, shift.end_at);
       return [shiftCode, openedBy, statusLabel]
         .filter(Boolean)
         .join(" ")
@@ -296,22 +407,28 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
       <div className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={filters.date}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, date: value }))
-              }
-            >
-              <SelectTrigger className="h-9 w-[160px]">
-              <SelectValue placeholder="Date" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All shifts</SelectItem>
-              <SelectItem value="month">Month</SelectItem>
-              <SelectItem value="custom">Date range</SelectItem>
-            </SelectContent>
-          </Select>
-            {filters.date === "month" ? (
+            {isMounted ? (
+              <Select
+                value={filters.date}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, date: value }))
+                }
+              >
+                <SelectTrigger className="h-9 w-[160px]">
+                  <SelectValue placeholder="Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All shifts</SelectItem>
+                  <SelectItem value="month">Month</SelectItem>
+                  <SelectItem value="custom">Date range</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Button variant="outline" className="h-9 w-[160px]" disabled>
+                Date
+              </Button>
+            )}
+            {isMounted && filters.date === "month" ? (
               <div className="flex flex-wrap items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -382,7 +499,7 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
                 </Button>
               </div>
             ) : null}
-            {filters.date === "custom" ? (
+            {isMounted && filters.date === "custom" ? (
               <div className="flex flex-wrap items-center gap-3">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -431,17 +548,27 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-9 w-[200px]">
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="opened_desc">Opened date: Newest → Oldest</SelectItem>
-                <SelectItem value="opened_asc">Opened date: Oldest → Newest</SelectItem>
-                <SelectItem value="sales_desc">Sales: High → Low</SelectItem>
-                <SelectItem value="sales_asc">Sales: Low → High</SelectItem>
-              </SelectContent>
-            </Select>
+            {isMounted ? (
+              <Select value={sort} onValueChange={setSort}>
+                <SelectTrigger className="h-9 w-[200px]">
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="opened_desc">
+                    Opened date: Newest → Oldest
+                  </SelectItem>
+                  <SelectItem value="opened_asc">
+                    Opened date: Oldest → Newest
+                  </SelectItem>
+                  <SelectItem value="sales_desc">Sales: High → Low</SelectItem>
+                  <SelectItem value="sales_asc">Sales: Low → High</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Button variant="outline" className="h-9 w-[200px]" disabled>
+                Sort
+              </Button>
+            )}
             <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -467,7 +594,7 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
       {filteredShifts.length === 0 ? (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-            <CalendarX className="size-8 text-muted-foreground" />
+            <Clock className="size-8 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-semibold">
@@ -483,7 +610,7 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
@@ -505,41 +632,242 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
                 <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Action
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredShifts.map((shift) => {
-                const tone = getStatusTone(shift.status);
+                const tone = getStatusTone(shift.status, shift.end_at);
+                const shiftCode = shift.shift_code ?? null;
+                const shiftLabel = shift.label ?? null;
+                const shiftTitle = shiftCode || shiftLabel || shift.id;
+                const openedBy = joinName(
+                  shift.profiles?.first_name ?? null,
+                  shift.profiles?.last_name ?? null
+                );
+                const closedAt = isOpenStatus(shift.status, shift.end_at)
+                  ? "-"
+                  : formatDateTime(shift.end_at);
+                const salesTotal = formatMoney(salesByShift[shift.id] ?? 0);
+                const totalTickets = ticketsCountByShift[shift.id] ?? 0;
+                const shiftItems = itemsByShift[shift.id] ?? [];
+                const itemsTotal = shiftItems.reduce(
+                  (total, item) => total + item.total,
+                  0
+                );
                 return (
                   <TableRow
                     key={shift.id}
-                    className="bg-white hover:bg-slate-50/70"
+                    className="bg-background hover:bg-muted/50"
                   >
-                    <TableCell className="px-4 py-3 font-semibold text-slate-900">
+                    <TableCell className="px-4 py-3 font-semibold text-foreground">
                       {shift.shift_code || shift.label || shift.id}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-slate-600">
+                    <TableCell className="px-4 py-3 text-muted-foreground">
                       {formatDateTime(shift.start_at)}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-slate-600">
-                      {isOpenStatus(shift.status)
+                    <TableCell className="px-4 py-3 text-muted-foreground">
+                      {isOpenStatus(shift.status, shift.end_at)
                         ? "-"
                         : formatDateTime(shift.end_at)}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-slate-700">
+                    <TableCell className="px-4 py-3 text-foreground">
                       {joinName(
                         shift.profiles?.first_name ?? null,
                         shift.profiles?.last_name ?? null
                       )}
                     </TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-slate-900">
+                    <TableCell className="px-4 py-3 font-semibold text-foreground">
                       {formatMoney(salesByShift[shift.id] ?? 0)}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
                         <span className={`size-2 rounded-full ${tone.dot}`} />
-                        {formatStatusLabel(shift.status)}
+                        {formatStatusLabel(shift.status, shift.end_at)}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {isMounted ? (
+                        <Sheet>
+                          <SheetTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              Manage
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent className="p-0">
+                            <div className="flex h-full flex-col bg-muted/10">
+                              <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
+                                <SheetTitle className="text-base font-semibold text-foreground">
+                                  {shiftTitle}
+                                </SheetTitle>
+                                <SheetDescription className="text-xs text-muted-foreground">
+                                  Shift ID: {shift.id}
+                                </SheetDescription>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  {shiftCode ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
+                                    >
+                                      {shiftCode}
+                                    </Badge>
+                                  ) : null}
+                                  {shiftLabel && shiftLabel !== shiftCode ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
+                                    >
+                                      {shiftLabel}
+                                    </Badge>
+                                  ) : null}
+                                <Badge
+                                  variant="outline"
+                                  className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
+                                >
+                                  <span className={`size-2 rounded-full ${tone.dot}`} />
+                                  {formatStatusLabel(shift.status, shift.end_at)}
+                                </Badge>
+                                </div>
+                              </SheetHeader>
+                              <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
+                                <div className="space-y-6">
+                                  <div className="space-y-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                      Shift details
+                                    </p>
+                                    <div className="divide-y divide-border/60 text-sm">
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Shift code
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {shiftCode ?? "-"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Label
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {shiftLabel ?? "-"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Opened
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {formatDateTime(shift.start_at)}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Closed
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {closedAt}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Opened by
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {openedBy}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Sales
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {salesTotal}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Total tickets
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {totalTickets}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                      Items sold
+                                    </p>
+                                    {shiftItems.length > 0 ? (
+                                      <div className="divide-y divide-border/60 text-sm">
+                                        {shiftItems.map((item) => (
+                                          <div
+                                            key={item.key}
+                                            className="flex items-start justify-between gap-4 py-2"
+                                          >
+                                            <div className="min-w-0">
+                                              <p className="font-medium text-foreground">
+                                                {item.label}
+                                              </p>
+                                              <p className="text-xs text-muted-foreground">
+                                                {item.type === "service"
+                                                  ? "Service"
+                                                  : "Product"}{" "}
+                                                - x{item.qty}
+                                              </p>
+                                            </div>
+                                            <span className="font-medium text-foreground">
+                                              {formatMoney(item.total)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        <div className="flex items-center justify-between py-2 font-semibold text-foreground">
+                                          <span>Total</span>
+                                          <span>{formatMoney(itemsTotal)}</span>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">
+                                        No items recorded for this shift.
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                      Shift ID
+                                    </p>
+                                    <p className="break-all text-xs font-medium text-foreground">
+                                      {shift.id}
+                                    </p>
+                                  </div>
+                                  <div className="border-t border-dashed border-border pt-4">
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => {
+                                        setDeleteTarget({
+                                          id: shift.id,
+                                          title: shiftTitle,
+                                        });
+                                        setDeleteDialogOpen(true);
+                                        setDeleteError(null);
+                                      }}
+                                    >
+                                      Delete shift
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </SheetContent>
+                        </Sheet>
+                      ) : (
+                        <Button size="sm" variant="outline" disabled>
+                          Manage
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -548,6 +876,46 @@ export function ShiftsTable({ shifts, salesByShift }: ShiftsTableProps) {
           </Table>
         </div>
       )}
+      {isMounted ? (
+        <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete shift</DialogTitle>
+              <DialogDescription>
+                This will delete the shift and all related tickets and items.
+                This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                Shift:{" "}
+                <span className="font-medium text-foreground">
+                  {deleteTarget?.title ?? "-"}
+                </span>
+              </p>
+              {deleteError ? (
+                <p className="text-sm text-red-600">{deleteError}</p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => handleDeleteDialogOpenChange(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteShift}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Deleting..." : "Delete shift"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   );
 }

@@ -19,6 +19,7 @@ type CreateUnpaidTicketInput = {
 type PayTicketInput = {
   ticketId: string;
   paymentMethod: "cash" | "ewallet";
+  cashReceived?: number | null;
 };
 
 export const createUnpaidTicket = async (input: CreateUnpaidTicketInput) => {
@@ -58,13 +59,62 @@ export const createUnpaidTicket = async (input: CreateUnpaidTicketInput) => {
 export const payTicket = async (input: PayTicketInput) => {
   try {
     const supabase = await createAdminClient();
+    const { data: ticket, error: ticketError } = await supabase
+      .from("tickets")
+      .select("total_amount, payment_status")
+      .eq("id", input.ticketId)
+      .maybeSingle();
+
+    if (ticketError) {
+      console.error("Failed to load ticket total", ticketError);
+      return { ok: false, error: "Failed to load ticket total." };
+    }
+
+    if (!ticket) {
+      return { ok: false, error: "Ticket not found." };
+    }
+
+    if (ticket.payment_status && ticket.payment_status !== "unpaid") {
+      return { ok: false, error: "Ticket is already paid or refunded." };
+    }
+
+    if (typeof ticket.total_amount !== "number") {
+      return { ok: false, error: "Ticket total is unavailable." };
+    }
+
+    const updatePayload: {
+      payment_status: "paid";
+      payment_method: "cash" | "ewallet";
+      paid_at: string;
+      cash_received?: number | null;
+      change_due?: number | null;
+    } = {
+      payment_status: "paid",
+      payment_method: input.paymentMethod,
+      paid_at: new Date().toISOString(),
+    };
+
+    if (input.paymentMethod === "cash") {
+      const cashReceived =
+        typeof input.cashReceived === "number"
+          ? input.cashReceived
+          : Number(input.cashReceived);
+      if (!Number.isFinite(cashReceived)) {
+        return { ok: false, error: "Cash received is required." };
+      }
+      if (cashReceived < ticket.total_amount) {
+        return { ok: false, error: "Cash received is insufficient." };
+      }
+      updatePayload.cash_received = cashReceived;
+      updatePayload.change_due = cashReceived - ticket.total_amount;
+    } else {
+      updatePayload.cash_received = null;
+      updatePayload.change_due = 0;
+    }
+
     const { data, error } = await supabase
       .from("tickets")
-      .update({
-        payment_status: "paid",
-        payment_method: input.paymentMethod,
-        paid_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", input.ticketId)
       .eq("payment_status", "unpaid")
       .select("id");

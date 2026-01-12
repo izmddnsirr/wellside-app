@@ -38,6 +38,7 @@ type Barber = {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  display_name: string | null;
   email: string | null;
   phone: string | null;
   is_active: boolean | null;
@@ -63,6 +64,21 @@ const formatDate = (value: string | null) => {
   });
 };
 
+const formatWorkingTime = (value: string | null) => {
+  if (!value) {
+    return "-";
+  }
+  const [hourPart, minutePart] = value.split(":");
+  const hour = Number(hourPart);
+  const minute = Number(minutePart ?? "0");
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return value;
+  }
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
+};
+
 const getStatusTone = (isActive: boolean | null) =>
   isActive
     ? {
@@ -79,10 +95,10 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", level: "all" });
   const [sort, setSort] = useState("name_asc");
-  const [isActive, setIsActive] = useState(true);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedBarberLevel, setSelectedBarberLevel] = useState<string>("");
+  const [selectedBarberActive, setSelectedBarberActive] = useState(true);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -181,6 +197,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
   const openUpdateDialog = (barber: Barber) => {
     setSelectedBarber(barber);
     setSelectedBarberLevel(barber.barber_level ?? "");
+    setSelectedBarberActive(Boolean(barber.is_active));
     setIsUpdateOpen(true);
   };
 
@@ -188,6 +205,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
     setIsUpdateOpen(false);
     setSelectedBarber(null);
     setSelectedBarberLevel("");
+    setSelectedBarberActive(true);
     setUpdateError(null);
   };
 
@@ -209,14 +227,25 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
     }
 
     const formData = new FormData(event.currentTarget);
+    const firstName = normalizeValue(formData.get("first_name"));
+    const lastName = normalizeValue(formData.get("last_name"));
+    const displayNameInput = normalizeValue(formData.get("display_name"));
+    const fallbackDisplayName = [firstName, lastName].filter(Boolean).join(" ");
+    const displayName =
+      displayNameInput || fallbackDisplayName ? (
+        displayNameInput ?? fallbackDisplayName
+      ) : null;
+
     const payload = {
-      first_name: normalizeValue(formData.get("first_name")),
-      last_name: normalizeValue(formData.get("last_name")),
+      first_name: firstName,
+      last_name: lastName,
+      display_name: displayName,
       email: normalizeValue(formData.get("email")),
       phone: normalizeValue(formData.get("phone")),
       working_start_time: normalizeValue(formData.get("working_start_time")),
       working_end_time: normalizeValue(formData.get("working_end_time")),
       barber_level: selectedBarberLevel || null,
+      is_active: formData.get("is_active") === "on",
     };
 
     const supabase = createAdminClient();
@@ -322,10 +351,10 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                 <DialogHeader>
                   <DialogTitle>Add barber</DialogTitle>
                   <DialogDescription>
-                    Create a barber profile and invite them later.
+                    Invite a barber and create their profile.
                   </DialogDescription>
                 </DialogHeader>
-                <form className="space-y-4">
+                <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="barber-first-name">First name</Label>
@@ -361,14 +390,6 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                       placeholder="+60 12-345 6789"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barber-display-name">Display name</Label>
-                    <Input
-                      id="barber-display-name"
-                      name="display_name"
-                      placeholder="Haziq"
-                    />
-                  </div>
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
                       <Label htmlFor="barber-working-start-time">
@@ -392,7 +413,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="barber-level">Barber level</Label>
-                      <Select name="barber_level">
+                      <Select>
                         <SelectTrigger id="barber-level">
                           <SelectValue placeholder="Select level" />
                         </SelectTrigger>
@@ -406,28 +427,19 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                       </Select>
                     </div>
                   </div>
-                  <input
-                    type="hidden"
-                    name="is_active"
-                    value={isActive ? "on" : ""}
-                  />
                   <div className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      id="barber-active"
-                      checked={isActive}
-                      onCheckedChange={(value) => setIsActive(value === true)}
-                    />
+                    <Checkbox id="barber-active" defaultChecked />
                     <Label htmlFor="barber-active" className="text-sm">
                       Active barber
                     </Label>
                   </div>
                   <DialogFooter>
-                    <Button type="submit">
+                    <Button type="button" disabled>
                       <Plus />
                       Add barber
                     </Button>
                   </DialogFooter>
-                </form>
+                </div>
               </DialogContent>
             </Dialog>
           </div>
@@ -521,6 +533,23 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                 </Select>
               </div>
             </div>
+            <input
+              type="hidden"
+              name="is_active"
+              value={selectedBarberActive ? "on" : ""}
+            />
+            <div className="flex items-center gap-2 text-sm">
+              <Checkbox
+                id="update-barber-active"
+                checked={selectedBarberActive}
+                onCheckedChange={(value) =>
+                  setSelectedBarberActive(value === true)
+                }
+              />
+              <Label htmlFor="update-barber-active" className="text-sm">
+                Active barber
+              </Label>
+            </div>
             {updateError ? (
               <p className="text-sm text-red-600">{updateError}</p>
             ) : null}
@@ -541,7 +570,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
       ) : sortedBarbers.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
@@ -578,25 +607,25 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
               {sortedBarbers.map((barber) => {
                 const tone = getStatusTone(barber.is_active);
                 return (
-                  <TableRow key={barber.id} className="bg-white hover:bg-slate-50/70">
-                    <TableCell className="w-[18%] px-4 py-3 font-semibold text-slate-900">
+                  <TableRow key={barber.id} className="bg-background hover:bg-muted/50">
+                    <TableCell className="w-[18%] px-4 py-3 font-semibold text-foreground">
                       {[barber.first_name, barber.last_name]
                         .filter(Boolean)
                         .join(" ") || "-"}
                     </TableCell>
-                    <TableCell className="w-[20%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[20%] px-4 py-3 text-muted-foreground">
                       {barber.email || "-"}
                     </TableCell>
-                    <TableCell className="w-[12%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
                       {barber.phone || "-"}
                     </TableCell>
-                    <TableCell className="w-[10%] px-4 py-3 text-slate-600">
-                      {barber.working_start_time || "-"}
+                    <TableCell className="w-[10%] px-4 py-3 text-muted-foreground">
+                      {formatWorkingTime(barber.working_start_time)}
                     </TableCell>
-                    <TableCell className="w-[10%] px-4 py-3 text-slate-600">
-                      {barber.working_end_time || "-"}
+                    <TableCell className="w-[10%] px-4 py-3 text-muted-foreground">
+                      {formatWorkingTime(barber.working_end_time)}
                     </TableCell>
-                    <TableCell className="w-[12%] px-4 py-3 text-slate-700">
+                    <TableCell className="w-[12%] px-4 py-3 text-foreground">
                       {barber.barber_level || "-"}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3">
@@ -605,7 +634,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                         {barber.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="w-[8%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[8%] px-4 py-3 text-muted-foreground">
                       {formatDate(barber.created_at)}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3">
@@ -638,7 +667,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
             <p className="text-sm text-muted-foreground">
               {debouncedSearch
                 ? "Try a different name, email, or phone."
-                : "Add a barber to start building your team."}
+                : "Barbers will show up here once they are added."}
             </p>
           </div>
         </div>

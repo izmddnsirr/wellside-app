@@ -31,16 +31,23 @@ const getMalaysiaDateString = () => {
   return formatter.format(new Date());
 };
 
+const timeFormatter = new Intl.DateTimeFormat("en-MY", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
 const formatTime = (value: string | null) => {
   if (!value) {
     return "-";
   }
-  return new Date(value).toLocaleTimeString("en-MY", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Kuala_Lumpur",
-  });
+  return timeFormatter
+    .formatToParts(new Date(value))
+    .map((part) =>
+      part.type === "dayPeriod" ? part.value.toUpperCase() : part.value
+    )
+    .join("");
 };
 
 const formatStatusLabel = (status: string | null) => {
@@ -131,7 +138,7 @@ export default async function Page() {
           </CardHeader>
           <CardContent>
             {upcomingBookings.length > 0 ? (
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+              <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
                 <Table>
                   <TableHeader className="bg-muted/40">
                     <TableRow className="border-border/60">
@@ -143,7 +150,10 @@ export default async function Page() {
                   </TableHeader>
                   <TableBody>
                     {upcomingBookings.map((booking) => (
-                      <TableRow key={booking.id} className="bg-white hover:bg-slate-50/70">
+                      <TableRow
+                        key={booking.id}
+                        className="bg-background hover:bg-muted/50"
+                      >
                         <TableCell className="font-medium">
                           {formatTime(booking.start_at)}
                         </TableCell>
@@ -154,7 +164,7 @@ export default async function Page() {
                         </TableCell>
                         <TableCell>{booking.service?.name ?? "-"}</TableCell>
                         <TableCell>
-                          <Badge className="border-blue-200 bg-blue-100 text-blue-900">
+                          <Badge variant="secondary">
                             {formatStatusLabel(booking.status)}
                           </Badge>
                         </TableCell>

@@ -2,7 +2,18 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, UserX } from "lucide-react";
+import { Pencil, Search, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Customer = {
@@ -34,6 +45,7 @@ type Customer = {
 type CustomersCardProps = {
   customers: Customer[];
   errorMessage?: string | null;
+  updateCustomerStatus: (formData: FormData) => Promise<void>;
 };
 
 const formatDate = (value: string | null) => {
@@ -58,7 +70,11 @@ const getStatusTone = (isActive: boolean | null) =>
         dot: "bg-rose-500",
       };
 
-export function CustomersCard({ customers, errorMessage }: CustomersCardProps) {
+export function CustomersCard({
+  customers,
+  errorMessage,
+  updateCustomerStatus,
+}: CustomersCardProps) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all" });
@@ -185,51 +201,146 @@ export function CustomersCard({ customers, errorMessage }: CustomersCardProps) {
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
       ) : filteredCustomers.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
-                <TableHead className="w-[22%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[20%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Name
                 </TableHead>
-                <TableHead className="w-[28%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[26%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Email
                 </TableHead>
-                <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Phone
                 </TableHead>
-                <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
-                <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Joined
+                </TableHead>
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCustomers.map((customer) => {
                 const tone = getStatusTone(customer.is_active);
+                const customerName =
+                  [customer.first_name, customer.last_name]
+                    .filter(Boolean)
+                    .join(" ") || "-";
+                const statusValue = customer.is_active ? "active" : "inactive";
                 return (
-                  <TableRow key={customer.id} className="bg-white hover:bg-slate-50/70">
-                    <TableCell className="w-[22%] px-4 py-3 font-semibold text-slate-900">
-                      {[customer.first_name, customer.last_name]
-                        .filter(Boolean)
-                        .join(" ") || "-"}
+                  <TableRow key={customer.id} className="bg-background hover:bg-muted/50">
+                    <TableCell className="w-[20%] px-4 py-3 font-semibold text-foreground">
+                      {customerName}
                     </TableCell>
-                    <TableCell className="w-[28%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[26%] px-4 py-3 text-muted-foreground">
                       {customer.email || "-"}
                     </TableCell>
-                    <TableCell className="w-[18%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {customer.phone || "-"}
                     </TableCell>
-                    <TableCell className="w-[14%] px-4 py-3">
+                    <TableCell className="w-[12%] px-4 py-3">
                       <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
                         <span className={`size-2 rounded-full ${tone.dot}`} />
                         {customer.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="w-[18%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {formatDate(customer.created_at)}
+                    </TableCell>
+                    <TableCell className="w-[10%] px-4 py-3">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Pencil />
+                            Manage
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Manage customer</DialogTitle>
+                            <DialogDescription>
+                              Review customer profile and status.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 text-sm text-foreground">
+                            <div className="rounded-xl border border-border bg-muted/30 p-4">
+                              <p className="text-base font-semibold text-foreground">
+                                {customerName}
+                              </p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {customer.email || "-"}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {customer.phone || "-"}
+                              </p>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">
+                                  Status
+                                </p>
+                                <Badge
+                                  variant="outline"
+                                  className={`gap-2 ${tone.badge}`}
+                                >
+                                  <span className={`size-2 rounded-full ${tone.dot}`} />
+                                  {customer.is_active ? "Active" : "Inactive"}
+                                </Badge>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">
+                                  Joined
+                                </p>
+                                <p className="font-medium text-foreground">
+                                  {formatDate(customer.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                Customer ID
+                              </p>
+                              <p className="break-all text-xs font-medium text-foreground">
+                                {customer.id}
+                              </p>
+                            </div>
+                          </div>
+                          <form action={updateCustomerStatus} className="space-y-4">
+                            <input type="hidden" name="id" value={customer.id} />
+                            <div className="space-y-2">
+                              <Label htmlFor={`customer-status-${customer.id}`}>
+                                Status
+                              </Label>
+                              <Select
+                                name="is_active"
+                                defaultValue={statusValue}
+                              >
+                                <SelectTrigger id={`customer-status-${customer.id}`}>
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="active">Active</SelectItem>
+                                  <SelectItem value="inactive">Inactive</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button variant="ghost" type="button">
+                                  Cancel
+                                </Button>
+                              </DialogClose>
+                              <Button type="submit">Update status</Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
                     </TableCell>
                   </TableRow>
                 );

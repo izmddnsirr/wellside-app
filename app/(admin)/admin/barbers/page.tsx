@@ -7,7 +7,7 @@ export default async function Page() {
   const { data: barbers, error } = await supabase
     .from("profiles")
     .select(
-      "id, first_name, last_name, email, phone, is_active, created_at, working_start_time, working_end_time, barber_level"
+      "id, first_name, last_name, display_name, email, phone, is_active, created_at, working_start_time, working_end_time, barber_level"
     )
     .eq("role", "barber")
     .order("created_at", { ascending: false });

@@ -17,6 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -32,14 +40,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  CalendarX,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Ticket } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
+import { useRouter } from "next/navigation";
+import { deleteTicket } from "./actions";
 
 type TicketItem = {
   qty: number | null;
@@ -53,6 +58,8 @@ type TicketRow = {
   payment_status: string | null;
   payment_method: string | null;
   total_amount: number | null;
+  cash_received: number | null;
+  change_due: number | null;
   paid_at: string | null;
   created_at: string | null;
   shifts: { shift_code: string | null; label: string | null } | null;
@@ -70,14 +77,47 @@ const formatMoney = (value: number | null) => {
   }).format(value);
 };
 
+const dateFormatter = new Intl.DateTimeFormat("en-MY", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const timeFormatter = new Intl.DateTimeFormat("en-MY", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const formatDate = (value: Date) => {
+  const parts = dateFormatter.formatToParts(value);
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  return [day, month, year].filter(Boolean).join(" ");
+};
+
+const formatTime = (value: Date) => {
+  const parts = timeFormatter.formatToParts(value);
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "";
+  const dayPeriod =
+    parts.find((part) => part.type === "dayPeriod")?.value ?? "";
+  const periodSuffix = dayPeriod ? ` ${dayPeriod.toUpperCase()}` : "";
+  return `${hour}:${minute}${periodSuffix}`.trim();
+};
+
 const formatDateTime = (value: string | null) => {
   if (!value) {
     return "-";
   }
-  return new Intl.DateTimeFormat("en-MY", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+  return `${formatDate(date)}, ${formatTime(date)}`.trim();
 };
 
 const getStatusTone = (status: string) => {
@@ -188,6 +228,7 @@ const MONTH_LABELS = [
 ];
 
 export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
+  const [isMounted, setIsMounted] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -202,6 +243,18 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
   const [monthPickerYear, setMonthPickerYear] = useState(
     filters.month ? Number(filters.month.split("-")[0]) : new Date().getFullYear()
   );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -209,6 +262,32 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
     }, 300);
     return () => clearTimeout(handle);
   }, [searchInput]);
+
+  const handleDeleteDialogOpenChange = (open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setDeleteError(null);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleDeleteTicket = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError(null);
+    const result = await deleteTicket(deleteTarget.id);
+    if (!result?.ok) {
+      setDeleteError(result?.error ?? "Failed to delete ticket.");
+      setDeleteLoading(false);
+      return;
+    }
+    setDeleteLoading(false);
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+    router.refresh();
+  };
 
   useEffect(() => {
     if (filters.date !== "month" || filters.month) {
@@ -528,7 +607,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
       {filteredTickets.length === 0 ? (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
-            <CalendarX className="size-8 text-muted-foreground" />
+            <Ticket className="size-8 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-semibold">
@@ -544,10 +623,13 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Date
+                </TableHead>
                 <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Ticket
                 </TableHead>
@@ -571,6 +653,28 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                   ticket.shifts?.shift_code || ticket.shifts?.label || "-";
                 const status = ticket.payment_status ?? "unpaid";
                 const isPaid = status === "paid";
+                const paymentMethod = (ticket.payment_method ?? "").toLowerCase();
+                const isCash = paymentMethod === "cash";
+                const totalAmount =
+                  typeof ticket.total_amount === "number"
+                    ? ticket.total_amount
+                    : null;
+                const storedCashReceived =
+                  typeof ticket.cash_received === "number"
+                    ? ticket.cash_received
+                    : null;
+                const storedChangeDue =
+                  typeof ticket.change_due === "number" ? ticket.change_due : null;
+                const cashReceived =
+                  isPaid && isCash ? storedCashReceived ?? totalAmount : null;
+                const balanceAmount = isPaid
+                  ? storedChangeDue ??
+                    (isCash && cashReceived !== null && totalAmount !== null
+                      ? cashReceived - totalAmount
+                      : totalAmount !== null
+                      ? 0
+                      : null)
+                  : null;
                 const tone = getStatusTone(status);
                 const itemLines =
                   ticket.ticket_items?.map((item, index) => {
@@ -591,12 +695,15 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 return (
                   <TableRow
                     key={ticket.id}
-                    className="border-border/60 bg-white hover:bg-slate-50/70"
+                    className="border-border/60 bg-background hover:bg-muted/50"
                   >
-                    <TableCell className="px-4 py-3 font-semibold text-slate-900">
+                    <TableCell className="px-4 py-3 text-muted-foreground">
+                      {formatDateTime(ticket.created_at)}
+                    </TableCell>
+                    <TableCell className="px-4 py-3 font-semibold text-foreground">
                       {ticket.ticket_no ?? ticket.id}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-slate-600">
+                    <TableCell className="px-4 py-3 text-muted-foreground">
                       {shiftLabel}
                     </TableCell>
                     <TableCell className="px-4 py-3">
@@ -605,7 +712,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                         {toTitleCase(status)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-slate-900">
+                    <TableCell className="px-4 py-3 font-semibold text-foreground">
                       {formatMoney(ticket.total_amount)}
                     </TableCell>
                     <TableCell className="px-4 py-3">
@@ -616,125 +723,143 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                           </Button>
                         </SheetTrigger>
                         <SheetContent className="p-0">
-                          <div className="flex h-full flex-col">
-                            <SheetHeader className="border-b px-6 py-5">
-                              <SheetTitle className="text-lg">
+                          <div className="flex h-full flex-col bg-muted/10">
+                            <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
+                              <SheetTitle className="text-base font-semibold text-foreground">
                                 {ticket.ticket_no ?? ticket.id}
                               </SheetTitle>
-                              <SheetDescription>Receipt</SheetDescription>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
+                                >
+                                  {shiftLabel}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
+                                >
+                                  <span className={`size-2 rounded-full ${tone.dot}`} />
+                                  {toTitleCase(status)}
+                                </Badge>
+                              </div>
                             </SheetHeader>
                             <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
-                              <div className="rounded-2xl border border-dashed border-border bg-white p-4 shadow-sm">
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="space-y-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Status
-                                    </p>
-                                    <Badge
-                                      variant="outline"
-                                      className={`gap-2 ${tone.badge}`}
-                                    >
-                                      <span
-                                        className={`size-2 rounded-full ${tone.dot}`}
-                                      />
-                                      {toTitleCase(status)}
-                                    </Badge>
+                              <div className="rounded-2xl border border-border bg-background shadow-sm">
+                                <div className="px-4 py-4">
+                                  <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    <span>Items</span>
+                                    <span>Amount</span>
                                   </div>
-                                  <div className="text-right">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Shift
-                                    </p>
-                                    <p className="text-sm font-semibold text-slate-900">
-                                      {shiftLabel}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="my-4 border-t border-dashed border-border" />
-                                <div className="space-y-3 text-sm">
-                                  <div className="space-y-1">
-                                    <p className="text-xs text-muted-foreground">
-                                      Items
-                                    </p>
-                                    {itemLines.length > 0 ? (
-                                      <ul className="space-y-2 text-sm">
-                                        {itemLines.map((item) => (
-                                          <li
-                                            key={item.key}
-                                            className="flex items-start justify-between gap-3"
-                                          >
-                                            <div className="space-y-1">
-                                              <p className="font-medium text-slate-900">
-                                                {item.label}
-                                              </p>
-                                              <p className="text-xs text-muted-foreground">
-                                                x{item.qty} ·{" "}
-                                                {item.price !== null
-                                                  ? formatMoney(item.price)
-                                                  : "-"}
-                                              </p>
-                                            </div>
-                                            <p className="text-sm font-semibold text-slate-900">
-                                              {item.lineTotal !== null
-                                                ? formatMoney(item.lineTotal)
+                                  {itemLines.length > 0 ? (
+                                    <ul className="mt-3 divide-y divide-dashed divide-border">
+                                      {itemLines.map((item) => (
+                                        <li
+                                          key={item.key}
+                                          className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                                        >
+                                          <div className="min-w-0 space-y-1">
+                                            <p className="font-medium text-foreground">
+                                              {item.label}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              x{item.qty} ·{" "}
+                                              {item.price !== null
+                                                ? formatMoney(item.price)
                                                 : "-"}
                                             </p>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    ) : (
-                                      <p className="font-medium text-slate-900">-</p>
-                                    )}
+                                          </div>
+                                          <p className="text-sm font-semibold text-foreground">
+                                            {item.lineTotal !== null
+                                              ? formatMoney(item.lineTotal)
+                                              : "-"}
+                                          </p>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="mt-3 text-sm font-medium text-foreground">
+                                      -
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="border-t border-dashed border-border px-4 py-4">
+                                  <div className="space-y-2 text-sm">
+                                    <div className="flex items-center justify-between text-muted-foreground">
+                                      <span>Subtotal</span>
+                                      <span>{formatMoney(totalAmount)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-base font-semibold text-foreground">
+                                      <span>Total</span>
+                                      <span>{formatMoney(totalAmount)}</span>
+                                    </div>
                                   </div>
-                                  <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="space-y-1">
-                                      <p className="text-xs text-muted-foreground">
+                                </div>
+                                <div className="border-t border-dashed border-border px-4 py-4">
+                                  <div className="space-y-3 text-sm">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-muted-foreground">
                                         Method
-                                      </p>
-                                      <p className="font-medium text-slate-900">
+                                      </span>
+                                      <span className="font-medium text-foreground">
                                         {isPaid
                                           ? toTitleCase(ticket.payment_method)
                                           : "-"}
-                                      </p>
+                                      </span>
                                     </div>
+                                    {isPaid && isCash ? (
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">
+                                          Cash received
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {formatMoney(cashReceived)}
+                                        </span>
+                                      </div>
+                                    ) : null}
+                                    {isPaid ? (
+                                      <div className="flex items-center justify-between font-semibold text-foreground">
+                                        <span>Balance</span>
+                                        <span>{formatMoney(balanceAmount)}</span>
+                                      </div>
+                                    ) : null}
                                     <div className="space-y-1">
                                       <p className="text-xs text-muted-foreground">
                                         Paid at
                                       </p>
-                                      <p className="font-medium text-slate-900">
+                                      <p className="font-medium text-foreground">
                                         {isPaid
                                           ? formatDateTime(ticket.paid_at)
                                           : "-"}
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="space-y-1">
-                                      <p className="text-xs text-muted-foreground">
-                                        Created at
-                                      </p>
-                                      <p className="font-medium text-slate-900">
-                                        {formatDateTime(ticket.created_at)}
-                                      </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                      <p className="text-xs text-muted-foreground">
-                                        Ticket ID
-                                      </p>
-                                      <p className="font-medium text-slate-900">
-                                        {ticket.id}
-                                      </p>
-                                    </div>
-                                  </div>
                                 </div>
-                                <div className="my-4 border-t border-dashed border-border" />
-                                <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Total
+                                <div className="border-t border-dashed border-border px-4 py-3">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Ticket ID
                                   </p>
-                                  <p className="text-base font-semibold text-slate-900">
-                                    {formatMoney(ticket.total_amount)}
+                                  <p className="mt-1 break-all text-xs font-medium text-foreground">
+                                    {ticket.id}
                                   </p>
                                 </div>
+                              </div>
+                              <div className="mt-4 flex justify-end">
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    setDeleteTarget({
+                                      id: ticket.id,
+                                      label: ticket.ticket_no ?? ticket.id,
+                                    });
+                                    setDeleteDialogOpen(true);
+                                    setDeleteError(null);
+                                  }}
+                                  disabled={deleteLoading}
+                                >
+                                  Delete ticket
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -748,6 +873,46 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
           </Table>
         </div>
       )}
+      {isMounted ? (
+        <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete ticket</DialogTitle>
+              <DialogDescription>
+                This will delete the ticket and all related items. This action cannot
+                be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                Ticket:{" "}
+                <span className="font-medium text-foreground">
+                  {deleteTarget?.label ?? "-"}
+                </span>
+              </p>
+              {deleteError ? (
+                <p className="text-sm text-red-600">{deleteError}</p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => handleDeleteDialogOpenChange(false)}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteTicket}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Deleting..." : "Delete ticket"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   );
 };

@@ -17,7 +17,7 @@ export function BarberShell({
 }: BarberShellProps) {
   return (
     <SidebarProvider
-      className="bg-white"
+      className="bg-background"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 64)",

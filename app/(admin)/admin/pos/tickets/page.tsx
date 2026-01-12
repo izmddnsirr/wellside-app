@@ -13,6 +13,8 @@ export default async function Page() {
       payment_status,
       payment_method,
       total_amount,
+      cash_received,
+      change_due,
       paid_at,
       created_at,
       shifts:shift_id (shift_code, label),

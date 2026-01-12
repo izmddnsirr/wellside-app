@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogClose,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -28,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PackageX, Pencil, Plus, Save, Search, Trash2 } from "lucide-react";
+import { Package, Pencil, Plus, Save, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Product = {
@@ -358,7 +359,7 @@ export function ProductsCard({
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
       ) : filteredProducts.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-white">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
@@ -389,17 +390,17 @@ export function ProductsCard({
                   product.is_active
                 );
                 return (
-                  <TableRow key={product.id} className="bg-white hover:bg-slate-50/70">
-                    <TableCell className="w-[16%] px-4 py-3 text-slate-600">
+                  <TableRow key={product.id} className="bg-background hover:bg-muted/50">
+                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {product.sku || "-"}
                     </TableCell>
-                    <TableCell className="w-[28%] px-4 py-3 font-semibold text-slate-900">
+                    <TableCell className="w-[28%] px-4 py-3 font-semibold text-foreground">
                       {product.name}
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-slate-900">
+                    <TableCell className="w-[16%] px-4 py-3 text-foreground">
                       {formatPrice(product.price)}
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-slate-600">
+                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {formatStock(product.stock_qty)}
                     </TableCell>
                     <TableCell className="w-[16%] px-4 py-3">
@@ -436,13 +437,43 @@ export function ProductsCard({
                             </form>
                           </DialogContent>
                         </Dialog>
-                        <form action={deleteProduct}>
-                          <input type="hidden" name="id" value={product.id} />
-                          <Button variant="destructive" size="sm" type="submit">
-                            <Trash2 />
-                            Delete
-                          </Button>
-                        </form>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 />
+                              Delete
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Delete product</DialogTitle>
+                              <DialogDescription>
+                                This will permanently delete the product.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="text-sm text-foreground">
+                              <p>
+                                Product:{" "}
+                                <span className="font-medium text-foreground">
+                                  {product.name}
+                                </span>
+                              </p>
+                            </div>
+                            <form action={deleteProduct}>
+                              <input type="hidden" name="id" value={product.id} />
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                  <Button variant="ghost" type="button">
+                                    Cancel
+                                  </Button>
+                                </DialogClose>
+                                <Button variant="destructive" type="submit">
+                                  Delete product
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -454,7 +485,7 @@ export function ProductsCard({
       ) : (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background shadow-sm">
-            <PackageX className="size-8 text-muted-foreground" />
+            <Package className="size-8 text-muted-foreground" />
           </div>
           <div>
             <p className="text-sm font-semibold">
