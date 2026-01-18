@@ -414,7 +414,7 @@ export function ShiftsTable({
                   setFilters((prev) => ({ ...prev, date: value }))
                 }
               >
-                <SelectTrigger className="h-9 w-[160px]">
+                <SelectTrigger className="h-9 w-[150px]">
                   <SelectValue placeholder="Date" />
                 </SelectTrigger>
                 <SelectContent>
@@ -434,7 +434,7 @@ export function ShiftsTable({
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="h-9 min-w-[180px] justify-between"
+                      className="h-9 min-w-[140px] justify-between"
                     >
                       {formatMonthLabel(filters.month)}
                     </Button>
@@ -550,7 +550,7 @@ export function ShiftsTable({
           <div className="flex flex-wrap items-center gap-2">
             {isMounted ? (
               <Select value={sort} onValueChange={setSort}>
-                <SelectTrigger className="h-9 w-[200px]">
+                <SelectTrigger className="h-9 w-[180px]">
                   <SelectValue placeholder="Sort" />
                 </SelectTrigger>
                 <SelectContent>
