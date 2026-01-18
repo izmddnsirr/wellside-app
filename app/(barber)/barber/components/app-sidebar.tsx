@@ -121,7 +121,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain groups={data.navMain} />
       </SidebarContent>
-      <SidebarFooter className="rounded-2xl border border-border/60 bg-background">
+      <SidebarFooter className="">
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

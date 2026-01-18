@@ -5,6 +5,7 @@ import {
   IconDotsVertical,
   IconLogout,
   IconNotification,
+  IconSettings,
   IconUserCircle,
 } from "@tabler/icons-react"
 import { useRouter } from "next/navigation"
@@ -124,8 +125,8 @@ export function NavUser({
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <IconCreditCard />
-                Billing
+                <IconSettings />
+                Settings
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <IconNotification />

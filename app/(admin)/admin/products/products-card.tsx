@@ -29,8 +29,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Package, Pencil, Plus, Save, Search, Trash2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Package,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type Product = {
   id: string;
@@ -47,18 +59,20 @@ type ProductsCardProps = {
   errorMessage?: string | null;
   createProduct: (formData: FormData) => Promise<void>;
   updateProduct: (formData: FormData) => Promise<void>;
-  deleteProduct: (formData: FormData) => Promise<void>;
+  archiveProduct: (formData: FormData) => Promise<void>;
+  reactivateProduct: (formData: FormData) => Promise<void>;
 };
+
+const priceFormatter = new Intl.NumberFormat("en-MY", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 const formatPrice = (value: number | null) => {
   if (value === null || Number.isNaN(value)) {
     return "-";
   }
-  return new Intl.NumberFormat("ms-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 2,
-  }).format(value);
+  return `RM ${priceFormatter.format(value)}`;
 };
 
 const formatStock = (value: number | null) => {
@@ -71,7 +85,7 @@ const formatStock = (value: number | null) => {
 const getStockStatus = (stockQty: number | null, isActive: boolean) => {
   if (!isActive) {
     return {
-      label: "Hidden",
+      label: "Deactivated",
       className: "bg-slate-100 text-slate-900 border-slate-200",
       dot: "bg-slate-500",
     };
@@ -157,15 +171,6 @@ const ProductFormFields = ({ product }: { product?: Product | null }) => (
         placeholder="Matte finish, medium hold"
       />
     </div>
-    <label className="flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        name="is_active"
-        defaultChecked={product?.is_active ?? true}
-        className="h-4 w-4 rounded border border-input"
-      />
-      Active product
-    </label>
   </>
 );
 
@@ -174,12 +179,38 @@ export function ProductsCard({
   errorMessage,
   createProduct,
   updateProduct,
-  deleteProduct,
+  archiveProduct,
+  reactivateProduct,
 }: ProductsCardProps) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all" });
   const [sort, setSort] = useState("sku_asc");
+  const [showInactive, setShowInactive] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const toastKey = searchParams.get("toast");
+  const searchParamsString = searchParams.toString();
+
+  useEffect(() => {
+    if (!toastKey) {
+      return;
+    }
+    const message = {
+      "product-created": "Product created.",
+      "product-updated": "Product updated.",
+      "product-deactivated": "Product deactivated.",
+      "product-reactivated": "Product reactivated.",
+    }[toastKey];
+    if (message) {
+      toast.success(message, { id: toastKey });
+    }
+    const params = new URLSearchParams(searchParamsString);
+    params.delete("toast");
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [toastKey, pathname, router, searchParamsString]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -202,17 +233,17 @@ export function ProductsCard({
     };
 
     const matchesStatus = (product: Product) => {
+      if (showInactive) {
+        return !product.is_active;
+      }
+      if (!product.is_active) {
+        return false;
+      }
       if (filters.status === "all") {
         return true;
       }
       if (filters.status === "active") {
         return product.is_active;
-      }
-      if (filters.status === "hidden") {
-        return !product.is_active;
-      }
-      if (!product.is_active) {
-        return false;
       }
       const stockQty = product.stock_qty;
       if (filters.status === "in_stock") {
@@ -269,12 +300,13 @@ export function ProductsCard({
     });
 
     return sorted;
-  }, [debouncedSearch, filters.status, products, sort]);
+  }, [debouncedSearch, filters.status, products, showInactive, sort]);
 
   const resetFilters = () => {
     setFilters({ status: "all" });
     setSort("sku_asc");
     setSearchInput("");
+    setShowInactive(false);
   };
 
   return (
@@ -294,7 +326,6 @@ export function ProductsCard({
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="hidden">Hidden</SelectItem>
                 <SelectItem value="in_stock">In stock</SelectItem>
                 <SelectItem value="low_stock">Low stock</SelectItem>
                 <SelectItem value="out_of_stock">Out of stock</SelectItem>
@@ -343,6 +374,7 @@ export function ProductsCard({
                   <DialogDescription>Create a new product entry.</DialogDescription>
                 </DialogHeader>
                 <form action={createProduct} className="space-y-4">
+                  <input type="hidden" name="is_active" value="on" />
                   <ProductFormFields />
                   <DialogFooter>
                     <Button type="submit">
@@ -353,6 +385,17 @@ export function ProductsCard({
                 </form>
               </DialogContent>
             </Dialog>
+            <Button
+              variant={showInactive ? "secondary" : "outline"}
+              size="icon"
+              onClick={() => setShowInactive((prev) => !prev)}
+              aria-label={
+                showInactive ? "Show active products" : "Show deactivated products"
+              }
+              title={showInactive ? "Show active products" : "Show deactivated products"}
+            >
+              {showInactive ? <Eye /> : <EyeOff />}
+            </Button>
           </div>
         </div>
       </div>
@@ -389,6 +432,7 @@ export function ProductsCard({
                   product.stock_qty,
                   product.is_active
                 );
+                const isActive = product.is_active;
                 return (
                   <TableRow key={product.id} className="bg-background hover:bg-muted/50">
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
@@ -410,71 +454,98 @@ export function ProductsCard({
                       </Badge>
                     </TableCell>
                     <TableCell className="w-[20%] px-4 py-3">
-                      <div className="flex gap-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Pencil />
-                              Update
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Edit product</DialogTitle>
-                              <DialogDescription>
-                                Update name, pricing, or stock levels.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <form action={updateProduct} className="space-y-4">
-                              <input type="hidden" name="id" value={product.id} />
-                              <ProductFormFields product={product} />
-                              <DialogFooter>
-                                <Button type="submit">
-                                  <Save />
-                                  Update product
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 />
-                              Delete
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Delete product</DialogTitle>
-                              <DialogDescription>
-                                This will permanently delete the product.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="text-sm text-foreground">
-                              <p>
-                                Product:{" "}
-                                <span className="font-medium text-foreground">
-                                  {product.name}
-                                </span>
-                              </p>
-                            </div>
-                            <form action={deleteProduct}>
-                              <input type="hidden" name="id" value={product.id} />
-                              <DialogFooter>
-                                <DialogClose asChild>
-                                  <Button variant="ghost" type="button">
-                                    Cancel
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Pencil />
+                            Manage
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Manage product</DialogTitle>
+                            <DialogDescription>
+                              {isActive
+                                ? "Update details or deactivate this product."
+                                : "Update details or reactivate this product."}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form
+                            id={`product-update-${product.id}`}
+                            action={updateProduct}
+                            className="space-y-4"
+                          >
+                            <input type="hidden" name="id" value={product.id} />
+                            <input
+                              type="hidden"
+                              name="is_active"
+                              value={product.is_active ? "on" : "off"}
+                            />
+                            <ProductFormFields product={product} />
+                          </form>
+                          <DialogFooter className="flex-row justify-end">
+                            {isActive ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="destructive" type="button">
+                                    <Trash2 />
+                                    Deactivate
                                   </Button>
-                                </DialogClose>
-                                <Button variant="destructive" type="submit">
-                                  Delete product
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Deactivate product</DialogTitle>
+                                    <DialogDescription>
+                                      This will hide the product from the POS catalog but
+                                      keep existing tickets intact.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="text-sm text-foreground">
+                                    <p>
+                                      Product:{" "}
+                                      <span className="font-medium text-foreground">
+                                        {product.name}
+                                      </span>
+                                    </p>
+                                  </div>
+                                  <form action={archiveProduct}>
+                                    <input type="hidden" name="id" value={product.id} />
+                                    <DialogFooter>
+                                      <DialogClose asChild>
+                                        <Button variant="ghost" type="button">
+                                          Cancel
+                                      </Button>
+                                    </DialogClose>
+                                      <Button variant="destructive" type="submit">
+                                        <Trash2 />
+                                        Deactivate
+                                      </Button>
+                                  </DialogFooter>
+                                </form>
+                              </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <form
+                                action={reactivateProduct}
+                                className="inline-flex"
+                              >
+                                <input type="hidden" name="id" value={product.id} />
+                                <Button
+                                  type="submit"
+                                  className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300/50"
+                                >
+                                  <RefreshCw />
+                                  Reactivate
                                 </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
+                              </form>
+                            )}
+                            <Button type="submit" form={`product-update-${product.id}`}>
+                              <Save />
+                              Update product
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </TableCell>
                   </TableRow>
                 );

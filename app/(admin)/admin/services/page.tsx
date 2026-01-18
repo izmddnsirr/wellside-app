@@ -31,7 +31,7 @@ const createService = async (formData: FormData) => {
   }
 
   revalidatePath("/admin/services");
-  redirect("/admin/services");
+  redirect("/admin/services?toast=service-created");
 };
 
 const updateService = async (formData: FormData) => {
@@ -63,10 +63,10 @@ const updateService = async (formData: FormData) => {
   }
 
   revalidatePath("/admin/services");
-  redirect("/admin/services");
+  redirect("/admin/services?toast=service-updated");
 };
 
-const deleteService = async (formData: FormData) => {
+const archiveService = async (formData: FormData) => {
   "use server";
   const supabase = await createAdminClient();
   const id = String(formData.get("id") ?? "");
@@ -74,14 +74,38 @@ const deleteService = async (formData: FormData) => {
     return;
   }
 
-  const { error } = await supabase.from("services").delete().eq("id", id);
+  const { error } = await supabase
+    .from("services")
+    .update({ is_active: false })
+    .eq("id", id);
   if (error) {
-    console.error("Failed to delete service", error);
+    console.error("Failed to deactivate service", error);
     return;
   }
 
   revalidatePath("/admin/services");
-  redirect("/admin/services");
+  redirect("/admin/services?toast=service-deactivated");
+};
+
+const reactivateService = async (formData: FormData) => {
+  "use server";
+  const supabase = await createAdminClient();
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("services")
+    .update({ is_active: true })
+    .eq("id", id);
+  if (error) {
+    console.error("Failed to reactivate service", error);
+    return;
+  }
+
+  revalidatePath("/admin/services");
+  redirect("/admin/services?toast=service-reactivated");
 };
 
 export default async function Page() {
@@ -107,7 +131,8 @@ export default async function Page() {
           errorMessage={errorMessage}
           createService={createService}
           updateService={updateService}
-          deleteService={deleteService}
+          archiveService={archiveService}
+          reactivateService={reactivateService}
         />
       </div>
     </AdminShell>

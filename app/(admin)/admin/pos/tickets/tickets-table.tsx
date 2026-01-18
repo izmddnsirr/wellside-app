@@ -48,6 +48,7 @@ import { deleteTicket } from "./actions";
 
 type TicketItem = {
   qty: number | null;
+  unit_price?: number | null;
   services: { name: string | null; price: number | null } | null;
   products: { name: string | null; price: number | null } | null;
 };
@@ -449,7 +450,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-[180px] justify-between"
+                    className="h-9 min-w-[120px] justify-between"
                   >
                     {formatMonthLabel(filters.month)}
                   </Button>
@@ -522,7 +523,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-[200px] justify-between text-left"
+                    className="h-9 min-w-[140px] justify-between text-left"
                   >
                     {range?.from ? formatRangeLabel(range) : "Pick date range"}
                   </Button>
@@ -566,7 +567,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-9 w-[240px]">
+            <SelectTrigger className="h-9 w-[180px]">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
@@ -681,7 +682,11 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                     const detail = item.services ?? item.products;
                     const name = detail?.name || "Item";
                     const price =
-                      typeof detail?.price === "number" ? detail.price : null;
+                      typeof item.unit_price === "number"
+                        ? item.unit_price
+                        : typeof detail?.price === "number"
+                          ? detail.price
+                          : null;
                     const qty = item.qty ?? 0;
                     const lineTotal = price !== null ? price * qty : null;
                     return {

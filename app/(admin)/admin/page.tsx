@@ -66,6 +66,7 @@ const formatCurrency = (value: number) =>
 
 type TicketItemRow = {
   qty: number | null;
+  unit_price?: number | null;
   services:
     | { name: string | null; price: number | null }
     | { name: string | null; price: number | null }[]
@@ -189,6 +190,7 @@ export default async function Page() {
         paid_at,
         ticket_items (
           qty,
+          unit_price,
           services:service_id (name, price)
         )
       `
@@ -319,7 +321,10 @@ export default async function Page() {
         return;
       }
       const qty = item.qty ?? 0;
-      const price = service?.price ?? 0;
+      const price =
+        typeof item.unit_price === "number"
+          ? item.unit_price
+          : service?.price ?? 0;
       const current = serviceMap.get(name) ?? {
         ticketIds: new Set<string>(),
         revenue: 0,

@@ -33,7 +33,7 @@ const createProduct = async (formData: FormData) => {
   }
 
   revalidatePath("/admin/products");
-  redirect("/admin/products");
+  redirect("/admin/products?toast=product-created");
 };
 
 const updateProduct = async (formData: FormData) => {
@@ -67,10 +67,10 @@ const updateProduct = async (formData: FormData) => {
   }
 
   revalidatePath("/admin/products");
-  redirect("/admin/products");
+  redirect("/admin/products?toast=product-updated");
 };
 
-const deleteProduct = async (formData: FormData) => {
+const archiveProduct = async (formData: FormData) => {
   "use server";
   const supabase = await createAdminClient();
   const id = String(formData.get("id") ?? "");
@@ -78,14 +78,38 @@ const deleteProduct = async (formData: FormData) => {
     return;
   }
 
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { error } = await supabase
+    .from("products")
+    .update({ is_active: false })
+    .eq("id", id);
   if (error) {
-    console.error("Failed to delete product", error);
+    console.error("Failed to archive product", error);
     return;
   }
 
   revalidatePath("/admin/products");
-  redirect("/admin/products");
+  redirect("/admin/products?toast=product-deactivated");
+};
+
+const reactivateProduct = async (formData: FormData) => {
+  "use server";
+  const supabase = await createAdminClient();
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("products")
+    .update({ is_active: true })
+    .eq("id", id);
+  if (error) {
+    console.error("Failed to reactivate product", error);
+    return;
+  }
+
+  revalidatePath("/admin/products");
+  redirect("/admin/products?toast=product-reactivated");
 };
 
 export default async function Page() {
@@ -111,7 +135,8 @@ export default async function Page() {
           errorMessage={errorMessage}
           createProduct={createProduct}
           updateProduct={updateProduct}
-          deleteProduct={deleteProduct}
+          archiveProduct={archiveProduct}
+          reactivateProduct={reactivateProduct}
         />
       </div>
     </AdminShell>

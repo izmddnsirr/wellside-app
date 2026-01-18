@@ -60,6 +60,29 @@ const formatStatusLabel = (status: string | null) => {
     .join(" ");
 };
 
+type BookingCustomer = {
+  first_name: string | null;
+  last_name: string | null;
+};
+
+type BookingService = {
+  name: string | null;
+  price: number | null;
+};
+
+type BookingRelation<T> = T | T[] | null;
+
+type BookingRow = {
+  id: string;
+  status: string | null;
+  start_at: string | null;
+  customer: BookingRelation<BookingCustomer>;
+  service: BookingRelation<BookingService>;
+};
+
+const resolveSingle = <T,>(value: BookingRelation<T>) =>
+  Array.isArray(value) ? value[0] ?? null : value;
+
 export default async function Page() {
   const supabase = await createBarberClient();
   const {
@@ -85,7 +108,7 @@ export default async function Page() {
         .order("start_at", { ascending: true })
     : { data: [] };
 
-  const todaysBookings = todaysBookingsData ?? [];
+  const todaysBookings = (todaysBookingsData ?? []) as BookingRow[];
   const upcomingBookings = todaysBookings.filter(
     (booking) =>
       booking.status !== "completed" && booking.status !== "cancelled"
@@ -95,7 +118,8 @@ export default async function Page() {
     if (booking.status === "cancelled") {
       return total;
     }
-    return total + (booking.service?.price ?? 0);
+    const service = resolveSingle(booking.service);
+    return total + (service?.price ?? 0);
   }, 0);
 
   return (
@@ -149,27 +173,32 @@ export default async function Page() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {upcomingBookings.map((booking) => (
-                      <TableRow
-                        key={booking.id}
-                        className="bg-background hover:bg-muted/50"
-                      >
-                        <TableCell className="font-medium">
-                          {formatTime(booking.start_at)}
-                        </TableCell>
-                        <TableCell>
-                          {[booking.customer?.first_name, booking.customer?.last_name]
-                            .filter(Boolean)
-                            .join(" ") || "-"}
-                        </TableCell>
-                        <TableCell>{booking.service?.name ?? "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {formatStatusLabel(booking.status)}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {upcomingBookings.map((booking) => {
+                      const customer = resolveSingle(booking.customer);
+                      const service = resolveSingle(booking.service);
+
+                      return (
+                        <TableRow
+                          key={booking.id}
+                          className="bg-background hover:bg-muted/50"
+                        >
+                          <TableCell className="font-medium">
+                            {formatTime(booking.start_at)}
+                          </TableCell>
+                          <TableCell>
+                            {[customer?.first_name, customer?.last_name]
+                              .filter(Boolean)
+                              .join(" ") || "-"}
+                          </TableCell>
+                          <TableCell>{service?.name ?? "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {formatStatusLabel(booking.status)}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

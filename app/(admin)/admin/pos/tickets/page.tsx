@@ -20,6 +20,7 @@ export default async function Page() {
       shifts:shift_id (shift_code, label),
       ticket_items (
         qty,
+        unit_price,
         services:service_id (name, price),
         products:product_id (name, price)
       )

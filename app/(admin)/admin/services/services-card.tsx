@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +29,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Plus, Save, Scissors, Search, Trash2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Save,
+  Scissors,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type Service = {
   id: string;
@@ -47,18 +58,20 @@ type ServicesCardProps = {
   errorMessage?: string | null;
   createService: (formData: FormData) => Promise<void>;
   updateService: (formData: FormData) => Promise<void>;
-  deleteService: (formData: FormData) => Promise<void>;
+  archiveService: (formData: FormData) => Promise<void>;
+  reactivateService: (formData: FormData) => Promise<void>;
 };
+
+const priceFormatter = new Intl.NumberFormat("en-MY", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 const formatPrice = (value: number | null) => {
   if (value === null || Number.isNaN(value)) {
     return "-";
   }
-  return new Intl.NumberFormat("ms-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 2,
-  }).format(value);
+  return `RM ${priceFormatter.format(value)}`;
 };
 
 const formatDuration = (value: number | null) => {
@@ -80,15 +93,8 @@ const getStatusTone = (isActive: boolean) =>
       };
 
 const ServiceFormFields = ({ service }: { service?: Service | null }) => (
-  <ServiceFormFieldsContent service={service} />
-);
-
-const ServiceFormFieldsContent = ({ service }: { service?: Service | null }) => {
-  const [isActive, setIsActive] = useState(service?.is_active ?? true);
-
-  return (
-    <>
-      <div className="space-y-2">
+  <>
+    <div className="space-y-2">
       <Label htmlFor={service ? `name-${service.id}` : "service-name"}>
         Service name
       </Label>
@@ -99,8 +105,8 @@ const ServiceFormFieldsContent = ({ service }: { service?: Service | null }) => 
         placeholder="Signature haircut"
         required
       />
-      </div>
-      <div className="space-y-2">
+    </div>
+    <div className="space-y-2">
       <Label htmlFor={service ? `duration-${service.id}` : "service-duration"}>
         Duration (minutes)
       </Label>
@@ -113,8 +119,8 @@ const ServiceFormFieldsContent = ({ service }: { service?: Service | null }) => 
         defaultValue={service?.duration_minutes ?? ""}
         required
       />
-      </div>
-      <div className="space-y-2">
+    </div>
+    <div className="space-y-2">
       <Label htmlFor={service ? `price-${service.id}` : "service-price"}>
         Price (RM)
       </Label>
@@ -127,36 +133,47 @@ const ServiceFormFieldsContent = ({ service }: { service?: Service | null }) => 
         defaultValue={service?.price ?? ""}
         required
       />
-      </div>
-      <input type="hidden" name="is_active" value={isActive ? "on" : ""} />
-      <div className="flex items-center gap-2 text-sm">
-        <Checkbox
-          id={service ? `active-${service.id}` : "service-active"}
-          checked={isActive}
-          onCheckedChange={(value) => setIsActive(value === true)}
-        />
-        <Label
-          htmlFor={service ? `active-${service.id}` : "service-active"}
-          className="text-sm"
-        >
-          Active service
-        </Label>
-      </div>
-    </>
-  );
-};
+    </div>
+  </>
+);
 
 export function ServicesCard({
   services,
   errorMessage,
   createService,
   updateService,
-  deleteService,
+  archiveService,
+  reactivateService,
 }: ServicesCardProps) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all" });
   const [sort, setSort] = useState("code_asc");
+  const [showInactive, setShowInactive] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const toastKey = searchParams.get("toast");
+  const searchParamsString = searchParams.toString();
+
+  useEffect(() => {
+    if (!toastKey) {
+      return;
+    }
+    const message = {
+      "service-created": "Service created.",
+      "service-updated": "Service updated.",
+      "service-deactivated": "Service deactivated.",
+      "service-reactivated": "Service reactivated.",
+    }[toastKey];
+    if (message) {
+      toast.success(message, { id: toastKey });
+    }
+    const params = new URLSearchParams(searchParamsString);
+    params.delete("toast");
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [toastKey, pathname, router, searchParamsString]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -177,12 +194,22 @@ export function ServicesCard({
     };
 
     const matchesStatus = (service: Service) => {
+      if (showInactive) {
+        return !service.is_active;
+      }
+      if (!service.is_active) {
+        return false;
+      }
       if (filters.status === "all") {
         return true;
       }
-      return filters.status === "active"
-        ? service.is_active
-        : !service.is_active;
+      if (filters.status === "active") {
+        return service.is_active;
+      }
+      if (filters.status === "deactivated") {
+        return !service.is_active;
+      }
+      return true;
     };
 
     const filtered = services.filter(
@@ -227,12 +254,13 @@ export function ServicesCard({
     });
 
     return sorted;
-  }, [debouncedSearch, filters.status, services, sort]);
+  }, [debouncedSearch, filters.status, services, showInactive, sort]);
 
   const resetFilters = () => {
     setFilters({ status: "all" });
     setSort("code_asc");
     setSearchInput("");
+    setShowInactive(false);
   };
 
   return (
@@ -252,7 +280,7 @@ export function ServicesCard({
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="hidden">Hidden</SelectItem>
+                <SelectItem value="deactivated">Deactivated</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -302,6 +330,7 @@ export function ServicesCard({
                   <DialogDescription>Create a new service entry.</DialogDescription>
                 </DialogHeader>
                 <form action={createService} className="space-y-4">
+                  <input type="hidden" name="is_active" value="on" />
                   <ServiceFormFields />
                   <DialogFooter>
                     <Button type="submit">
@@ -312,6 +341,17 @@ export function ServicesCard({
                 </form>
               </DialogContent>
             </Dialog>
+            <Button
+              variant={showInactive ? "secondary" : "outline"}
+              size="icon"
+              onClick={() => setShowInactive((prev) => !prev)}
+              aria-label={
+                showInactive ? "Show active services" : "Show deactivated services"
+              }
+              title={showInactive ? "Show active services" : "Show deactivated services"}
+            >
+              {showInactive ? <Eye /> : <EyeOff />}
+            </Button>
           </div>
         </div>
       </div>
@@ -345,6 +385,7 @@ export function ServicesCard({
             <TableBody>
               {filteredServices.map((service) => {
                 const tone = getStatusTone(service.is_active);
+                const isActive = service.is_active;
                 return (
                   <TableRow key={service.id} className="bg-background hover:bg-muted/50">
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
@@ -362,75 +403,106 @@ export function ServicesCard({
                     <TableCell className="w-[12%] px-4 py-3">
                       <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
                         <span className={`size-2 rounded-full ${tone.dot}`} />
-                        {service.is_active ? "Active" : "Hidden"}
+                        {service.is_active ? "Active" : "Deactivated"}
                       </Badge>
                     </TableCell>
                     <TableCell className="w-[12%] px-4 py-3">
-                      <div className="flex gap-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Pencil />
-                              Manage
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Edit service</DialogTitle>
-                              <DialogDescription>
-                                Update name, pricing, or visibility.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <form action={updateService} className="space-y-4">
-                              <input type="hidden" name="id" value={service.id} />
-                              <ServiceFormFields service={service} />
-                              <DialogFooter>
-                                <Button type="submit">
-                                  <Save />
-                                  Update service
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 />
-                              Delete
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Delete service</DialogTitle>
-                              <DialogDescription>
-                                This will permanently delete the service.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="text-sm text-foreground">
-                              <p>
-                                Service:{" "}
-                                <span className="font-medium text-foreground">
-                                  {service.name}
-                                </span>
-                              </p>
-                            </div>
-                            <form action={deleteService}>
-                              <input type="hidden" name="id" value={service.id} />
-                              <DialogFooter>
-                                <DialogClose asChild>
-                                  <Button variant="ghost" type="button">
-                                    Cancel
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Pencil />
+                            Manage
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Manage service</DialogTitle>
+                            <DialogDescription>
+                              {isActive
+                                ? "Update details or deactivate this service."
+                                : "Update details or reactivate this service."}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form
+                            id={`service-update-${service.id}`}
+                            action={updateService}
+                            className="space-y-4"
+                          >
+                            <input type="hidden" name="id" value={service.id} />
+                            <input
+                              type="hidden"
+                              name="is_active"
+                              value={service.is_active ? "on" : "off"}
+                            />
+                            <ServiceFormFields service={service} />
+                          </form>
+                          <DialogFooter className="flex-row justify-end">
+                            {isActive ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="destructive" type="button">
+                                    <Trash2 />
+                                    Deactivate
                                   </Button>
-                                </DialogClose>
-                                <Button variant="destructive" type="submit">
-                                  Delete service
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Deactivate service</DialogTitle>
+                                    <DialogDescription>
+                                      This will hide the service from the POS catalog but
+                                      keep existing tickets intact.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="text-sm text-foreground">
+                                    <p>
+                                      Service:{" "}
+                                      <span className="font-medium text-foreground">
+                                        {service.name}
+                                      </span>
+                                    </p>
+                                  </div>
+                                  <form action={archiveService}>
+                                    <input
+                                      type="hidden"
+                                      name="id"
+                                      value={service.id}
+                                    />
+                                    <DialogFooter>
+                                      <DialogClose asChild>
+                                        <Button variant="ghost" type="button">
+                                          Cancel
+                                        </Button>
+                                      </DialogClose>
+                                      <Button variant="destructive" type="submit">
+                                        <Trash2 />
+                                        Deactivate
+                                      </Button>
+                                    </DialogFooter>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <form
+                                action={reactivateService}
+                                className="inline-flex"
+                              >
+                                <input type="hidden" name="id" value={service.id} />
+                                <Button
+                                  type="submit"
+                                  className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300/50"
+                                >
+                                  <RefreshCw />
+                                  Reactivate
                                 </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
+                              </form>
+                            )}
+                            <Button type="submit" form={`service-update-${service.id}`}>
+                              <Save />
+                              Update service
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </TableCell>
                   </TableRow>
                 );

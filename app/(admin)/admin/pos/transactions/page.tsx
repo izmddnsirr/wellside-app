@@ -117,15 +117,14 @@ export default function Page() {
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   useEffect(() => {
     let isMounted = true;
-    const today = getLocalDateValue();
 
     const fetchShift = async () => {
       const supabase = createAdminClient();
       const { data, error } = await supabase
         .from("shifts")
         .select("id, shift_code, label, start_at, status")
-        .eq("shift_date", today)
         .eq("status", "active")
+        .is("end_at", null)
         .order("start_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -544,7 +543,9 @@ export default function Page() {
     setHeldTicketNo(null);
     setCashReceived("");
     setCheckoutDialogOpen(false);
-    toast.success(`Payment confirmed for ${ticketNo ?? ticketId ?? "-"}.`);
+    toast.success(`Payment confirmed for ${ticketNo ?? ticketId ?? "-"}.`, {
+      position: "top-center",
+    });
     setTicketLoading(false);
   };
 
@@ -685,7 +686,7 @@ export default function Page() {
                               </div>
                             </div>
                           ) : (
-                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                               {filteredServices.map((service) => (
                                 <button
                                   key={service.code}
@@ -737,7 +738,7 @@ export default function Page() {
                               </div>
                             </div>
                           ) : (
-                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                               {filteredProducts.map((product) => (
                                 <button
                                   key={product.code}
