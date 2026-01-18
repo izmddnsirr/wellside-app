@@ -8,6 +8,7 @@ import {
   IconChartBar,
   IconDashboard,
   IconFolder,
+  IconCalendarEvent,
   IconListDetails,
   IconReport,
   IconScissors,
@@ -53,6 +54,11 @@ const data = {
               title: "Active",
               url: "/admin/bookings/active",
               icon: IconListDetails,
+            },
+            {
+              title: "Calendar",
+              url: "/admin/bookings/calendar",
+              icon: IconCalendarEvent,
             },
             {
               title: "Past",

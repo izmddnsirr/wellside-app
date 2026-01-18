@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Instrument_Sans, Space_Grotesk } from "next/font/google";
+import { createClient } from "@/utils/supabase/server";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -37,16 +39,41 @@ const featuredBarbers = [
   },
 ];
 
-const services = [
-  { name: "Classic Cut", time: "45 min", price: "RM35" },
-  { name: "Skin Fade", time: "60 min", price: "RM50" },
-  { name: "Beard Trim", time: "30 min", price: "RM25" },
-  { name: "Hair + Beard", time: "75 min", price: "RM70" },
-];
+type Service = {
+  id: string;
+  name: string;
+  price: number | null;
+  duration_minutes: number | null;
+};
+
+const formatServicePrice = (value: number | null) => {
+  if (value === null || Number.isNaN(value)) {
+    return "-";
+  }
+  return `RM${new Intl.NumberFormat("en-MY", {
+    maximumFractionDigits: 0,
+  }).format(value)}`;
+};
+
+const formatServiceDuration = (value: number | null) => {
+  if (!value || Number.isNaN(value)) {
+    return "-";
+  }
+  return `${value} min`;
+};
 
 const openings = ["11:15 AM", "12:00 PM", "2:30 PM", "4:00 PM", "6:15 PM"];
 
-export default function CustomerHome() {
+export default async function CustomerHome() {
+  const supabase = await createClient();
+  const { data: servicesData } = await supabase
+    .from("services")
+    .select("id, name, price, duration_minutes")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(4);
+  const services = servicesData ?? [];
+
   return (
     <div
       className={`${display.variable} ${body.variable} min-h-screen bg-background font-(--font-body) text-foreground`}
@@ -56,16 +83,23 @@ export default function CustomerHome() {
         <div className="pointer-events-none absolute right-0 top-0 h-[360px] w-[360px] translate-x-1/3 -translate-y-1/4 rounded-full bg-secondary/30 opacity-80 blur-3xl" />
 
         <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 pt-8">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground">
-              W+
-            </div>
-            <div className="leading-tight">
-              <p className="text-xl font-semibold">Wellside+</p>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Barber booking
-              </p>
-            </div>
+          <div className="flex items-center">
+            <Image
+              src="/wellside-logo.png"
+              alt="Wellside+"
+              width={180}
+              height={44}
+              className="h-10 w-auto dark:hidden"
+              priority
+            />
+            <Image
+              src="/wellside-logo-white.png"
+              alt="Wellside+"
+              width={180}
+              height={44}
+              className="hidden h-10 w-auto dark:block"
+              priority
+            />
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="rounded-full border border-border/60 bg-background/60 px-4 py-2">
@@ -92,7 +126,7 @@ export default function CustomerHome() {
               Wellside+ matches you with vetted barbers and real-time openings.
               Pick a vibe, lock a slot, and walk out ready for the day.
             </p>
-            <div className="grid gap-3 rounded-3xl border border-border/60 bg-card/80 p-4 shadow-lg sm:grid-cols-[1fr_auto]">
+            <div className="grid gap-3 rounded-2xl border border-border/60 bg-card/80 p-4 shadow-lg sm:grid-cols-[1fr_auto]">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm">
                   <span className="text-muted-foreground">Location</span>
@@ -121,8 +155,8 @@ export default function CustomerHome() {
           </div>
 
           <div className="relative">
-            <div className="absolute inset-0 -rotate-2 rounded-[32px] bg-muted opacity-90" />
-            <div className="relative grid gap-6 rounded-[32px] bg-card p-6 text-foreground shadow-xl">
+            <div className="absolute inset-0 -rotate-2 rounded-3xl bg-muted opacity-90" />
+            <div className="relative grid gap-6 rounded-3xl bg-card p-6 text-foreground shadow-xl">
               <div className="flex items-center justify-between">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                   Today
@@ -168,7 +202,10 @@ export default function CustomerHome() {
             </p>
             <h2 className="text-3xl font-semibold">Barbers trending today</h2>
           </div>
-          <Link href="/barber" className="text-sm font-semibold text-foreground">
+          <Link
+            href="/barber"
+            className="text-sm font-semibold text-foreground"
+          >
             View all barbers
           </Link>
         </div>
@@ -176,7 +213,7 @@ export default function CustomerHome() {
           {featuredBarbers.map((barber) => (
             <div
               key={barber.name}
-              className="flex h-full flex-col gap-4 rounded-3xl border border-border/60 bg-card p-5 shadow-lg"
+              className="flex h-full flex-col gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-lg"
             >
               <div className="flex items-center justify-between">
                 <div className="rounded-full bg-muted px-3 py-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -204,7 +241,7 @@ export default function CustomerHome() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-12">
-        <div className="grid gap-6 rounded-[36px] border border-border/60 bg-card p-6 md:grid-cols-[1fr_1.1fr]">
+        <div className="grid gap-6 rounded-3xl border border-border/60 bg-card p-6 md:grid-cols-[1fr_1.1fr]">
           <div className="flex flex-col justify-between gap-6">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -227,27 +264,35 @@ export default function CustomerHome() {
             </div>
           </div>
           <div className="grid gap-3">
-            {services.map((service) => (
-              <div
-                key={service.name}
-                className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 px-4 py-4"
-              >
-                <div>
-                  <p className="text-sm font-semibold">{service.name}</p>
-                  <p className="text-xs text-muted-foreground">{service.time}</p>
+            {services.length ? (
+              services.map((service: Service) => (
+                <div
+                  key={service.id}
+                  className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 px-4 py-4"
+                >
+                  <div>
+                    <p className="text-sm font-semibold">{service.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatServiceDuration(service.duration_minutes)}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">
+                    {formatServicePrice(service.price)}
+                  </span>
                 </div>
-                <span className="text-sm font-semibold text-foreground">
-                  {service.price}
-                </span>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+                No services available yet.
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-16">
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[32px] border border-border/60 bg-card p-6 text-foreground">
+          <div className="rounded-3xl border border-border/60 bg-card p-6 text-foreground">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               How it works
             </p>
@@ -272,7 +317,7 @@ export default function CustomerHome() {
               ))}
             </div>
           </div>
-          <div className="flex flex-col gap-4 rounded-[32px] border border-border/60 bg-card p-6">
+          <div className="flex flex-col gap-4 rounded-3xl border border-border/60 bg-card p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Customer mood
             </p>
@@ -297,7 +342,7 @@ export default function CustomerHome() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-6 pb-20">
-        <div className="grid gap-6 rounded-[36px] border border-border/60 bg-secondary p-6 md:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-6 rounded-3xl border border-border/60 bg-secondary p-6 md:grid-cols-[1.1fr_0.9fr]">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Ready to book?

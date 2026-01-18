@@ -17,7 +17,7 @@ type BookingsClientProps = {
   deleteBooking?: (formData: FormData) => Promise<void>;
   allowCancel?: boolean;
   allowDelete?: boolean;
-  view?: "tabs" | "active" | "past";
+  view?: "tabs" | "active" | "past" | "calendar";
 };
 
 export function BookingsClient(props: BookingsClientProps) {

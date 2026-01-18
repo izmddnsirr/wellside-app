@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -79,7 +80,7 @@ type BookingsCardProps = {
   deleteBooking?: (formData: FormData) => Promise<void>;
   allowCancel?: boolean;
   allowDelete?: boolean;
-  view?: "tabs" | "active" | "past";
+  view?: "tabs" | "active" | "past" | "calendar";
 };
 
 const formatDate = (value: string | null) => {
@@ -249,6 +250,155 @@ const MONTH_LABELS = [
   "Oct",
   "Nov",
   "Dec",
+];
+
+const CALENDAR_SLOTS = [
+  { label: "8:00 AM", show: true },
+  { label: "8:30 AM", show: false },
+  { label: "9:00 AM", show: true },
+  { label: "9:30 AM", show: false },
+  { label: "10:00 AM", show: true },
+  { label: "10:30 AM", show: false },
+  { label: "11:00 AM", show: true },
+  { label: "11:30 AM", show: false },
+  { label: "12:00 PM", show: true },
+  { label: "12:30 PM", show: false },
+  { label: "1:00 PM", show: true },
+  { label: "1:30 PM", show: false },
+  { label: "2:00 PM", show: true },
+  { label: "2:30 PM", show: false },
+];
+
+const CALENDAR_BARBERS = [
+  { id: "john", name: "John", initials: "JH", tone: "bg-sky-100 text-sky-900" },
+  { id: "maria", name: "Maria", initials: "MR", tone: "bg-amber-100 text-amber-900" },
+  { id: "wendy", name: "Wendy", initials: "WD", tone: "bg-rose-100 text-rose-900" },
+  { id: "amy", name: "Amy", initials: "AM", tone: "bg-emerald-100 text-emerald-900" },
+  { id: "michael", name: "Michael", initials: "ML", tone: "bg-orange-100 text-orange-900" },
+  { id: "sarah", name: "Sarah", initials: "SS", tone: "bg-indigo-100 text-indigo-900" },
+];
+
+const CALENDAR_EVENTS = [
+  {
+    id: "evt-1",
+    barberId: "john",
+    start: 1,
+    end: 3,
+    time: "8:00 - 9:00",
+    client: "Brenda Massey",
+    service: "Blow dry",
+    tone: "bg-sky-100 text-sky-900 border-sky-200",
+  },
+  {
+    id: "evt-2",
+    barberId: "john",
+    start: 11,
+    end: 14,
+    time: "1:00 - 2:30",
+    client: "Mary Lee Fisher",
+    service: "Hair coloring",
+    tone: "bg-sky-100 text-sky-900 border-sky-200",
+  },
+  {
+    id: "evt-3",
+    barberId: "maria",
+    start: 1,
+    end: 3,
+    time: "8:00 - 9:00",
+    client: "Alena Geidt",
+    service: "Classic cut",
+    tone: "bg-amber-100 text-amber-900 border-amber-200",
+  },
+  {
+    id: "evt-4",
+    barberId: "maria",
+    start: 5,
+    end: 7,
+    time: "10:00 - 10:45",
+    client: "Marilyn Carder",
+    service: "Hair + beard",
+    tone: "bg-emerald-100 text-emerald-900 border-emerald-200",
+  },
+  {
+    id: "evt-5",
+    barberId: "wendy",
+    start: 3,
+    end: 6,
+    time: "9:00 - 10:15",
+    client: "Phillip Dorwart",
+    service: "Beard grooming",
+    tone: "bg-rose-100 text-rose-900 border-rose-200",
+  },
+  {
+    id: "evt-6",
+    barberId: "amy",
+    start: 2,
+    end: 5,
+    time: "8:30 - 9:45",
+    client: "James Herwitz",
+    service: "Haircut",
+    tone: "bg-emerald-100 text-emerald-900 border-emerald-200",
+  },
+  {
+    id: "evt-7",
+    barberId: "amy",
+    start: 5,
+    end: 8,
+    time: "9:45 - 11:15",
+    client: "Amy Jones",
+    service: "Haircut + color",
+    tone: "bg-sky-100 text-sky-900 border-sky-200",
+  },
+  {
+    id: "evt-8",
+    barberId: "michael",
+    start: 3,
+    end: 6,
+    time: "9:00 - 10:15",
+    client: "Megan White",
+    service: "Fade cut",
+    tone: "bg-amber-100 text-amber-900 border-amber-200",
+  },
+  {
+    id: "evt-9",
+    barberId: "michael",
+    start: 8,
+    end: 10,
+    time: "11:15 - 12:30",
+    client: "Randy Press",
+    service: "Scalp treatment",
+    tone: "bg-rose-100 text-rose-900 border-rose-200",
+  },
+  {
+    id: "evt-10",
+    barberId: "sarah",
+    start: 2,
+    end: 5,
+    time: "8:30 - 9:45",
+    client: "Tony Danza",
+    service: "Balayage",
+    tone: "bg-emerald-100 text-emerald-900 border-emerald-200",
+  },
+  {
+    id: "evt-11",
+    barberId: "sarah",
+    start: 5,
+    end: 8,
+    time: "9:45 - 11:15",
+    client: "Laura Marsden",
+    service: "Haircut + color",
+    tone: "bg-sky-100 text-sky-900 border-sky-200",
+  },
+  {
+    id: "evt-12",
+    barberId: "sarah",
+    start: 9,
+    end: 11,
+    time: "12:15 - 1:30",
+    client: "Dori Doreau",
+    service: "Haircut + color",
+    tone: "bg-amber-100 text-amber-900 border-amber-200",
+  },
 ];
 
 export function BookingsCard({
@@ -682,6 +832,107 @@ export function BookingsCard({
     ? "Try a different name, service, or status."
     : "Completed bookings will show up here.";
 
+  const calendarView = (
+    <div className="rounded-2xl border border-border/60 bg-card">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold">Calendar view</p>
+          <p className="text-xs text-muted-foreground">
+            Visual schedule preview for staff bookings.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-full bg-sky-400" />
+            Haircut
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-full bg-amber-400" />
+            Fade
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="size-2 rounded-full bg-rose-400" />
+            Treatment
+          </span>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="min-w-[1100px]">
+          <div className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))] border-b border-border/60">
+            <div className="px-2 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Time
+            </div>
+            {CALENDAR_BARBERS.map((barber) => (
+              <div
+                key={barber.id}
+                className="flex items-center justify-center gap-2 px-3 py-3"
+              >
+                <Avatar className="size-8 ring-2 ring-background">
+                  <AvatarFallback
+                    className={`text-[11px] font-semibold ${barber.tone}`}
+                  >
+                    {barber.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-semibold">{barber.name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))]">
+            <div className="border-r border-border/60">
+              <div className="grid grid-rows-[repeat(14,36px)]">
+                {CALENDAR_SLOTS.map((slot, index) => (
+                  <div
+                    key={`${slot.label}-${index}`}
+                    className="border-b border-border/60 px-2 text-[11px] text-muted-foreground"
+                  >
+                    {slot.show ? slot.label : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {CALENDAR_BARBERS.map((barber) => (
+              <div
+                key={barber.id}
+                className="relative border-r border-border/60 last:border-r-0"
+              >
+                <div className="grid grid-rows-[repeat(14,36px)]">
+                  {CALENDAR_SLOTS.map((slot, index) => (
+                    <div
+                      key={`${barber.id}-${index}`}
+                      className="border-b border-border/60"
+                    />
+                  ))}
+                </div>
+                <div className="absolute inset-0 grid grid-rows-[repeat(14,36px)] px-3 py-2">
+                  {CALENDAR_EVENTS.filter(
+                    (event) => event.barberId === barber.id
+                  ).map((event) => (
+                    <div
+                      key={event.id}
+                      style={{ gridRow: `${event.start} / ${event.end}` }}
+                      className={`flex flex-col justify-between rounded-xl border px-3 py-2 text-xs shadow-sm ${event.tone}`}
+                    >
+                      <span className="text-[11px] font-semibold">
+                        {event.time}
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {event.client}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {event.service}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const activeList =
     upcomingBookings.length === 0 ? (
       <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
@@ -1051,6 +1302,18 @@ export function BookingsCard({
     );
 
   if (view !== "tabs") {
+    if (view === "calendar") {
+      return (
+        <div className="space-y-4">
+          {toolbar}
+          <p className="text-xs text-muted-foreground">
+            Schedule overview by staff.
+          </p>
+          {calendarView}
+        </div>
+      );
+    }
+
     const list = view === "past" ? pastList : activeList;
 
     return (
@@ -1068,6 +1331,7 @@ export function BookingsCard({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="active">Active bookings</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="past">Past bookings</TabsTrigger>
           </TabsList>
           {hasActiveFilters ? <Badge variant="secondary">Filtered</Badge> : null}
@@ -1075,6 +1339,12 @@ export function BookingsCard({
         <TabsContent value="active" className="space-y-3">
           <p className="text-xs text-muted-foreground">{activeDescription}</p>
           {activeList}
+        </TabsContent>
+        <TabsContent value="calendar" className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Schedule overview by staff.
+          </p>
+          {calendarView}
         </TabsContent>
         <TabsContent value="past" className="space-y-3">
           <p className="text-xs text-muted-foreground">{pastDescription}</p>

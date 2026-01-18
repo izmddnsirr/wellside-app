@@ -21,7 +21,7 @@ import { BookingsChartCard } from "./components/bookings-chart-card";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Wellside+ | Admin",
+  title: "Wellside+",
   description: "Wellside Barbershop booking and management system.",
 };
 

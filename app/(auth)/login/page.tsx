@@ -55,12 +55,19 @@ const login = async (formData: FormData) => {
     redirect("/login?error=profile");
   }
 
-  if (profile.role !== "customer") {
+  const roleRedirects: Record<string, string> = {
+    customer: "/home",
+    barber: "/barber",
+    admin: "/admin",
+  };
+  const destination = roleRedirects[profile.role];
+
+  if (!destination) {
     await supabase.auth.signOut();
     redirect("/login?error=unauthorized");
   }
 
-  redirect("/home");
+  redirect(destination);
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -73,13 +80,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       : params?.error === "profile"
       ? "Account profile not found."
       : params?.error === "unauthorized"
-      ? "This account is not a customer."
+      ? "This account role is not supported."
       : null;
 
   return (
-    <div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
+    <div className="bg-muted dark:bg-[#0b0b0f] flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm md:max-w-4xl">
-        <Card className="overflow-hidden p-0">
+        <Card className="overflow-hidden border-slate-200/70 p-0 dark:border-white/10 dark:bg-[#0f1012]">
           <CardContent className="grid p-0 md:grid-cols-2">
             <form className="p-6 md:p-8" action={login}>
               <FieldGroup>
@@ -97,6 +104,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     type="email"
                     placeholder="m@example.com"
                     required
+                    className="dark:bg-[#151515] dark:border-white/10 dark:text-white dark:placeholder:text-white/40"
                   />
                 </Field>
                 <Field>
@@ -114,6 +122,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     name="password"
                     type="password"
                     required
+                    className="dark:bg-[#151515] dark:border-white/10 dark:text-white dark:placeholder:text-white/40"
                   />
                 </Field>
                 {errorMessage ? (
@@ -124,7 +133,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 <Field>
                   <Button type="submit">Login</Button>
                 </Field>
-                <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+                <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card dark:*:data-[slot=field-separator-content]:bg-[#0f1012]">
                   Or continue with
                 </FieldSeparator>
                 <Field className="gap-4">
@@ -143,7 +152,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </FieldDescription>
               </FieldGroup>
             </form>
-            <div className="bg-muted relative hidden md:block">
+            <div className="bg-muted relative hidden md:block dark:bg-[#0d0e12]">
               <img
                 src="/placeholder.svg"
                 alt="Image"

@@ -1,6 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { StaffLoginForm } from "./staff-login-form";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -70,53 +68,15 @@ export default async function LoginStaffPage({ searchParams }: StaffLoginPagePro
         ? "Invalid email or password."
         : params?.error === "profile"
           ? "Account profile not found."
-          : params?.error === "unauthorized"
-            ? "This account is not staff."
-            : null;
+      : params?.error === "unauthorized"
+        ? "This account is not staff."
+        : null;
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
-          <form className="w-full max-w-xs" action={staffLogin}>
-            <FieldGroup>
-              <div className="flex flex-col items-center gap-1 text-center">
-                <h1 className="text-2xl font-bold">Login to your account</h1>
-                <p className="text-muted-foreground text-sm text-balance">
-                  Enter your email below to login to your account
-                </p>
-              </div>
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                />
-              </Field>
-              <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                />
-              </Field>
-              {errorMessage ? (
-                <FieldDescription className="text-center text-red-600">
-                  {errorMessage}
-                </FieldDescription>
-              ) : null}
-              <Field>
-                <Button type="submit">Login</Button>
-              </Field>
-            </FieldGroup>
-          </form>
+          <StaffLoginForm action={staffLogin} errorMessage={errorMessage} />
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
