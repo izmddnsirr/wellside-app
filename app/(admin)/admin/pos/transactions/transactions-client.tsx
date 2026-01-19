@@ -940,7 +940,10 @@ export function TransactionsClient() {
                           >
                             {ticketLoading ? "Processing..." : "Checkout"}
                           </Button>
-                          <DialogContent>
+                          <DialogContent
+                            onInteractOutside={(event) => event.preventDefault()}
+                            onEscapeKeyDown={(event) => event.preventDefault()}
+                          >
                             <DialogHeader>
                               <DialogTitle>Charge customer</DialogTitle>
                               <DialogDescription>
