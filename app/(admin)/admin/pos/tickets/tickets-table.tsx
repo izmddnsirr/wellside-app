@@ -53,7 +53,7 @@ type TicketItem = {
   products: { name: string | null; price: number | null } | null;
 };
 
-type TicketRow = {
+export type TicketRow = {
   id: string;
   ticket_no: string | null;
   payment_status: string | null;

@@ -1,6 +1,6 @@
 import { AdminShell } from "../../components/admin-shell";
 import { createAdminClient } from "@/utils/supabase/server";
-import { TicketsTable } from "./tickets-table";
+import { TicketsTableClient } from "./tickets-table-client";
 
 export default async function Page() {
   const supabase = await createAdminClient();
@@ -54,7 +54,7 @@ export default async function Page() {
         {errorMessage ? (
           <p className="text-sm text-red-600">{errorMessage}</p>
         ) : (
-          <TicketsTable tickets={normalizedTickets} />
+          <TicketsTableClient tickets={normalizedTickets} />
         )}
       </div>
     </AdminShell>
