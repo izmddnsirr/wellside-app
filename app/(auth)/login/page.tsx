@@ -55,19 +55,12 @@ const login = async (formData: FormData) => {
     redirect("/login?error=profile");
   }
 
-  const roleRedirects: Record<string, string> = {
-    customer: "/home",
-    barber: "/barber",
-    admin: "/admin",
-  };
-  const destination = roleRedirects[profile.role];
-
-  if (!destination) {
+  if (profile.role !== "customer") {
     await supabase.auth.signOut();
     redirect("/login?error=unauthorized");
   }
 
-  redirect(destination);
+  redirect("/home");
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -80,7 +73,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       : params?.error === "profile"
       ? "Account profile not found."
       : params?.error === "unauthorized"
-      ? "This account role is not supported."
+      ? "This account is not a customer."
       : null;
 
   return (

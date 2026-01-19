@@ -5,6 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
+type BookingSummaryField =
+  | "service"
+  | "duration"
+  | "price"
+  | "date"
+  | "time"
+  | "barber";
+
 type BookingSummaryCardProps = {
   ctaHref: string;
   ctaLabel?: string;
@@ -15,6 +23,7 @@ type BookingSummaryCardProps = {
   serviceDuration?: string;
   servicePrice?: string;
   totalPrice?: string;
+  requiredFields?: BookingSummaryField[];
 };
 
 export function BookingSummaryCard({
@@ -27,6 +36,7 @@ export function BookingSummaryCard({
   serviceDuration,
   servicePrice,
   totalPrice,
+  requiredFields,
 }: BookingSummaryCardProps) {
   const searchParams = useSearchParams();
   const getParam = (key: string) => searchParams?.get(key) ?? undefined;
@@ -50,6 +60,22 @@ export function BookingSummaryCard({
   const hasDuration = Boolean(resolvedServiceDuration);
   const hasServicePrice = Boolean(resolvedServicePrice);
   const hasTotalPrice = Boolean(resolvedTotalPrice);
+  const required: BookingSummaryField[] = requiredFields ?? [
+    "service",
+    "duration",
+    "price",
+    "date",
+    "time",
+  ];
+  const readiness: Record<BookingSummaryField, boolean> = {
+    service: hasService,
+    duration: hasDuration,
+    price: hasServicePrice,
+    date: hasDate,
+    time: hasTime,
+    barber: hasBarber,
+  };
+  const isReady = required.every((field) => readiness[field]);
   const subtotalLabel = resolvedTotalPrice ?? "-";
   const totalLabel = resolvedTotalPrice ?? "-";
 
@@ -135,12 +161,21 @@ export function BookingSummaryCard({
           </div>
         </div>
 
-        <Button
-          asChild
-          className="w-full rounded-full bg-slate-900 py-6 text-base font-semibold text-white hover:bg-slate-900/90"
-        >
-          <Link href={ctaHref}>{ctaLabel}</Link>
-        </Button>
+        {isReady ? (
+          <Button
+            asChild
+            className="w-full rounded-full bg-slate-900 py-6 text-base font-semibold text-white hover:bg-slate-900/90"
+          >
+            <Link href={ctaHref}>{ctaLabel}</Link>
+          </Button>
+        ) : (
+          <Button
+            className="w-full rounded-full bg-slate-900 py-6 text-base font-semibold text-white"
+            disabled
+          >
+            {ctaLabel}
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogClose,
@@ -40,10 +41,16 @@ const bookingBackSteps = [
 
 export function CustomerNav() {
   const pathname = usePathname();
+  const isMobile = useIsMobile();
   const isBookingFlow = pathname.startsWith("/booking/");
+  const hideNav = isMobile && isBookingFlow && pathname !== "/booking";
   const backHref =
     bookingBackSteps.find((step) => pathname.startsWith(step.match))?.back ??
     "/booking";
+
+  if (hideNav) {
+    return null;
+  }
 
   return (
     <>
