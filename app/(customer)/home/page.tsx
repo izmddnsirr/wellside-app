@@ -85,7 +85,7 @@ export default async function HomePage() {
   const serviceName = upcoming?.service?.name ?? "Service";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <header className="space-y-2">
         <div className="space-y-1">
           <h1 className="font-semibold text-3xl text-slate-900 lg:text-4xl">
@@ -97,7 +97,7 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <div className="grid gap-8">
+      <div className="grid gap-4">
         <div className="flex flex-col gap-6">
           <div
             className="relative flex flex-col gap-0 overflow-hidden rounded-3xl border border-slate-200/70 bg-white"

@@ -104,7 +104,7 @@ export default async function BookingConfirmedPage({
     : "-";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-8 pb-16">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-16">
       <div className="flex flex-col gap-4">
         <header className="space-y-4">
           <div className="lg:hidden">

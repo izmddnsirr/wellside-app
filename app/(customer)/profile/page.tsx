@@ -132,7 +132,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-10">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="font-semibold text-3xl text-slate-900 lg:text-4xl">
             Profile
@@ -153,7 +153,7 @@ export default async function ProfilePage() {
 
       <section className="rounded-3xl bg-slate-900 p-5 text-white">
         <div className="flex items-center gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-slate-900">
+          <div className="flex h-16 w-16  items-center justify-center rounded-full bg-slate-200 text-slate-900">
             <span className="text-2xl font-semibold">{initials || "?"}</span>
           </div>
           <div className="flex-1">
@@ -164,14 +164,14 @@ export default async function ProfilePage() {
               {profile.email ?? "—"}
             </p>
           </div>
-          <Button
+          {/* <Button
             type="button"
             variant="secondary"
             className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
             disabled
           >
             Edit
-          </Button>
+          </Button> */}
         </div>
       </section>
 

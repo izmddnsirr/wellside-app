@@ -110,7 +110,7 @@ export default async function BookingPage({
 
   if (userError || !user) {
     return (
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
         <header className="space-y-2">
           <div className="space-y-1">
             <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
@@ -176,7 +176,7 @@ export default async function BookingPage({
     booking?.status === "in_progress" ? "IN PROGRESS" : "SCHEDULED";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <header className="space-y-2">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
