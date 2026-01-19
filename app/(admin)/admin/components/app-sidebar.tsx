@@ -51,14 +51,14 @@ const data = {
           icon: IconFolder,
           items: [
             {
-              title: "Active",
-              url: "/admin/bookings/active",
-              icon: IconListDetails,
-            },
-            {
               title: "Calendar",
               url: "/admin/bookings/calendar",
               icon: IconCalendarEvent,
+            },
+            {
+              title: "Active",
+              url: "/admin/bookings/active",
+              icon: IconListDetails,
             },
             {
               title: "Past",
