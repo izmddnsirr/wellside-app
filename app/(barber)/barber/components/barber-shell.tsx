@@ -1,6 +1,5 @@
-"use client";
-
 import * as React from "react";
+import { cookies } from "next/headers";
 
 import { AppSidebar } from "./app-sidebar";
 import { SiteHeader } from "./site-header";
@@ -12,35 +11,18 @@ type BarberShellProps = {
   children?: React.ReactNode;
 };
 
-const readSidebarCookie = () => {
-  if (typeof document === "undefined") {
-    return true;
-  }
-  const match = document.cookie
-    .split("; ")
-    .find((cookie) => cookie.startsWith("sidebar_state="));
-  if (!match) {
-    return true;
-  }
-  const value = match.split("=")[1];
-  return value === "true";
-};
-
-export function BarberShell({
+export async function BarberShell({
   title,
   description,
   children,
 }: BarberShellProps) {
-  const [open, setOpen] = React.useState(true);
-
-  React.useEffect(() => {
-    setOpen(readSidebarCookie());
-  }, []);
+  const cookieStore = await cookies();
+  const sidebarCookie = cookieStore.get("sidebar_state")?.value;
+  const defaultOpen = sidebarCookie ? sidebarCookie === "true" : true;
 
   return (
     <SidebarProvider
-      open={open}
-      onOpenChange={setOpen}
+      defaultOpen={defaultOpen}
       className="bg-background"
       style={
         {
