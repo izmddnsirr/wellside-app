@@ -134,16 +134,18 @@ export default async function ProfilePage() {
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-10">
       <header className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="font-semibold text-3xl text-slate-900 lg:text-4xl">
+          <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
             Profile
           </h1>
-          <p className="text-sm text-slate-500 lg:text-base">Customize your profile</p>
+          <p className="text-sm text-muted-foreground lg:text-base">
+            Customize your profile
+          </p>
         </div>
         <form action={logout}>
           <Button
             type="submit"
             variant="outline"
-            className="rounded-full border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900"
+            className="rounded-full border-border bg-background px-4 py-2 text-sm font-semibold text-foreground"
           >
             <LogOut className="h-4 w-4" />
             Log out
@@ -151,23 +153,23 @@ export default async function ProfilePage() {
         </form>
       </header>
 
-      <section className="rounded-3xl bg-slate-900 p-5 text-white">
+      <section className="rounded-3xl bg-primary p-5 text-primary-foreground">
         <div className="flex items-center gap-5">
-          <div className="flex h-16 w-16  items-center justify-center rounded-full bg-slate-200 text-slate-900">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-foreground/10 text-primary-foreground">
             <span className="text-2xl font-semibold">{initials || "?"}</span>
           </div>
           <div className="flex-1">
             <p className="text-xl font-semibold">
               {fullName || "Your Profile"}
             </p>
-            <p className="mt-1 text-base text-slate-200">
+            <p className="mt-1 text-base text-primary-foreground/70">
               {profile.email ?? "—"}
             </p>
           </div>
           {/* <Button
             type="button"
             variant="secondary"
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+            className="rounded-full bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
             disabled
           >
             Edit
@@ -177,32 +179,32 @@ export default async function ProfilePage() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold tracking-[0.25em] text-slate-500">
+          <p className="text-xs font-semibold tracking-[0.25em] text-muted-foreground">
             Booking History
           </p>
-          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground">
             {completedVisits} visits
           </span>
         </div>
 
-        <div className="rounded-3xl bg-slate-900 p-5 text-white">
+        <div className="rounded-3xl bg-primary p-5 text-primary-foreground">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xl font-semibold">Recent visits</p>
-              <p className="mt-1 text-sm text-slate-300">
+              <p className="mt-1 text-sm text-primary-foreground/70">
                 Track completed and cancelled appointments
               </p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
-              <Clock className="h-5 w-5 text-slate-200" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/10">
+              <Clock className="h-5 w-5 text-primary-foreground/70" />
             </div>
           </div>
 
           <div className="mt-5 space-y-3">
             {history.length === 0 ? (
-              <div className="rounded-2xl border border-slate-700 bg-slate-800 px-6 py-10 text-center">
-                <Calendar className="mx-auto h-8 w-8 text-slate-200" />
-                <p className="mt-3 text-sm text-slate-300">
+              <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/5 px-6 py-10 text-center">
+                <Calendar className="mx-auto h-8 w-8 text-primary-foreground/70" />
+                <p className="mt-3 text-sm text-primary-foreground/70">
                   No visits yet. Your next booking will show up here.
                 </p>
               </div>
@@ -224,7 +226,7 @@ export default async function ProfilePage() {
                 return (
                   <div
                     key={item.id}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900"
+                    className="rounded-2xl border border-border bg-background px-4 py-3 text-foreground"
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-base font-semibold">
@@ -233,22 +235,22 @@ export default async function ProfilePage() {
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
                           item.status === "cancelled"
-                            ? "bg-rose-100 text-rose-700"
-                            : "bg-emerald-100 text-emerald-700"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                         }`}
                       >
                         {item.status.toUpperCase()}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {dateLabel} · {timeLabel}
                     </p>
-                    <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                    <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
                       <span className="flex items-center gap-2">
                         <User className="h-4 w-4" />
                         {item.barberName}
                       </span>
-                      <span className="font-semibold text-slate-900">
+                      <span className="font-semibold text-foreground">
                         {item.price ? `RM${item.price}` : "RM0"}
                       </span>
                     </div>

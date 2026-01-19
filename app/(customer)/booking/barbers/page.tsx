@@ -130,23 +130,23 @@ export default async function SelectBarberPage({
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Time</span>
+                    <span className="text-muted-foreground">Time</span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Review</span>
+                    <span className="text-muted-foreground">Review</span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Confirmed</span>
+                    <span className="text-muted-foreground">Confirmed</span>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
               <div className="space-y-1">
-                <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
+                <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
                   Select barbers
                 </h1>
-                <p className="text-sm text-slate-500 lg:text-base">
+                <p className="text-sm text-muted-foreground lg:text-base">
                   Choose your preferred barber.
                 </p>
               </div>
@@ -155,12 +155,12 @@ export default async function SelectBarberPage({
             <section className="" style={{ animationDelay: "80ms" }}>
               <div className="space-y-4">
                 {barbersError ? (
-                  <p className="text-sm text-red-500">
+                  <p className="text-sm text-destructive">
                     Unable to load barbers right now.
                   </p>
                 ) : null}
                 {!barbersError && barbers.length === 0 ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     No barbers available right now.
                   </p>
                 ) : null}
@@ -179,10 +179,10 @@ export default async function SelectBarberPage({
                   const isSelected = barberId
                     ? barberId === barber.id
                     : barberName === barber.name;
-                  const cardClassName = `text-card-foreground flex flex-col gap-6 rounded-3xl border bg-white/85 transition hover:border-slate-300 focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+                  const cardClassName = `text-card-foreground flex flex-col gap-6 rounded-3xl border bg-card/85 transition hover:border-border focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
                     isSelected
-                      ? "border-slate-900 ring-1 ring-slate-900/10"
-                      : "border-slate-200/80"
+                      ? "border-primary ring-1 ring-primary/10"
+                      : "border-border/60"
                   }`;
 
                   return (
@@ -196,15 +196,15 @@ export default async function SelectBarberPage({
                           <div className="px-3 flex items-center gap-5 py-3">
                             <Badge
                               variant="secondary"
-                              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-semibold text-slate-700"
+                              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
                             >
                               {barber.initials}
                             </Badge>
                             <div className="space-y-1">
-                              <p className="text-base font-semibold text-slate-900">
+                              <p className="text-base font-semibold text-foreground">
                                 {barber.name}
                               </p>
-                              <p className="text-sm text-slate-500">
+                              <p className="text-sm text-muted-foreground">
                                 {barber.level}
                               </p>
                             </div>
@@ -220,15 +220,15 @@ export default async function SelectBarberPage({
                           <div className="px-3 flex items-center gap-5 py-3">
                             <Badge
                               variant="secondary"
-                              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-semibold text-slate-700"
+                              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
                             >
                               {barber.initials}
                             </Badge>
                             <div className="space-y-1">
-                              <p className="text-base font-semibold text-slate-900">
+                              <p className="text-base font-semibold text-foreground">
                                 {barber.name}
                               </p>
-                              <p className="text-sm text-slate-500">
+                              <p className="text-sm text-muted-foreground">
                                 {barber.level}
                               </p>
                             </div>

@@ -80,28 +80,28 @@ export function BookingSummaryCard({
   const totalLabel = resolvedTotalPrice ?? "-";
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
-      <div className="bg-slate-900 px-6 py-6">
-        <p className="text-[11px] uppercase tracking-[0.45em] text-slate-300">
+    <div className="overflow-hidden rounded-3xl border border-border/60 bg-card">
+      <div className="bg-primary px-6 py-6">
+        <p className="text-[11px] uppercase tracking-[0.45em] text-primary-foreground/70">
           Booking Details
         </p>
         <p
           className={`mt-3 text-xl font-semibold ${
-            hasDate ? "text-white" : "text-slate-400"
+            hasDate ? "text-primary-foreground" : "text-primary-foreground/60"
           }`}
         >
           {dateLabel}
         </p>
         <p
           className={`mt-1 text-sm ${
-            hasTime ? "text-slate-300" : "text-slate-500"
+            hasTime ? "text-primary-foreground/80" : "text-primary-foreground/50"
           }`}
         >
           {timeLabel}
         </p>
         <p
           className={`mt-2 text-sm ${
-            hasBarber ? "text-slate-200" : "text-slate-500"
+            hasBarber ? "text-primary-foreground/70" : "text-primary-foreground/50"
           }`}
         >
           {barberLabel}
@@ -110,21 +110,21 @@ export function BookingSummaryCard({
 
       <div className="space-y-6 px-6 py-6">
         <div className="space-y-4">
-          <p className="text-[11px] uppercase tracking-[0.45em] text-slate-400">
+          <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
             Service
           </p>
           <div className="flex items-start justify-between gap-4">
             <div>
               <p
                 className={`text-base font-semibold ${
-                  hasService ? "text-slate-900" : "text-slate-400"
+                  hasService ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
                 {resolvedServiceName ?? "-"}
               </p>
               <p
                 className={`text-sm ${
-                  hasDuration ? "text-slate-500" : "text-slate-400"
+                  hasDuration ? "text-muted-foreground" : "text-muted-foreground/70"
                 }`}
               >
                 {resolvedServiceDuration ?? "-"}
@@ -132,7 +132,7 @@ export function BookingSummaryCard({
             </div>
             <p
               className={`text-base font-semibold ${
-                hasServicePrice ? "text-slate-900" : "text-slate-400"
+                hasServicePrice ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               {resolvedServicePrice ?? "-"}
@@ -141,21 +141,21 @@ export function BookingSummaryCard({
         </div>
 
         <div className="pt-2">
-          <Separator className="mb-4 bg-slate-200" />
-          <p className="text-[11px] uppercase tracking-[0.45em] text-slate-400">
+          <Separator className="mb-4 bg-border" />
+          <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
             Summary
           </p>
-          <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+          {/* <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <span>Subtotal</span>
             <span
-              className={hasTotalPrice ? "text-slate-600" : "text-slate-400"}
+              className={hasTotalPrice ? "text-foreground" : "text-muted-foreground"}
             >
               {subtotalLabel}
             </span>
-          </div>
-          <div className="mt-4 flex items-center justify-between text-lg font-semibold text-slate-900">
+          </div> */}
+          <div className="mt-4 flex items-center justify-between text-lg font-semibold text-foreground">
             <span>Total</span>
-            <span className={hasTotalPrice ? "text-slate-900" : "text-slate-400"}>
+            <span className={hasTotalPrice ? "text-foreground" : "text-muted-foreground"}>
               {totalLabel}
             </span>
           </div>
@@ -164,13 +164,13 @@ export function BookingSummaryCard({
         {isReady ? (
           <Button
             asChild
-            className="w-full rounded-full bg-slate-900 py-6 text-base font-semibold text-white hover:bg-slate-900/90"
+            className="w-full rounded-full bg-primary py-6 text-base font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Link href={ctaHref}>{ctaLabel}</Link>
           </Button>
         ) : (
           <Button
-            className="w-full rounded-full bg-slate-900 py-6 text-base font-semibold text-white"
+            className="w-full rounded-full bg-muted py-6 text-base font-semibold text-muted-foreground"
             disabled
           >
             {ctaLabel}

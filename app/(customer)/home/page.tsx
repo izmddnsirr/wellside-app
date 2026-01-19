@@ -88,10 +88,10 @@ export default async function HomePage() {
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <header className="space-y-2">
         <div className="space-y-1">
-          <h1 className="font-semibold text-3xl text-slate-900 lg:text-4xl">
+          <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
             Hi{firstName ? `, ${firstName}` : ""}
           </h1>
-          <p className="text-sm text-slate-500 lg:text-base">
+          <p className="text-sm text-muted-foreground lg:text-base">
             Clean lines. Calm day.
           </p>
         </div>
@@ -100,21 +100,21 @@ export default async function HomePage() {
       <div className="grid gap-4">
         <div className="flex flex-col gap-6">
           <div
-            className="relative flex flex-col gap-0 overflow-hidden rounded-3xl border border-slate-200/70 bg-white"
+            className="relative flex flex-col gap-0 overflow-hidden rounded-3xl border border-border/60 bg-card"
             style={{ animationDelay: "80ms" }}
           >
-          
-            <div className="bg-slate-900 px-6 py-5 text-white">
+
+            <div className="bg-primary px-6 py-5 text-primary-foreground">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-[0.4em] text-slate-300">
+                <p className="text-[11px] uppercase tracking-[0.4em] text-primary-foreground/70">
                   Upcoming
                 </p>
                 {upcoming ? (
                   <span
                     className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
                       upcoming.status === "in_progress"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-blue-100 text-blue-700"
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                        : "bg-sky-500/15 text-sky-600 dark:text-sky-400"
                     }`}
                   >
                     {upcoming.status === "in_progress"
@@ -126,7 +126,7 @@ export default async function HomePage() {
               {upcoming ? (
                 <>
                   <p className="mt-3 text-3xl font-semibold">{bookingDay}</p>
-                  <p className="text-lg text-slate-200">
+                  <p className="text-lg text-primary-foreground/80">
                     {bookingTime} · {serviceName}
                   </p>
                 </>
@@ -135,7 +135,7 @@ export default async function HomePage() {
                   <p className="mt-3 text-2xl font-semibold">
                     No upcoming booking
                   </p>
-                  <p className="mt-2 text-base text-slate-200">
+                  <p className="mt-2 text-base text-primary-foreground/80">
                     Book a slot to see it here.
                   </p>
                 </>
@@ -145,20 +145,20 @@ export default async function HomePage() {
               <div className="px-6 py-5">
                 <div className="flex items-center justify-between gap-6">
                   <div>
-                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
                       <Scissors className="h-3.5 w-3.5" />
                       Service
                     </div>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
+                    <p className="mt-1 text-base font-semibold text-foreground">
                       {serviceName}
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center justify-end gap-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+                    <div className="flex items-center justify-end gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
                       <User className="h-3.5 w-3.5" />
                       Barber
                     </div>
-                    <p className="mt-1 text-base font-semibold text-slate-900">
+                    <p className="mt-1 text-base font-semibold text-foreground">
                       {barberName}
                     </p>
                   </div>
@@ -166,7 +166,7 @@ export default async function HomePage() {
                 <Button
                   asChild
                   size="lg"
-                  className="mt-5 w-full rounded-full border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+                  className="mt-5 w-full rounded-full border border-border bg-background text-sm font-semibold text-foreground hover:bg-muted"
                 >
                   <Link href="/booking">
                     <Calendar className="h-4 w-4" />
@@ -179,7 +179,7 @@ export default async function HomePage() {
                 <Button
                   asChild
                   size="lg"
-                  className="w-full rounded-full bg-slate-900 text-sm font-semibold text-white hover:bg-slate-900/90"
+                  className="w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
                 >
                   <Link href="/booking">
                     <CalendarCheck className="h-4 w-4" />
@@ -194,42 +194,40 @@ export default async function HomePage() {
             className="grid grid-cols-3 gap-3"
             style={{ animationDelay: "160ms" }}
           >
-            <div className="text-card-foreground flex flex-col gap-3 rounded-3xl border border-slate-200/70 bg-white px-4 py-4">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.35em] text-slate-400">
+            <div className="text-card-foreground flex flex-col gap-3 rounded-3xl border border-border/60 bg-card px-4 py-4">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 Next
               </div>
-              <div className="mt-3 text-base font-semibold leading-none text-slate-900">
+              <div className="mt-3 text-base font-semibold leading-none text-foreground">
                 {upcoming ? bookingTime : "None"}
               </div>
-              <div className="text-sm text-slate-400">
+              <div className="text-sm text-muted-foreground">
                 {upcoming ? bookingDay : "Book now"}
               </div>
             </div>
-            <div className="flex flex-col gap-3 rounded-3xl border border-slate-200/70 bg-white px-4 py-4">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.35em] text-slate-400">
+            <div className="flex flex-col gap-3 rounded-3xl border border-border/60 bg-card px-4 py-4">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
                 Total
               </div>
-              <div className="mt-3 text-base font-semibold leading-none text-slate-900">
+              <div className="mt-3 text-base font-semibold leading-none text-foreground">
                 {totalBookings ?? 0}
               </div>
-              <div className="text-sm text-slate-400">
-                Bookings
-              </div>
+              <div className="text-sm text-muted-foreground">Bookings</div>
             </div>
             <Link
               href="/ai"
-              className="flex flex-col gap-3 rounded-3xl border border-transparent bg-slate-900 px-4 py-4 text-white"
+              className="flex flex-col gap-3 rounded-3xl border border-transparent bg-primary px-4 py-4 text-primary-foreground"
             >
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.35em] text-slate-300">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.35em] text-primary-foreground/70">
                 <Sparkles className="h-3.5 w-3.5" />
                 Try AI
               </div>
-              <div className="mt-3 text-base font-semibold leading-none text-white">
+              <div className="mt-3 text-base font-semibold leading-none text-primary-foreground">
                 Suggest
               </div>
-              <div className="text-sm text-slate-300">New look</div>
+              <div className="text-sm text-primary-foreground/70">New look</div>
             </Link>
           </section>
         </div>

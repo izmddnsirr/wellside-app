@@ -422,19 +422,19 @@ export default function SelectTimeClient() {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Review</span>
+                    <span className="text-muted-foreground">Review</span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Confirmed</span>
+                    <span className="text-muted-foreground">Confirmed</span>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
               <div className="space-y-1">
-                <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
+                <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
                   Select time
                 </h1>
-                <p className="text-sm text-slate-500 lg:text-base">
+                <p className="text-sm text-muted-foreground lg:text-base">
                   Pick a slot that fits your day.
                 </p>
               </div>
@@ -448,37 +448,37 @@ export default function SelectTimeClient() {
                 <DialogTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-auto w-fit rounded-full border-slate-200/80 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-none"
+                    className="h-auto w-fit rounded-full border-border/60 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground shadow-none"
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
                       {barberInitials}
                     </span>
-                    <span className="text-slate-900">{barberLabel}</span>
-                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                    <span className="text-foreground">{barberLabel}</span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="rounded-3xl border-slate-200/80 bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[720px]">
+                <DialogContent className="rounded-3xl border-border bg-card p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[720px]">
                   <DialogHeader className="space-y-3 text-left">
-                    <DialogTitle className="text-2xl font-semibold text-slate-900">
+                    <DialogTitle className="text-2xl font-semibold text-foreground">
                       Select barber
                     </DialogTitle>
-                    <DialogDescription className="text-sm text-slate-500">
+                    <DialogDescription className="text-sm text-muted-foreground">
                       Switch to another barber for this slot.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="pt-4">
                     {isLoadingBarbers ? (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-muted-foreground">
                         Loading barbers...
                       </p>
                     ) : null}
                     {barberError ? (
-                      <p className="text-sm text-red-500">{barberError}</p>
+                      <p className="text-sm text-destructive">{barberError}</p>
                     ) : null}
                     {!isLoadingBarbers &&
                     !barberError &&
                     professionals.length === 0 ? (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-muted-foreground">
                         No barbers available right now.
                       </p>
                     ) : null}
@@ -503,19 +503,19 @@ export default function SelectTimeClient() {
                             }}
                             className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
                               isSelected
-                                ? "border-slate-900/70 bg-slate-50"
-                                : "border-slate-200/80 bg-white hover:border-slate-300"
+                                ? "border-primary/60 bg-muted"
+                                : "border-border/60 bg-background hover:border-border"
                             }`}
                           >
-                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
                               {pro.initials}
                             </span>
                             <span>
-                              <span className="block text-sm font-semibold text-slate-900">
+                              <span className="block text-sm font-semibold text-foreground">
                                 {pro.name}
                               </span>
                               {pro.level ? (
-                                <span className="block text-xs text-slate-500">
+                                <span className="block text-xs text-muted-foreground">
                                   {pro.level}
                                 </span>
                               ) : null}
@@ -529,7 +529,7 @@ export default function SelectTimeClient() {
               </Dialog>
 
               <div className="space-y-4">
-                <p className="text-lg font-semibold text-slate-900">
+                <p className="text-lg font-semibold text-foreground">
                   {monthYearLabel}
                 </p>
                 <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -552,13 +552,13 @@ export default function SelectTimeClient() {
                           }
                           className={`h-20 w-20 rounded-full text-lg font-semibold shadow-none ${
                             isSelected
-                              ? "bg-slate-900 text-white hover:bg-slate-900/90"
-                              : "border-slate-200/80 bg-white/80 text-slate-900"
+                              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                              : "border-border/60 bg-background/80 text-foreground"
                           }`}
                         >
                           {option.label}
                         </Button>
-                        <span className="text-sm text-slate-500">
+                        <span className="text-sm text-muted-foreground">
                           {option.detail}
                         </span>
                       </div>
@@ -570,23 +570,23 @@ export default function SelectTimeClient() {
 
             <section className="space-y-4" style={{ animationDelay: "160ms" }}>
               {!barberId ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Select a barber to see available slots.
                 </p>
               ) : null}
               {barberId && slotState.isLoading ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Loading available slots...
                 </p>
               ) : null}
               {barberId && slotState.error ? (
-                <p className="text-sm text-red-500">{slotState.error}</p>
+                <p className="text-sm text-destructive">{slotState.error}</p>
               ) : null}
               {barberId &&
               !slotState.isLoading &&
               !slotState.error &&
               slotState.slots.length === 0 ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   No available slots right now.
                 </p>
               ) : null}
@@ -599,8 +599,8 @@ export default function SelectTimeClient() {
                     onClick={() => handleSelectSlot(slot)}
                     className={`h-auto w-full justify-start rounded-3xl px-6 py-5 text-left text-base font-semibold shadow-none transition ${
                       isSelected
-                        ? "bg-slate-900 text-white hover:bg-slate-900/90"
-                        : "border-slate-200/80 bg-white/80 text-slate-900 hover:border-slate-300"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "border-border/60 bg-background/80 text-foreground hover:border-border"
                     }`}
                   >
                     {slot.label}

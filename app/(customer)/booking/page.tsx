@@ -113,25 +113,25 @@ export default async function BookingPage({
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
         <header className="space-y-2">
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
+            <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
               Booking
             </h1>
-            <p className="text-sm text-slate-500 lg:text-base">
+            <p className="text-sm text-muted-foreground lg:text-base">
               Choose your chair now
             </p>
           </div>
         </header>
         <section className="space-y-4" style={{ animationDelay: "80ms" }}>
-          <p className="text-[11px] uppercase tracking-[0.45em] text-slate-400">
+          <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
             Upcoming
           </p>
-          <div className=" border-slate-200 border bg-white/85">
+          <div className="border border-border/60 bg-card/85">
             <div className="p-4">
-              <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-200/80 bg-slate-50 p-8 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
+              <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border/60 bg-muted/30 p-8 text-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
                   <Calendar className="h-5 w-5" />
                 </div>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   Please sign in to view your booking.
                 </p>
               </div>
@@ -179,39 +179,39 @@ export default async function BookingPage({
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <header className="space-y-2">
         <div className="space-y-1">
-          <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
+          <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
             Booking
           </h1>
-          <p className="text-sm text-slate-500 lg:text-base">
+          <p className="text-sm text-muted-foreground lg:text-base">
             Choose your chair now
           </p>
         </div>
       </header>
       <section className="space-y-4" style={{ animationDelay: "80ms" }}>
         <div className="flex items-center justify-between">
-          <p className="text-[11px] uppercase tracking-[0.45em] text-slate-400">
+          <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
             Upcoming
           </p>
           {hasBooking ? (
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 booking?.status === "in_progress"
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-blue-100 text-blue-700"
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                  : "bg-sky-500/15 text-sky-600 dark:text-sky-400"
               }`}
             >
               {statusLabel}
             </span>
           ) : null}
         </div>
-        <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
+        <div className="overflow-hidden rounded-3xl border border-border/60 bg-card">
           {!hasBooking ? (
             <div className="p-4">
-              <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-200/80 bg-slate-50 p-8 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
+              <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border/60 bg-muted/30 p-8 text-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
                   <Calendar className="h-5 w-5" />
                 </div>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   {bookingError
                     ? "Unable to load your upcoming booking."
                     : "No upcoming bookings yet."}
@@ -220,18 +220,18 @@ export default async function BookingPage({
             </div>
           ) : (
             <>
-              <div className="bg-slate-900 px-6 py-6 text-white">
+              <div className="bg-primary px-6 py-6 text-primary-foreground">
                 <div className="flex items-start justify-between gap-6">
                   <div className="space-y-2">
-                    <p className="text-[11px] uppercase tracking-[0.3em] text-slate-300">
+                    <p className="text-[11px] uppercase tracking-[0.3em] text-primary-foreground/70">
                       {dayLabel}
                     </p>
                     <p className="text-2xl font-semibold">{timeLabel}</p>
-                    <p className="text-sm text-slate-300">
+                    <p className="text-sm text-primary-foreground/70">
                       {booking?.service?.name ?? "Service"} · {barberLabel}
                     </p>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-foreground/10">
                     <CalendarCheck className="h-5 w-5" />
                   </div>
                 </div>
@@ -239,27 +239,27 @@ export default async function BookingPage({
               <div className="space-y-6 px-6 py-6">
                 <div className="flex items-center justify-between gap-6">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-foreground">
                       <Clock className="h-4 w-4" />
                     </span>
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                         Duration
                       </p>
-                      <p className="text-base font-semibold text-slate-900">
+                      <p className="text-base font-semibold text-foreground">
                         {durationLabel}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-foreground">
                       <span className="text-xs font-semibold">RM</span>
                     </span>
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                         Total
                       </p>
-                      <p className="text-base font-semibold text-slate-900">
+                      <p className="text-base font-semibold text-foreground">
                         {priceLabel}
                       </p>
                     </div>
@@ -267,16 +267,16 @@ export default async function BookingPage({
                 </div>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button className="w-full rounded-full border border-red-200 bg-red-50 py-6 text-sm font-semibold text-red-600 hover:bg-red-100">
+                    <Button className="w-full rounded-full border border-destructive/30 bg-destructive/10 py-6 text-sm font-semibold text-destructive hover:bg-destructive/20">
                       Cancel booking
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="rounded-3xl border-slate-200/80 bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[520px]">
+                  <DialogContent className="rounded-3xl border-border bg-card p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[520px]">
                     <DialogHeader className="space-y-3 text-left">
-                      <DialogTitle className="text-2xl font-semibold text-red-600">
+                      <DialogTitle className="text-2xl font-semibold text-destructive">
                         Cancel this booking?
                       </DialogTitle>
-                      <DialogDescription className="text-sm text-slate-600">
+                      <DialogDescription className="text-sm text-muted-foreground">
                         You can cancel up to 2 hours before your appointment.
                         After that, please contact your barber.
                       </DialogDescription>
@@ -286,7 +286,7 @@ export default async function BookingPage({
                         <Button
                           type="button"
                           variant="outline"
-                          className="rounded-full border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700"
+                          className="rounded-full border-border px-6 py-3 text-sm font-semibold text-foreground"
                         >
                           Keep booking
                         </Button>
@@ -299,7 +299,7 @@ export default async function BookingPage({
                         />
                         <Button
                           type="submit"
-                          className="w-full rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                          className="w-full rounded-full bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90"
                         >
                           Yes, cancel
                         </Button>
@@ -307,7 +307,7 @@ export default async function BookingPage({
                     </div>
                   </DialogContent>
                 </Dialog>
-                <p className="text-xs text-slate-500 text-center">
+                <p className="text-xs text-muted-foreground text-center">
                   You can cancel up to 2 hours before your appointment. After
                   that, please contact your barber.
                 </p>
@@ -320,7 +320,7 @@ export default async function BookingPage({
             <Button
               asChild
               variant="outline"
-              className="w-full rounded-full border-slate-200 bg-white py-6 text-sm font-semibold text-slate-700"
+              className="w-full rounded-full border-border bg-background py-6 text-sm font-semibold text-foreground"
             >
               <a href={DEFAULT_DIRECTIONS_URL} target="_blank" rel="noreferrer">
                 <MapPin className="h-4 w-4" />
@@ -330,7 +330,7 @@ export default async function BookingPage({
             <Button
               asChild
               variant="outline"
-              className="w-full rounded-full border-slate-200 bg-white py-6 text-sm font-semibold text-slate-700"
+              className="w-full rounded-full border-border bg-background py-6 text-sm font-semibold text-foreground"
             >
               <a
                 href={`https://wa.me/${DEFAULT_WHATSAPP_PHONE.replace(
@@ -351,18 +351,18 @@ export default async function BookingPage({
       </section>
       {errorMessage ? (
         <Dialog defaultOpen>
-          <DialogContent className="rounded-3xl border-slate-200/80 bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[520px]">
+          <DialogContent className="rounded-3xl border-border bg-card p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[520px]">
             <DialogHeader className="space-y-3 text-left">
-              <DialogTitle className="text-2xl font-semibold text-red-600">
+              <DialogTitle className="text-2xl font-semibold text-destructive">
                 Unable to cancel booking
               </DialogTitle>
-              <DialogDescription className="text-sm text-slate-600">
+              <DialogDescription className="text-sm text-muted-foreground">
                 {errorMessage}
               </DialogDescription>
             </DialogHeader>
             <div className="pt-4">
               <DialogClose asChild>
-                <Button className="rounded-full bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700">
+                <Button className="rounded-full bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90">
                   Okay
                 </Button>
               </DialogClose>
@@ -372,13 +372,13 @@ export default async function BookingPage({
       ) : null}
 
       <section className="space-y-4" style={{ animationDelay: "160ms" }}>
-        <p className="text-[11px] uppercase tracking-[0.45em] text-slate-400">
+        <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
           Quick Pick
         </p>
         <Button
           asChild
           size="lg"
-          className="h-16 w-full rounded-full bg-slate-900 text-base font-semibold text-white hover:bg-slate-900/90"
+          className="h-16 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
         >
           <Link href="/booking/services">Book appointment</Link>
         </Button>

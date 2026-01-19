@@ -20,14 +20,14 @@ export function BookingActionBar({
     : "flex items-center justify-end";
 
   return (
-    <div className="sticky top-0 bg-[#f4f6fb]/90 pb-4 pt-4 backdrop-blur">
+    <div className="sticky top-0 bg-background/90 pb-4 pt-4 backdrop-blur">
       <div className={containerClass}>
         {backHref ? (
           <Button
             asChild
             variant="outline"
             size="icon"
-            className="h-11 w-11 rounded-full border-slate-200/80 bg-white/70 text-slate-700 shadow-none"
+            className="h-11 w-11 rounded-full border-border/60 bg-background/70 text-foreground shadow-none"
           >
             <Link href={backHref} aria-label={backLabel}>
               <ArrowLeft className="h-5 w-5" />
@@ -38,7 +38,7 @@ export function BookingActionBar({
           asChild
           variant="outline"
           size="icon"
-          className="h-11 w-11 rounded-full border-slate-200/80 bg-white/70 text-slate-700 shadow-none"
+          className="h-11 w-11 rounded-full border-border/60 bg-background/70 text-foreground shadow-none"
         >
           <Link href={closeHref} aria-label={closeLabel}>
             <X className="h-5 w-5" />

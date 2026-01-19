@@ -204,12 +204,12 @@ export default async function ReviewBookingPage({
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <span className="text-slate-400">Confirmed</span>
+                <span className="text-muted-foreground">Confirmed</span>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
+            <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
               Review and confirm
             </h1>
           </div>
@@ -217,46 +217,48 @@ export default async function ReviewBookingPage({
       </div>
 
       <section className="">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-3xl border border-border bg-card">
           <div className="relative">
             {/* Header */}
-            <div className="bg-slate-900 px-5 py-4 text-white">
-              <p className="text-xs font-semibold tracking-[0.2em] text-slate-300">
+            <div className="bg-primary px-5 py-4 text-primary-foreground">
+              <p className="text-xs font-semibold tracking-[0.2em] text-primary-foreground/70">
                 Booking Details
               </p>
               <p className="mt-2 text-lg font-semibold">{bookingDate}</p>
-              <p className="mt-1 text-sm text-slate-300">{bookingTime}</p>
+              <p className="mt-1 text-sm text-primary-foreground/70">
+                {bookingTime}
+              </p>
             </div>
 
             {/* Appointment */}
             <div className="px-5 py-4">
-              <p className="text-xs font-semibold tracking-[0.2em] text-slate-500">
+              <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
                 Appointment
               </p>
 
               <div className="mt-3 flex items-center">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground">
                   <Calendar className="h-4 w-4" />
                 </span>
-                <p className="ml-3 text-base font-semibold text-slate-900">
+                <p className="ml-3 text-base font-semibold text-foreground">
                   {bookingDate}
                 </p>
               </div>
 
               <div className="mt-3 flex items-center">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground">
                   <Clock className="h-4 w-4" />
                 </span>
-                <p className="ml-3 text-base font-semibold text-slate-900">
+                <p className="ml-3 text-base font-semibold text-foreground">
                   {bookingTime}
                 </p>
               </div>
 
               <div className="mt-3 flex items-center">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground">
                   <User className="h-4 w-4" />
                 </span>
-                <p className="ml-3 text-base font-semibold text-slate-900">
+                <p className="ml-3 text-base font-semibold text-foreground">
                   {barberName}
                 </p>
               </div>
@@ -264,51 +266,51 @@ export default async function ReviewBookingPage({
 
             {/* Tear line (dashed) + notches */}
             <div className="relative">
-              <div className="h-px border-t border-dashed border-slate-200" />
-              <div className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-slate-200 bg-slate-50" />
-              <div className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-slate-200 bg-slate-50" />
+              <div className="h-px border-t border-dashed border-border" />
+              <div className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-border bg-muted" />
+              <div className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-border bg-muted" />
             </div>
 
             {/* Service */}
             <div className="px-5 py-4">
-              <p className="text-xs font-semibold tracking-[0.2em] text-slate-500">
+              <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
                 Service
               </p>
 
               <div className="mt-3 flex items-start justify-between">
                 <div className="min-w-0 flex-1 pr-4">
-                  <p className="truncate text-base font-semibold text-slate-900">
+                  <p className="truncate text-base font-semibold text-foreground">
                     {serviceName}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {serviceDuration}
                   </p>
                 </div>
 
-                <p className="shrink-0 text-base font-semibold text-slate-900">
+                <p className="shrink-0 text-base font-semibold text-foreground">
                   {servicePrice}
                 </p>
               </div>
             </div>
 
-            <div className="h-px bg-slate-200" />
+            <div className="h-px bg-border" />
 
             {/* Summary */}
             <div className="px-5 py-4">
-              <p className="text-xs font-semibold tracking-[0.2em] text-slate-500">
+              <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
                 Summary
               </p>
 
               <div className="mt-3 flex items-center justify-between">
-                <p className="text-lg font-semibold text-slate-900">Total</p>
-                <p className="text-lg font-semibold text-slate-900">
+                <p className="text-lg font-semibold text-foreground">Total</p>
+                <p className="text-lg font-semibold text-foreground">
                   {totalPrice}
                 </p>
               </div>
             </div>
 
             {errorMessage ? (
-              <p className="px-5 pb-4 text-sm font-medium text-red-600">
+              <p className="px-5 pb-4 text-sm font-medium text-destructive">
                 {errorMessage}
               </p>
             ) : null}
@@ -317,18 +319,18 @@ export default async function ReviewBookingPage({
       </section>
 
       <div className="fixed bottom-4 left-1/2 z-20 w-[min(480px,calc(100%-2rem))] -translate-x-1/2 lg:bottom-6">
-        <div className="text-card-foreground flex flex-col gap-6 border rounded-3xl border-slate-200/70 bg-white/90 shadow-none backdrop-blur">
+        <div className="text-card-foreground flex flex-col gap-6 rounded-3xl border border-border/60 bg-card/90 shadow-none backdrop-blur">
           <div className="flex items-center justify-between px-5 py-4">
             <div className="space-y-1 py-2">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-foreground">
                 {totalPrice}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 1 service · {serviceDuration}
               </p>
             </div>
             <form action={createBooking}>
-              <Button className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-900/90">
+              <Button className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
                 Confirm
               </Button>
             </form>

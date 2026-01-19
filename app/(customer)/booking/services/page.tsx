@@ -112,27 +112,27 @@ export default async function SelectServicesPage({
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Barbers</span>
+                    <span className="text-muted-foreground">Barbers</span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Time</span>
+                    <span className="text-muted-foreground">Time</span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Review</span>
+                    <span className="text-muted-foreground">Review</span>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <span className="text-slate-400">Confirmed</span>
+                    <span className="text-muted-foreground">Confirmed</span>
                   </BreadcrumbItem>
                 </BreadcrumbList>
               </Breadcrumb>
               <div className="space-y-1">
-                <h1 className="text-3xl font-semibold text-slate-900 lg:text-4xl">
+                <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
                   Select Services
                 </h1>
-                <p className="text-sm text-slate-500 lg:text-base">
+                <p className="text-sm text-muted-foreground lg:text-base">
                   Choose your cut and finishing.
                 </p>
               </div>
@@ -146,7 +146,7 @@ export default async function SelectServicesPage({
                   </p>
                 ) : null}
                 {!servicesError && services.length === 0 ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     No services available right now.
                   </p>
                 ) : null}
@@ -176,25 +176,25 @@ export default async function SelectServicesPage({
                   return (
                     <div
                       key={service.id}
-                      className={`text-card-foreground flex flex-col gap-6 rounded-3xl border bg-white/80 ${
+                      className={`text-card-foreground flex flex-col gap-6 rounded-3xl border bg-card/80 ${
                         isSelected
-                          ? "border-slate-900/80 shadow-sm"
-                          : "border-slate-200/80"
+                          ? "border-primary/60 shadow-sm"
+                          : "border-border/60"
                       }`}
                     >
                       <div className="px-6 flex items-center justify-between py-6">
                         <div className="space-y-3">
-                          <p className="text-base font-semibold text-slate-900">
+                          <p className="text-base font-semibold text-foreground">
                             {service.name}
                           </p>
                           <div className="flex items-center gap-2">
                             <Badge
                               variant="secondary"
-                              className="rounded-full bg-slate-100 px-4 py-1 text-xs font-semibold text-slate-600"
+                              className="rounded-full bg-muted px-4 py-1 text-xs font-semibold text-muted-foreground"
                             >
                               {durationLabel}
                             </Badge>
-                            <Badge className="rounded-full bg-slate-900 px-4 py-1 text-xs font-semibold text-white">
+                            <Badge className="rounded-full bg-primary px-4 py-1 text-xs font-semibold text-primary-foreground">
                               {priceLabel}
                             </Badge>
                           </div>
@@ -202,7 +202,7 @@ export default async function SelectServicesPage({
                         <Button
                           asChild
                           size="icon"
-                          className="hidden h-14 w-14 rounded-full bg-slate-900 text-white hover:bg-slate-900/90 lg:inline-flex"
+                          className="hidden h-14 w-14 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 lg:inline-flex"
                         >
                           <Link
                             href={`/booking/services${selectionQuery}`}
@@ -214,7 +214,7 @@ export default async function SelectServicesPage({
                         <Button
                           asChild
                           size="icon"
-                          className="h-14 w-14 rounded-full bg-slate-900 text-white hover:bg-slate-900/90 lg:hidden"
+                          className="h-14 w-14 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 lg:hidden"
                         >
                           <Link
                             href={`/booking/barbers${selectionQuery}`}
