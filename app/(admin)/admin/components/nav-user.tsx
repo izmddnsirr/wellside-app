@@ -120,11 +120,21 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault()
+                  router.push("/admin/account")
+                }}
+              >
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault()
+                  router.push("/admin/settings")
+                }}
+              >
                 <IconSettings />
                 Settings
               </DropdownMenuItem>

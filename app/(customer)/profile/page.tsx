@@ -25,7 +25,7 @@ type HistoryItem = {
   serviceName: string;
   barberName: string;
   price: number | null;
-  status: "completed" | "cancelled";
+  status: "completed" | "cancelled" | "no_show";
 };
 
 type BookingRecord = {
@@ -33,7 +33,7 @@ type BookingRecord = {
   start_at: string;
   end_at: string;
   created_at: string;
-  status: "completed" | "cancelled";
+  status: "completed" | "cancelled" | "no_show";
   service: {
     name: string | null;
     price: number | null;
@@ -88,7 +88,7 @@ export default async function ProfilePage() {
         "id,start_at,end_at,created_at,status,service:service_id (name, price), barber:barber_id (display_name, first_name, last_name)"
       )
       .eq("customer_id", user.id)
-      .in("status", ["completed", "cancelled"])
+      .in("status", ["completed", "cancelled", "no_show"])
       .order("created_at", { ascending: false })
       .returns<BookingRecord[]>(),
   ]);
@@ -179,7 +179,7 @@ export default async function ProfilePage() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold tracking-[0.25em] text-muted-foreground">
+          <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
             Booking History
           </p>
           <span className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground">
@@ -236,6 +236,8 @@ export default async function ProfilePage() {
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
                           item.status === "cancelled"
                             ? "bg-destructive/10 text-destructive"
+                            : item.status === "no_show"
+                            ? "bg-purple-500/15 text-purple-600 dark:text-purple-400"
                             : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                         }`}
                       >

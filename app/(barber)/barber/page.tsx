@@ -111,11 +111,13 @@ export default async function Page() {
   const todaysBookings = (todaysBookingsData ?? []) as BookingRow[];
   const upcomingBookings = todaysBookings.filter(
     (booking) =>
-      booking.status !== "completed" && booking.status !== "cancelled"
+      booking.status !== "completed" &&
+      booking.status !== "cancelled" &&
+      booking.status !== "no_show"
   );
   const totalBookingsToday = todaysBookings.length;
   const projectedEarnings = todaysBookings.reduce((total, booking) => {
-    if (booking.status === "cancelled") {
+    if (booking.status === "cancelled" || booking.status === "no_show") {
       return total;
     }
     const service = resolveSingle(booking.service);

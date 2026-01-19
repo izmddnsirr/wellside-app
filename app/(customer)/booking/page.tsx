@@ -122,7 +122,7 @@ export default async function BookingPage({
           </div>
         </header>
         <section className="space-y-4" style={{ animationDelay: "80ms" }}>
-          <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
             Upcoming
           </p>
           <div className="border border-border/60 bg-card/85">
@@ -189,7 +189,7 @@ export default async function BookingPage({
       </header>
       <section className="space-y-4" style={{ animationDelay: "80ms" }}>
         <div className="flex items-center justify-between">
-          <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
+          <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
             Upcoming
           </p>
           {hasBooking ? (
@@ -223,7 +223,7 @@ export default async function BookingPage({
               <div className="bg-primary px-6 py-6 text-primary-foreground">
                 <div className="flex items-start justify-between gap-6">
                   <div className="space-y-2">
-                    <p className="text-[11px] uppercase tracking-[0.3em] text-primary-foreground/70">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-primary-foreground/70">
                       {dayLabel}
                     </p>
                     <p className="text-2xl font-semibold">{timeLabel}</p>
@@ -372,7 +372,7 @@ export default async function BookingPage({
       ) : null}
 
       <section className="space-y-4" style={{ animationDelay: "160ms" }}>
-        <p className="text-[11px] uppercase tracking-[0.45em] text-muted-foreground">
+        <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
           Quick Pick
         </p>
         <Button

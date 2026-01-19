@@ -157,6 +157,8 @@ const getStatusTone = (status: string | null) => {
       return { badge: "bg-amber-100 text-amber-900 border-amber-200", dot: "bg-amber-500" };
     case "completed":
       return { badge: "bg-emerald-100 text-emerald-900 border-emerald-200", dot: "bg-emerald-500" };
+    case "no_show":
+      return { badge: "bg-purple-100 text-purple-900 border-purple-200", dot: "bg-purple-500" };
     case "cancelled":
       return { badge: "bg-rose-100 text-rose-900 border-rose-200", dot: "bg-rose-500" };
     default:
@@ -172,6 +174,8 @@ const statusSelectClass = (status: string | null) => {
       return "border-amber-200 bg-amber-50 text-amber-900";
     case "completed":
       return "border-emerald-200 bg-emerald-50 text-emerald-900";
+    case "no_show":
+      return "border-purple-200 bg-purple-50 text-purple-900";
     case "cancelled":
       return "border-rose-200 bg-rose-50 text-rose-900";
     default:
@@ -582,10 +586,16 @@ export function BookingsCard({
   }, [filteredBookings, sort]);
 
   const upcomingBookings = sortedBookings.filter(
-    (booking) => booking.status !== "completed" && booking.status !== "cancelled"
+    (booking) =>
+      booking.status !== "completed" &&
+      booking.status !== "cancelled" &&
+      booking.status !== "no_show"
   );
   const pastBookings = sortedBookings.filter(
-    (booking) => booking.status === "completed" || booking.status === "cancelled"
+    (booking) =>
+      booking.status === "completed" ||
+      booking.status === "cancelled" ||
+      booking.status === "no_show"
   );
   const hasActiveFilters =
     Boolean(searchInput) ||

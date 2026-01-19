@@ -1,4 +1,5 @@
 import * as React from "react";
+import { cookies } from "next/headers";
 
 import { AppSidebar } from "./app-sidebar";
 import { SiteHeader } from "./site-header";
@@ -10,13 +11,18 @@ type BarberShellProps = {
   children?: React.ReactNode;
 };
 
-export function BarberShell({
+export async function BarberShell({
   title,
   description,
   children,
 }: BarberShellProps) {
+  const cookieStore = await cookies();
+  const sidebarCookie = cookieStore.get?.("sidebar_state")?.value;
+  const defaultOpen = sidebarCookie ? sidebarCookie === "true" : true;
+
   return (
     <SidebarProvider
+      defaultOpen={defaultOpen}
       className="bg-background"
       style={
         {
