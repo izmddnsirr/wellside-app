@@ -89,7 +89,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                       <img
                         src="/wellside-logo.png"
                         alt="Wellside"
-                        className="h-14 w-auto"
+                        className="h-14 w-auto dark:invert"
                       />
                       <h1 className="text-2xl font-bold">
                         Login to your account

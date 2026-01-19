@@ -53,7 +53,7 @@ export function StepOneForm() {
           <img
             src="/wellside-logo.png"
             alt="Wellside"
-            className="h-14 w-auto"
+            className="h-14 w-auto dark:invert"
           />
           <h1 className="text-2xl font-bold">Create your account</h1>
           <p className="text-muted-foreground text-sm text-balance">
