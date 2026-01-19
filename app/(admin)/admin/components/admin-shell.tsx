@@ -1,5 +1,6 @@
+"use client";
+
 import * as React from "react";
-import { cookies } from "next/headers";
 
 import { AppSidebar } from "./app-sidebar";
 import { SiteHeader } from "./site-header";
@@ -11,18 +12,31 @@ type AdminShellProps = {
   children?: React.ReactNode;
 };
 
-export async function AdminShell({
-  title,
-  description,
-  children,
-}: AdminShellProps) {
-  const cookieStore = await cookies();
-  const sidebarCookie = cookieStore.get?.("sidebar_state")?.value;
-  const defaultOpen = sidebarCookie ? sidebarCookie === "true" : true;
+const readSidebarCookie = () => {
+  if (typeof document === "undefined") {
+    return true;
+  }
+  const match = document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith("sidebar_state="));
+  if (!match) {
+    return true;
+  }
+  const value = match.split("=")[1];
+  return value === "true";
+};
+
+export function AdminShell({ title, description, children }: AdminShellProps) {
+  const [open, setOpen] = React.useState(true);
+
+  React.useEffect(() => {
+    setOpen(readSidebarCookie());
+  }, []);
 
   return (
     <SidebarProvider
-      defaultOpen={defaultOpen}
+      open={open}
+      onOpenChange={setOpen}
       className="bg-background"
       style={
         {
