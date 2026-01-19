@@ -67,7 +67,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return requireAuthRedirect(request);
   }
 
-  if (pathname.startsWith("/home") && profile.role !== "customer") {
+  if (
+    pathname.startsWith("/home") &&
+    !["customer", "admin", "barber"].includes(profile.role)
+  ) {
     return requireAuthRedirect(request);
   }
 

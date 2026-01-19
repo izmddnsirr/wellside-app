@@ -1,6 +1,4 @@
 "use client";
-
-import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingProvider, useOnboarding } from "./onboarding-context";
 import { StepOneForm } from "./step-one-form";
 import { StepTwoForm } from "./step-two-form";
@@ -11,13 +9,9 @@ function RegisterCard() {
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex flex-1 items-start justify-center pt-6 md:pt-10">
+        <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
-            <Card className="border-0 shadow-none">
-              <CardContent className="p-0">
-                {step === 1 ? <StepOneForm /> : <StepTwoForm />}
-              </CardContent>
-            </Card>
+            {step === 1 ? <StepOneForm /> : <StepTwoForm />}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Instrument_Sans, Space_Grotesk } from "next/font/google";
+import { HomeAvailability } from "@/components/customer/home-availability";
 import { createClient } from "@/utils/supabase/server";
 
 const display = Space_Grotesk({
@@ -62,7 +63,10 @@ const formatServiceDuration = (value: number | null) => {
   return `${value} min`;
 };
 
-const openings = ["11:15 AM", "12:00 PM", "2:30 PM", "4:00 PM", "6:15 PM"];
+type BarberOption = {
+  id: string;
+  name: string;
+};
 
 export default async function CustomerHome() {
   const supabase = await createClient();
@@ -70,26 +74,39 @@ export default async function CustomerHome() {
     .from("services")
     .select("id, name, price, duration_minutes")
     .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(4);
+    .order("created_at", { ascending: false });
   const services = servicesData ?? [];
+  const { data: barbersData } = await supabase
+    .from("profiles")
+    .select("id, first_name, last_name, display_name")
+    .eq("is_active", true)
+    .eq("role", "barber")
+    .order("display_name");
+  const barbers: BarberOption[] = (barbersData ?? []).map((barber) => {
+    const name =
+      barber.display_name?.trim() ||
+      [barber.first_name, barber.last_name].filter(Boolean).join(" ").trim() ||
+      "Barber";
+
+    return {
+      id: barber.id,
+      name,
+    };
+  });
 
   return (
     <div
       className={`${display.variable} ${body.variable} min-h-screen bg-background font-(--font-body) text-foreground`}
     >
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-primary/20 opacity-70 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-0 h-[360px] w-[360px] translate-x-1/3 -translate-y-1/4 rounded-full bg-secondary/30 opacity-80 blur-3xl" />
-
-        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 pt-8">
+      <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/70 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
           <div className="flex items-center">
             <Image
               src="/wellside-logo.png"
               alt="Wellside+"
               width={180}
               height={44}
-              className="h-10 w-auto dark:hidden"
+              className="h-8 w-auto dark:hidden sm:h-10"
               priority
             />
             <Image
@@ -97,22 +114,24 @@ export default async function CustomerHome() {
               alt="Wellside+"
               width={180}
               height={44}
-              className="hidden h-10 w-auto dark:block"
+              className="hidden h-8 w-auto dark:block sm:h-10"
               priority
             />
           </div>
           <div className="flex items-center gap-3 text-sm">
-            <span className="rounded-full border border-border/60 bg-background/60 px-4 py-2">
-              Skudai, Johor
-            </span>
             <Link
               href="/login"
               className="rounded-full bg-primary px-4 py-2 text-primary-foreground"
             >
-              My bookings
+              Login
             </Link>
           </div>
-        </header>
+        </div>
+      </header>
+
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-primary/20 opacity-70 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-0 h-[360px] w-[360px] translate-x-1/3 -translate-y-1/4 rounded-full bg-secondary/30 opacity-80 blur-3xl" />
 
         <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-6 pb-16 pt-12 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="flex flex-col gap-6">
@@ -124,71 +143,46 @@ export default async function CustomerHome() {
             </h1>
             <p className="max-w-xl text-base text-muted-foreground sm:text-lg">
               Wellside+ matches you with vetted barbers and real-time openings.
-              Pick a vibe, lock a slot, and walk out ready for the day.
+              Pick a flow, lock a slot, and walk out ready for the day.
             </p>
             <div className="grid gap-3 rounded-2xl border border-border/60 bg-card/80 p-4 shadow-lg sm:grid-cols-[1fr_auto]">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm">
                   <span className="text-muted-foreground">Location</span>
-                  <span className="font-medium">Bukit Bintang</span>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm">
-                  <span className="text-muted-foreground">Service</span>
-                  <span className="font-medium">Haircut + Beard</span>
+                  <span className="font-medium">
+                    Taman Teratai, Skudai, Johor
+                  </span>
                 </div>
               </div>
-              <button className="rounded-2xl bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground">
+              <Link
+                href="/login"
+                className="rounded-2xl bg-primary px-6 py-4 text-center text-sm font-semibold text-primary-foreground"
+              >
                 Find a slot
-              </button>
+              </Link>
             </div>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <div className="rounded-full border border-border/60 bg-background/70 px-4 py-2">
-                120+ vetted barbers
-              </div>
-              <div className="rounded-full border border-border/60 bg-background/70 px-4 py-2">
-                Live availability
-              </div>
-              <div className="rounded-full border border-border/60 bg-background/70 px-4 py-2">
-                Cashless checkout
-              </div>
+              {services.length ? (
+                services.map((service: Service) => (
+                  <div
+                    key={service.id}
+                    className="rounded-full border border-border/60 bg-background/70 px-4 py-2"
+                  >
+                    {service.name}
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-full border border-dashed border-border bg-background/70 px-4 py-2">
+                  No services available yet.
+                </div>
+              )}
             </div>
           </div>
 
           <div className="relative">
             <div className="absolute inset-0 -rotate-2 rounded-3xl bg-muted opacity-90" />
             <div className="relative grid gap-6 rounded-3xl bg-card p-6 text-foreground shadow-xl">
-              <div className="flex items-center justify-between">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  Today
-                </p>
-                <span className="rounded-full border border-border px-3 py-1 text-xs">
-                  5 slots left
-                </span>
-              </div>
-              <div className="space-y-4">
-                <h2 className="font-(--font-display) text-2xl">
-                  Openings near you
-                </h2>
-                <div className="grid gap-3">
-                  {openings.map((time) => (
-                    <button
-                      key={time}
-                      className="flex items-center justify-between rounded-2xl border border-border bg-muted/60 px-4 py-3 text-sm"
-                    >
-                      <span>{time}</span>
-                      <span className="text-muted-foreground">Book now</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-secondary px-4 py-4 text-secondary-foreground">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  Member perk
-                </p>
-                <p className="mt-2 text-sm font-medium">
-                  Save 15% on your first appointment this week.
-                </p>
-              </div>
+              <HomeAvailability barbers={barbers} />
             </div>
           </div>
         </section>
@@ -301,7 +295,7 @@ export default async function CustomerHome() {
             </h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               {[
-                "Pick a barber and vibe",
+                "Pick a barber and flow",
                 "Lock a time that works",
                 "Pay once, relax later",
               ].map((step, index) => (

@@ -47,7 +47,7 @@ export function StepOneForm() {
   };
 
   return (
-    <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+    <form className="flex w-full flex-col gap-6" onSubmit={handleSubmit}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
           <img
