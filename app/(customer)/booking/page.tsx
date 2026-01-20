@@ -29,7 +29,7 @@ type BookingRecord = {
   status: string;
   service: {
     name: string | null;
-    price: number | null;
+    base_price: number | null;
     duration_minutes: number | null;
   } | null;
   barber: {
