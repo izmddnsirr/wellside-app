@@ -68,8 +68,8 @@ type TicketItemRow = {
   qty: number | null;
   unit_price?: number | null;
   services:
-    | { name: string | null; price: number | null }
-    | { name: string | null; price: number | null }[]
+    | { name: string | null; base_price: number | null }
+    | { name: string | null; base_price: number | null }[]
     | null;
 };
 
