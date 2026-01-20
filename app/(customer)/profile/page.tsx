@@ -36,7 +36,7 @@ type BookingRecord = {
   status: "completed" | "cancelled" | "no_show";
   service: {
     name: string | null;
-    price: number | null;
+    base_price: number | null;
   } | null;
   barber: {
     display_name: string | null;
@@ -57,6 +57,16 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
 });
+
+const formatCurrency = (value: number | null) => {
+  if (value === null || Number.isNaN(value)) {
+    return "RM0.00";
+  }
+  return `RM${new Intl.NumberFormat("en-MY", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)}`;
+};
 
 const logout = async () => {
   "use server";
@@ -85,7 +95,7 @@ export default async function ProfilePage() {
     supabase
       .from("bookings")
       .select(
-        "id,start_at,end_at,created_at,status,service:service_id (name, price), barber:barber_id (display_name, first_name, last_name)"
+        "id,start_at,end_at,created_at,status,service:service_id (name, base_price), barber:barber_id (display_name, first_name, last_name)"
       )
       .eq("customer_id", user.id)
       .in("status", ["completed", "cancelled", "no_show"])
@@ -116,7 +126,7 @@ export default async function ProfilePage() {
       createdAt: booking.created_at,
       serviceName: booking.service?.name ?? "Service",
       barberName,
-      price: booking.service?.price ?? null,
+      price: booking.service?.base_price ?? null,
       status: booking.status,
     };
   });
@@ -253,7 +263,7 @@ export default async function ProfilePage() {
                         {item.barberName}
                       </span>
                       <span className="font-semibold text-foreground">
-                        {item.price ? `RM${item.price}` : "RM0"}
+                        {formatCurrency(item.price)}
                       </span>
                     </div>
                   </div>

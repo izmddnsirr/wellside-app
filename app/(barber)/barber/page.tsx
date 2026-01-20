@@ -67,7 +67,7 @@ type BookingCustomer = {
 
 type BookingService = {
   name: string | null;
-  price: number | null;
+  base_price: number | null;
 };
 
 type BookingRelation<T> = T | T[] | null;
@@ -100,7 +100,7 @@ export default async function Page() {
           status,
           start_at,
           customer:customer_id (first_name, last_name),
-          service:service_id (name, price)
+          service:service_id (name, base_price)
         `
         )
         .eq("booking_date", todayDate)
@@ -121,7 +121,7 @@ export default async function Page() {
       return total;
     }
     const service = resolveSingle(booking.service);
-    return total + (service?.price ?? 0);
+    return total + Number(service?.base_price ?? 0);
   }, 0);
 
   return (

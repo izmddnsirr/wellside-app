@@ -593,7 +593,7 @@ export function ShiftsTable({
       </div>
       {filteredShifts.length === 0 ? (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
             <Clock className="size-8 text-muted-foreground" />
           </div>
           <div>

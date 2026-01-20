@@ -8,12 +8,14 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 type AdminShellProps = {
   title?: string;
   description?: string;
+  headerMeta?: React.ReactNode;
   children?: React.ReactNode;
 };
 
 export async function AdminShell({
   title,
   description,
+  headerMeta,
   children,
 }: AdminShellProps) {
   const cookieStore = await cookies();
@@ -33,24 +35,10 @@ export async function AdminShell({
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader title={title} meta={headerMeta} />
         <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="@container/main flex flex-1 flex-col gap-2 [&_[data-slot=card]]:shadow-none">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              {title || description ? (
-                <div className="px-4 lg:px-6">
-                  <div className="flex flex-col gap-1">
-                    {title ? (
-                      <h2 className="text-xl font-semibold">{title}</h2>
-                    ) : null}
-                    {description ? (
-                      <p className="text-sm text-muted-foreground">
-                        {description}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
               {children}
             </div>
           </div>

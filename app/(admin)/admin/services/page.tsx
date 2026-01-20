@@ -10,17 +10,23 @@ const createService = async (formData: FormData) => {
   "use server";
   const supabase = await createAdminClient();
   const name = String(formData.get("name") ?? "").trim();
-  const price = Number(formData.get("price"));
+  const basePriceRaw = String(formData.get("base_price") ?? "").trim();
+  const basePrice = basePriceRaw === "" ? null : Number(basePriceRaw);
   const duration = Number(formData.get("duration_minutes"));
   const isActive = formData.get("is_active") === "on";
 
-  if (!name || Number.isNaN(price) || Number.isNaN(duration)) {
+  if (
+    !name ||
+    Number.isNaN(duration) ||
+    (basePriceRaw !== "" && Number.isNaN(basePrice)) ||
+    (basePrice !== null && basePrice <= 0)
+  ) {
     return;
   }
 
   const { error } = await supabase.from("services").insert({
     name,
-    price,
+    base_price: basePrice,
     duration_minutes: duration,
     is_active: isActive,
   });
@@ -39,11 +45,18 @@ const updateService = async (formData: FormData) => {
   const supabase = await createAdminClient();
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
-  const price = Number(formData.get("price"));
+  const basePriceRaw = String(formData.get("base_price") ?? "").trim();
+  const basePrice = basePriceRaw === "" ? null : Number(basePriceRaw);
   const duration = Number(formData.get("duration_minutes"));
   const isActive = formData.get("is_active") === "on";
 
-  if (!id || !name || Number.isNaN(price) || Number.isNaN(duration)) {
+  if (
+    !id ||
+    !name ||
+    Number.isNaN(duration) ||
+    (basePriceRaw !== "" && Number.isNaN(basePrice)) ||
+    (basePrice !== null && basePrice <= 0)
+  ) {
     return;
   }
 
@@ -51,7 +64,7 @@ const updateService = async (formData: FormData) => {
     .from("services")
     .update({
       name,
-      price,
+      base_price: basePrice,
       duration_minutes: duration,
       is_active: isActive,
     })
@@ -113,7 +126,7 @@ export default async function Page() {
   const { data: services, error } = await supabase
     .from("services")
     .select(
-      "id, name, service_code, price, duration_minutes, is_active, created_at"
+      "id, name, service_code, base_price, duration_minutes, is_active, created_at"
     )
     .order("created_at", { ascending: false });
   const errorMessage = error

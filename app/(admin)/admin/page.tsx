@@ -191,7 +191,7 @@ export default async function Page() {
         ticket_items (
           qty,
           unit_price,
-          services:service_id (name, price)
+          services:service_id (name, base_price)
         )
       `
     )
@@ -324,7 +324,7 @@ export default async function Page() {
       const price =
         typeof item.unit_price === "number"
           ? item.unit_price
-          : service?.price ?? 0;
+          : Number(service?.base_price ?? 0);
       const current = serviceMap.get(name) ?? {
         ticketIds: new Set<string>(),
         revenue: 0,

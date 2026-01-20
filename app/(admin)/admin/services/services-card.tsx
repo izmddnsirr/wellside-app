@@ -48,7 +48,7 @@ type Service = {
   id: string;
   name: string;
   service_code: string | null;
-  price: number | null;
+  base_price: number | null;
   duration_minutes: number | null;
   is_active: boolean;
 };
@@ -69,7 +69,7 @@ const priceFormatter = new Intl.NumberFormat("en-MY", {
 
 const formatPrice = (value: number | null) => {
   if (value === null || Number.isNaN(value)) {
-    return "-";
+    return "Custom price";
   }
   return `RM ${priceFormatter.format(value)}`;
 };
@@ -122,16 +122,15 @@ const ServiceFormFields = ({ service }: { service?: Service | null }) => (
     </div>
     <div className="space-y-2">
       <Label htmlFor={service ? `price-${service.id}` : "service-price"}>
-        Price (RM)
+        Base price (RM)
       </Label>
       <Input
         id={service ? `price-${service.id}` : "service-price"}
-        name="price"
+        name="base_price"
         type="number"
-        min="0"
+        min="0.01"
         step="0.01"
-        defaultValue={service?.price ?? ""}
-        required
+        defaultValue={service?.base_price ?? ""}
       />
     </div>
   </>
@@ -222,8 +221,8 @@ export function ServicesCard({
       const nameB = b.name.toLowerCase();
       const codeA = (a.service_code ?? "").toLowerCase();
       const codeB = (b.service_code ?? "").toLowerCase();
-      const priceA = a.price ?? 0;
-      const priceB = b.price ?? 0;
+      const priceA = a.base_price ?? 0;
+      const priceB = b.base_price ?? 0;
       const durationA = a.duration_minutes ?? 0;
       const durationB = b.duration_minutes ?? 0;
       if (sort === "code_asc") {
@@ -398,7 +397,7 @@ export function ServicesCard({
                       {formatDuration(service.duration_minutes)}
                     </TableCell>
                     <TableCell className="w-[16%] px-4 py-3 text-foreground">
-                      {formatPrice(service.price)}
+                      {formatPrice(service.base_price)}
                     </TableCell>
                     <TableCell className="w-[12%] px-4 py-3">
                       <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
@@ -512,7 +511,7 @@ export function ServicesCard({
         </div>
       ) : (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
             <Scissors className="size-8 text-muted-foreground" />
           </div>
           <div>

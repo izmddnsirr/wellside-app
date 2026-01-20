@@ -350,7 +350,7 @@ export function CustomersCard({
         </div>
       ) : (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
-          <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background shadow-sm">
+          <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background">
             <UserX className="size-8 text-muted-foreground" />
           </div>
           <div>

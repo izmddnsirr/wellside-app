@@ -43,7 +43,7 @@ const featuredBarbers = [
 type Service = {
   id: string;
   name: string;
-  price: number | null;
+  base_price: number | null;
   duration_minutes: number | null;
 };
 
@@ -52,7 +52,8 @@ const formatServicePrice = (value: number | null) => {
     return "-";
   }
   return `RM${new Intl.NumberFormat("en-MY", {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)}`;
 };
 
@@ -72,7 +73,7 @@ export default async function CustomerHome() {
   const supabase = await createClient();
   const { data: servicesData } = await supabase
     .from("services")
-    .select("id, name, price, duration_minutes")
+    .select("id, name, base_price, duration_minutes")
     .eq("is_active", true)
     .order("created_at", { ascending: false });
   const services = servicesData ?? [];
@@ -271,7 +272,7 @@ export default async function CustomerHome() {
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-foreground">
-                    {formatServicePrice(service.price)}
+                    {formatServicePrice(service.base_price)}
                   </span>
                 </div>
               ))

@@ -21,8 +21,8 @@ export default async function Page() {
       ticket_items (
         qty,
         unit_price,
-        services:service_id (name, price),
-        products:product_id (name, price)
+        services:service_id (name, base_price),
+        products:product_id (name, base_price)
       )
     `
     )

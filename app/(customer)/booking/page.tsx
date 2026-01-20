@@ -55,10 +55,11 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
 
 const formatCurrency = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return "RM0";
+    return "RM0.00";
   }
   return `RM${new Intl.NumberFormat("en-MY", {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)}`;
 };
 
@@ -145,7 +146,7 @@ export default async function BookingPage({
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
     .select(
-      "id, start_at, end_at, status, service:service_id (name, price, duration_minutes), barber:barber_id (display_name, first_name, last_name, phone)"
+      "id, start_at, end_at, status, service:service_id (name, base_price, duration_minutes), barber:barber_id (display_name, first_name, last_name, phone)"
     )
     .eq("customer_id", user.id)
     .in("status", ["scheduled", "in_progress"])
@@ -171,7 +172,7 @@ export default async function BookingPage({
   const durationLabel = booking?.service?.duration_minutes
     ? `${booking.service.duration_minutes} min`
     : "N/A";
-  const priceLabel = formatCurrency(booking?.service?.price);
+  const priceLabel = formatCurrency(booking?.service?.base_price);
   const statusLabel =
     booking?.status === "in_progress" ? "IN PROGRESS" : "SCHEDULED";
 

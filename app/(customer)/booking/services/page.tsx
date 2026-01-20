@@ -18,7 +18,7 @@ type ServiceRow = {
   id: string;
   service_code: string | null;
   name: string;
-  price: number | null;
+  base_price: number | null;
   duration_minutes: number | null;
   is_active: boolean;
 };
@@ -28,7 +28,8 @@ const formatServicePrice = (value: number | null) => {
     return undefined;
   }
   return `MYR ${new Intl.NumberFormat("en-MY", {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)}`;
 };
 
@@ -73,7 +74,7 @@ export default async function SelectServicesPage({
   const supabase = await createClient();
   const { data: servicesData, error: servicesError } = await supabase
     .from("services")
-    .select("id, service_code, name, price, duration_minutes, is_active")
+    .select("id, service_code, name, base_price, duration_minutes, is_active")
     .eq("is_active", true)
     .order("service_code", { ascending: true })
     .order("name", { ascending: true });
@@ -154,7 +155,7 @@ export default async function SelectServicesPage({
                   const durationValue = formatServiceDuration(
                     service.duration_minutes
                   );
-                  const priceValue = formatServicePrice(service.price);
+                  const priceValue = formatServicePrice(service.base_price);
                   const durationLabel = durationValue ?? "-";
                   const priceLabel = priceValue ?? "-";
                   const isSelected =

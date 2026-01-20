@@ -74,7 +74,7 @@ export default async function Page() {
         booking_date,
         customer:customer_id (first_name, last_name, email, phone),
         barber:barber_id (first_name, last_name),
-        service:service_id (name, duration_minutes, price)
+        service:service_id (name, duration_minutes, base_price)
       `
         )
         .eq("barber_id", user.id)

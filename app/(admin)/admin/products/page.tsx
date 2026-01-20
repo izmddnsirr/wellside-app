@@ -10,18 +10,24 @@ const createProduct = async (formData: FormData) => {
   "use server";
   const supabase = await createAdminClient();
   const name = String(formData.get("name") ?? "").trim();
-  const price = Number(formData.get("price"));
+  const basePriceRaw = String(formData.get("base_price") ?? "").trim();
+  const basePrice = basePriceRaw === "" ? null : Number(basePriceRaw);
   const stockQty = Number(formData.get("stock_qty"));
   const isActive = formData.get("is_active") === "on";
   const description = String(formData.get("description") ?? "").trim();
 
-  if (!name || Number.isNaN(price) || Number.isNaN(stockQty)) {
+  if (
+    !name ||
+    Number.isNaN(stockQty) ||
+    (basePriceRaw !== "" && Number.isNaN(basePrice)) ||
+    (basePrice !== null && basePrice <= 0)
+  ) {
     return;
   }
 
   const { error } = await supabase.from("products").insert({
     name,
-    price,
+    base_price: basePrice,
     stock_qty: stockQty,
     is_active: isActive,
     description: description.length ? description : null,
@@ -41,12 +47,19 @@ const updateProduct = async (formData: FormData) => {
   const supabase = await createAdminClient();
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
-  const price = Number(formData.get("price"));
+  const basePriceRaw = String(formData.get("base_price") ?? "").trim();
+  const basePrice = basePriceRaw === "" ? null : Number(basePriceRaw);
   const stockQty = Number(formData.get("stock_qty"));
   const isActive = formData.get("is_active") === "on";
   const description = String(formData.get("description") ?? "").trim();
 
-  if (!id || !name || Number.isNaN(price) || Number.isNaN(stockQty)) {
+  if (
+    !id ||
+    !name ||
+    Number.isNaN(stockQty) ||
+    (basePriceRaw !== "" && Number.isNaN(basePrice)) ||
+    (basePrice !== null && basePrice <= 0)
+  ) {
     return;
   }
 
@@ -54,7 +67,7 @@ const updateProduct = async (formData: FormData) => {
     .from("products")
     .update({
       name,
-      price,
+      base_price: basePrice,
       stock_qty: stockQty,
       is_active: isActive,
       description: description.length ? description : null,
@@ -117,7 +130,7 @@ export default async function Page() {
   const { data: products, error } = await supabase
     .from("products")
     .select(
-      "id, name, sku, description, price, stock_qty, is_active, created_at"
+      "id, name, sku, description, base_price, stock_qty, is_active, created_at"
     )
     .order("created_at", { ascending: false });
   const errorMessage = error

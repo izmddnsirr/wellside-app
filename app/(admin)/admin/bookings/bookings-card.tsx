@@ -67,7 +67,7 @@ export type BookingRow = {
   service: {
     name: string | null;
     duration_minutes: number | null;
-    price: number | null;
+    base_price: number | null;
   } | null;
 };
 
@@ -921,7 +921,7 @@ export function BookingsCard({
                     <div
                       key={event.id}
                       style={{ gridRow: `${event.start} / ${event.end}` }}
-                      className={`flex flex-col justify-between rounded-xl border px-3 py-2 text-xs shadow-sm ${event.tone}`}
+                      className={`flex flex-col justify-between rounded-xl border px-3 py-2 text-xs ${event.tone}`}
                     >
                       <span className="text-[11px] font-semibold">
                         {event.time}
@@ -946,7 +946,7 @@ export function BookingsCard({
   const activeList =
     upcomingBookings.length === 0 ? (
       <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-        <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+        <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
           <CalendarClock className="size-8 text-muted-foreground" />
         </div>
         <div>
@@ -1015,7 +1015,7 @@ export function BookingsCard({
                       {booking.service?.duration_minutes
                         ? `${booking.service.duration_minutes} min`
                         : "Duration not set"}{" "}
-                      · {formatMoney(booking.service?.price ?? null)}
+                      · {formatMoney(booking.service?.base_price ?? null)}
                     </div>
                   </TableCell>
                   <TableCell className="w-[14%] px-4 py-3 text-foreground">
@@ -1101,7 +1101,7 @@ export function BookingsCard({
                                 {booking.service?.duration_minutes
                                   ? `${booking.service.duration_minutes} min`
                                   : "Duration not set"}{" "}
-                                · {formatMoney(booking.service?.price ?? null)}
+                                · {formatMoney(booking.service?.base_price ?? null)}
                               </p>
                             </div>
                             <div className="space-y-1">
@@ -1208,7 +1208,7 @@ export function BookingsCard({
   const pastList =
     pastBookings.length === 0 ? (
       <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-        <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+        <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
           <History className="size-8 text-muted-foreground" />
         </div>
         <div>
@@ -1277,7 +1277,7 @@ export function BookingsCard({
                       {booking.service?.duration_minutes
                         ? `${booking.service.duration_minutes} min`
                         : "Duration not set"}{" "}
-                      · {formatMoney(booking.service?.price ?? null)}
+                      · {formatMoney(booking.service?.base_price ?? null)}
                     </div>
                   </TableCell>
                   <TableCell className="w-[14%] px-4 py-3 text-foreground">

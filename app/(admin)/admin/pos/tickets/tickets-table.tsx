@@ -49,8 +49,8 @@ import { deleteTicket } from "./actions";
 type TicketItem = {
   qty: number | null;
   unit_price?: number | null;
-  services: { name: string | null; price: number | null } | null;
-  products: { name: string | null; price: number | null } | null;
+  services: { name: string | null; base_price: number | null } | null;
+  products: { name: string | null; base_price: number | null } | null;
 };
 
 export type TicketRow = {
@@ -607,7 +607,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
       ) : null}
       {filteredTickets.length === 0 ? (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
             <Ticket className="size-8 text-muted-foreground" />
           </div>
           <div>
@@ -750,7 +750,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                               </div>
                             </SheetHeader>
                             <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
-                              <div className="rounded-2xl border border-border bg-background shadow-sm">
+                              <div className="rounded-2xl border border-border bg-background">
                                 <div className="px-4 py-4">
                                   <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                     <span>Items</span>

@@ -1,6 +1,8 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CustomPriceDialog } from "@/components/custom-price-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +26,7 @@ import { Clock, Package, Scissors, Search, ShoppingCart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createAdminClient } from "@/utils/supabase/client";
 import { createUnpaidTicket, payTicket } from "./actions";
+import { deleteTicket } from "../tickets/actions";
 import { toast } from "sonner";
 
 type CatalogItem = {
@@ -31,7 +34,7 @@ type CatalogItem = {
   type: "service" | "product";
   code: string;
   name: string;
-  price: number;
+  basePrice: number | null;
   meta: string;
   stockQty?: number | null;
 };
@@ -39,6 +42,7 @@ type CatalogItem = {
 type CartItem = {
   item: CatalogItem;
   qty: number;
+  unitPrice: number;
 };
 
 type ShiftSummary = {
@@ -84,6 +88,273 @@ const formatTime = (value: string | null) => {
 const getLocalDateValue = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
 
+type AddItemResult = {
+  ok: boolean;
+  unitPrice?: number;
+  ticketId?: string | null;
+  ticketNo?: string | null;
+  error?: string;
+  requiresCustomPrice?: boolean;
+  itemName?: string | null;
+};
+
+const addServiceToTicket = async ({
+  ticketId,
+  shiftId,
+  barberId,
+  serviceId,
+  customPrice,
+}: {
+  ticketId: string | null;
+  shiftId: string;
+  barberId: string | null;
+  serviceId: string;
+  customPrice?: number | null;
+}): Promise<AddItemResult> => {
+  try {
+    const supabase = createAdminClient();
+    const { data: service, error: serviceError } = await supabase
+      .from("services")
+      .select("id, name, base_price, is_active")
+      .eq("id", serviceId)
+      .maybeSingle();
+
+    if (serviceError || !service) {
+      console.error("Failed to load service", serviceError);
+      return { ok: false, error: "Failed to load service." };
+    }
+
+    if (!service.is_active) {
+      return { ok: false, error: "Service is inactive." };
+    }
+
+    const basePrice =
+      service.base_price === null ? null : Number(service.base_price);
+    if (basePrice !== null && !Number.isFinite(basePrice)) {
+      return { ok: false, error: "Invalid service price." };
+    }
+
+    // NULL base_price means a custom price is required.
+    if (basePrice === null) {
+      if (!customPrice || customPrice <= 0) {
+        return {
+          ok: false,
+          requiresCustomPrice: true,
+          itemName: service.name ?? "Service",
+        };
+      }
+    }
+
+    const unitPrice = basePrice === null ? Number(customPrice) : basePrice;
+
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      return { ok: false, error: "Invalid price." };
+    }
+
+    if (!ticketId) {
+      const result = await createUnpaidTicket({
+        shiftId,
+        barberId,
+        items: [
+          {
+            item_type: "service",
+            service_id: serviceId,
+            product_id: null,
+            qty: 1,
+            unit_price: unitPrice,
+          },
+        ],
+      });
+
+      if (!result.ok) {
+        return { ok: false, error: result.error ?? "Failed to create ticket." };
+      }
+
+      return {
+        ok: true,
+        unitPrice,
+        ticketId: result.ticketId ?? null,
+        ticketNo: result.ticketNo ?? null,
+      };
+    }
+
+    const { error } = await supabase.from("ticket_items").insert({
+      ticket_id: ticketId,
+      item_type: "service",
+      service_id: serviceId,
+      product_id: null,
+      qty: 1,
+      unit_price: unitPrice,
+    });
+
+    if (error) {
+      console.error("Failed to add service to ticket", error);
+      return {
+        ok: false,
+        error: error.message || error.details || "Failed to add service.",
+      };
+    }
+
+    return { ok: true, unitPrice };
+  } catch (error) {
+    console.error("Failed to add service to ticket", error);
+    return { ok: false, error: "Failed to add service." };
+  }
+};
+
+const addProductToTicket = async ({
+  ticketId,
+  shiftId,
+  barberId,
+  productId,
+  customPrice,
+}: {
+  ticketId: string | null;
+  shiftId: string;
+  barberId: string | null;
+  productId: string;
+  customPrice?: number | null;
+}): Promise<AddItemResult> => {
+  try {
+    const supabase = createAdminClient();
+    const { data: product, error: productError } = await supabase
+      .from("products")
+      .select("id, name, base_price, is_active")
+      .eq("id", productId)
+      .maybeSingle();
+
+    if (productError || !product) {
+      console.error("Failed to load product", productError);
+      return { ok: false, error: "Failed to load product." };
+    }
+
+    if (!product.is_active) {
+      return { ok: false, error: "Product is inactive." };
+    }
+
+    const basePrice =
+      product.base_price === null ? null : Number(product.base_price);
+    if (basePrice !== null && !Number.isFinite(basePrice)) {
+      return { ok: false, error: "Invalid product price." };
+    }
+
+    // NULL base_price means a custom price is required.
+    if (basePrice === null) {
+      if (!customPrice || customPrice <= 0) {
+        return {
+          ok: false,
+          requiresCustomPrice: true,
+          itemName: product.name ?? "Product",
+        };
+      }
+    }
+
+    const unitPrice = basePrice === null ? Number(customPrice) : basePrice;
+
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      return { ok: false, error: "Invalid price." };
+    }
+
+    if (!ticketId) {
+      const result = await createUnpaidTicket({
+        shiftId,
+        barberId,
+        items: [
+          {
+            item_type: "product",
+            service_id: null,
+            product_id: productId,
+            qty: 1,
+            unit_price: unitPrice,
+          },
+        ],
+      });
+
+      if (!result.ok) {
+        return { ok: false, error: result.error ?? "Failed to create ticket." };
+      }
+
+      return {
+        ok: true,
+        unitPrice,
+        ticketId: result.ticketId ?? null,
+        ticketNo: result.ticketNo ?? null,
+      };
+    }
+
+    const { error } = await supabase.from("ticket_items").insert({
+      ticket_id: ticketId,
+      item_type: "product",
+      service_id: null,
+      product_id: productId,
+      qty: 1,
+      unit_price: unitPrice,
+    });
+
+    if (error) {
+      console.error("Failed to add product to ticket", error);
+      return {
+        ok: false,
+        error: error.message || error.details || "Failed to add product.",
+      };
+    }
+
+    return { ok: true, unitPrice };
+  } catch (error) {
+    console.error("Failed to add product to ticket", error);
+    return { ok: false, error: "Failed to add product." };
+  }
+};
+
+const removeTicketItem = async (input: {
+  ticketId: string;
+  item: CatalogItem;
+  unitPrice: number;
+}) => {
+  try {
+    const supabase = createAdminClient();
+    const idFilter =
+      input.item.type === "service" ? "service_id" : "product_id";
+    const { data: itemRow, error: fetchError } = await supabase
+      .from("ticket_items")
+      .select("id")
+      .eq("ticket_id", input.ticketId)
+      .eq("item_type", input.item.type)
+      .eq(idFilter, input.item.id)
+      .eq("unit_price", input.unitPrice)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Failed to locate ticket item", fetchError);
+      return { ok: false, error: "Failed to update ticket items." };
+    }
+
+    if (!itemRow?.id) {
+      return { ok: false, error: "Ticket item not found." };
+    }
+
+    const { error } = await supabase
+      .from("ticket_items")
+      .delete()
+      .eq("id", itemRow.id);
+
+    if (error) {
+      console.error("Failed to remove ticket item", error);
+      return {
+        ok: false,
+        error: error.message || error.details || "Failed to remove item.",
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error("Failed to remove ticket item", error);
+    return { ok: false, error: "Failed to remove item." };
+  }
+};
+
 export function TransactionsClient() {
   const [isShiftOpen, setIsShiftOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -114,6 +385,10 @@ export function TransactionsClient() {
   const [barbersLoading, setBarbersLoading] = useState(true);
   const [barbersError, setBarbersError] = useState<string | null>(null);
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
+  const [customPriceDialogOpen, setCustomPriceDialogOpen] = useState(false);
+  const [pendingCustomItem, setPendingCustomItem] = useState<CatalogItem | null>(
+    null
+  );
   useEffect(() => {
     let isMounted = true;
 
@@ -151,7 +426,7 @@ export function TransactionsClient() {
       const supabase = createAdminClient();
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, price, duration_minutes, service_code, is_active")
+        .select("id, name, base_price, duration_minutes, service_code, is_active")
         .eq("is_active", true)
         .order("service_code", { ascending: true });
 
@@ -173,7 +448,11 @@ export function TransactionsClient() {
           type: "service" as const,
           code: service.service_code || service.id,
           name: service.name,
-          price: Number(service.price ?? 0),
+          basePrice: (() => {
+            const value =
+              service.base_price === null ? null : Number(service.base_price);
+            return value !== null && Number.isFinite(value) ? value : null;
+          })(),
           meta:
             typeof service.duration_minutes === "number"
               ? `${service.duration_minutes}m`
@@ -190,7 +469,7 @@ export function TransactionsClient() {
       const supabase = createAdminClient();
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, price, stock_qty, sku, is_active")
+        .select("id, name, base_price, stock_qty, sku, is_active")
         .eq("is_active", true)
         .order("sku", { ascending: true });
 
@@ -212,7 +491,11 @@ export function TransactionsClient() {
           type: "product" as const,
           code: product.sku || product.id,
           name: product.name,
-          price: Number(product.price ?? 0),
+          basePrice: (() => {
+            const value =
+              product.base_price === null ? null : Number(product.base_price);
+            return value !== null && Number.isFinite(value) ? value : null;
+          })(),
           meta:
             typeof product.stock_qty === "number"
               ? `Stock ${product.stock_qty}`
@@ -389,71 +672,229 @@ export function TransactionsClient() {
     );
   }, [query, products]);
 
+  const cartItemCount = useMemo(
+    () => cartItems.reduce((total, entry) => total + entry.qty, 0),
+    [cartItems]
+  );
+
+  const cartQtyByItemId = useMemo(() => {
+    const map = new Map<string, number>();
+    cartItems.forEach((entry) => {
+      map.set(entry.item.id, (map.get(entry.item.id) ?? 0) + entry.qty);
+    });
+    return map;
+  }, [cartItems]);
+
   const subtotal = useMemo(
     () =>
       cartItems.reduce(
-        (total, entry) => total + entry.item.price * entry.qty,
+        (total, entry) => total + entry.unitPrice * entry.qty,
         0
       ),
     [cartItems]
   );
 
-  const addToCart = (item: CatalogItem) => {
-    setCartItems((prev) => {
-      const existing = prev.find((entry) => entry.item.id === item.id);
-      if (existing) {
-        if (
-          item.type === "product" &&
-          typeof item.stockQty === "number" &&
-          existing.qty >= item.stockQty
-        ) {
-          setCartError("Insufficient stock.");
-          return prev;
+  const updateCartEntry = (
+    item: CatalogItem,
+    unitPrice: number,
+    ticketId: string | null,
+    delta: number
+  ) => {
+    if (!ticketId) {
+      setTicketError("No active ticket.");
+      return;
+    }
+    const unitKey = unitPrice.toFixed(2);
+
+    if (delta > 0) {
+      const totalQtyForItem = cartItems.reduce((total, entry) => {
+        if (entry.item.id !== item.id) {
+          return total;
         }
+        return total + entry.qty;
+      }, 0);
+
+      if (
+        item.type === "product" &&
+        typeof item.stockQty === "number" &&
+        totalQtyForItem >= item.stockQty
+      ) {
+        setCartError("Insufficient stock.");
+        return;
+      }
+
+      const addItem =
+        item.type === "service"
+          ? addServiceToTicket({
+              ticketId,
+              shiftId: activeShift?.id ?? "",
+              barberId: selectedBarberId,
+              serviceId: item.id,
+              customPrice: unitPrice,
+            })
+          : addProductToTicket({
+              ticketId,
+              shiftId: activeShift?.id ?? "",
+              barberId: selectedBarberId,
+              productId: item.id,
+              customPrice: unitPrice,
+            });
+
+      addItem.then((result) => {
+        if (!result.ok) {
+          toast.error(result.error ?? "Failed to add item.");
+          return;
+        }
+        setCartItems((prev) => {
+          const existing = prev.find(
+            (entry) =>
+              entry.item.id === item.id &&
+              entry.unitPrice.toFixed(2) === unitKey
+          );
+          if (existing) {
+            return prev.map((entry) =>
+              entry.item.id === item.id &&
+              entry.unitPrice.toFixed(2) === unitKey
+                ? { ...entry, qty: entry.qty + 1 }
+                : entry
+            );
+          }
+          return [...prev, { item, qty: 1, unitPrice }];
+        });
+      });
+      return;
+    }
+
+    const entry = cartItems.find(
+      (cartEntry) =>
+        cartEntry.item.id === item.id &&
+        cartEntry.unitPrice.toFixed(2) === unitKey
+    );
+
+    if (!entry) {
+      return;
+    }
+
+    removeTicketItem({ ticketId, item, unitPrice }).then((result) => {
+      if (!result.ok) {
+        toast.error(result.error ?? "Failed to remove item.");
+        return;
+      }
+      setCartItems((prev) =>
+        prev
+          .map((cartEntry) => {
+            if (
+              cartEntry.item.id !== item.id ||
+              cartEntry.unitPrice.toFixed(2) !== unitKey
+            ) {
+              return cartEntry;
+            }
+            const nextQty = cartEntry.qty - 1;
+            return { ...cartEntry, qty: nextQty };
+          })
+          .filter((cartEntry) => cartEntry.qty > 0)
+      );
+    });
+  };
+
+  const appendCartItem = (item: CatalogItem, unitPrice: number) => {
+    const unitKey = unitPrice.toFixed(2);
+    setCartItems((prev) => {
+      const existing = prev.find(
+        (entry) =>
+          entry.item.id === item.id && entry.unitPrice.toFixed(2) === unitKey
+      );
+      if (existing) {
         return prev.map((entry) =>
-          entry.item.id === item.id
+          entry.item.id === item.id && entry.unitPrice.toFixed(2) === unitKey
             ? { ...entry, qty: entry.qty + 1 }
             : entry
         );
       }
-      if (
-        item.type === "product" &&
-        typeof item.stockQty === "number" &&
-        item.stockQty <= 0
-      ) {
-        setCartError("Out of stock.");
-        return prev;
-      }
-      return [...prev, { item, qty: 1 }];
+      return [...prev, { item, qty: 1, unitPrice }];
     });
   };
 
-  const updateQty = (itemId: string, delta: number) => {
-    setCartItems((prev) =>
-      prev
-        .map((entry) => {
-          if (entry.item.id !== itemId) {
-            return entry;
-          }
-          const nextQty = entry.qty + delta;
-          if (
-            entry.item.type === "product" &&
-            typeof entry.item.stockQty === "number" &&
-            nextQty > entry.item.stockQty
-          ) {
-            setCartError("Insufficient stock.");
-            return entry;
-          }
-          return { ...entry, qty: nextQty };
-        })
-        .filter((entry) => entry.qty > 0)
-    );
+  const handleAddCatalogItem = async (
+    item: CatalogItem,
+    customPrice?: number | null
+  ) => {
+    if (!activeShift?.id) {
+      setTicketError("No active shift.");
+      return;
+    }
+
+    const currentQty = cartItems.reduce((total, entry) => {
+      if (entry.item.id !== item.id) {
+        return total;
+      }
+      return total + entry.qty;
+    }, 0);
+
+    if (
+      item.type === "product" &&
+      typeof item.stockQty === "number" &&
+      currentQty >= item.stockQty
+    ) {
+      setCartError("Out of stock.");
+      return;
+    }
+
+    const addResult =
+      item.type === "service"
+        ? await addServiceToTicket({
+            ticketId: heldTicketId,
+            shiftId: activeShift.id,
+            barberId: selectedBarberId,
+            serviceId: item.id,
+            customPrice,
+          })
+        : await addProductToTicket({
+            ticketId: heldTicketId,
+            shiftId: activeShift.id,
+            barberId: selectedBarberId,
+            productId: item.id,
+            customPrice,
+          });
+
+    if (!addResult.ok) {
+      if (addResult.requiresCustomPrice) {
+        setPendingCustomItem(item);
+        setCustomPriceDialogOpen(true);
+        return;
+      }
+      const message = addResult.error ?? "Failed to add item.";
+      setCartError(message);
+      toast.error(message, { position: "top-center" });
+      return;
+    }
+
+    if (!heldTicketId && addResult.ticketId) {
+      setHeldTicketId(addResult.ticketId ?? null);
+      setHeldTicketNo(addResult.ticketNo ?? null);
+    }
+
+    if (typeof addResult.unitPrice === "number") {
+      appendCartItem(item, addResult.unitPrice);
+    }
+    setCartError(null);
   };
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
+    if (heldTicketId) {
+      const result = await deleteTicket(heldTicketId);
+      if (!result.ok) {
+        const message = result.error ?? "Failed to clear ticket.";
+        setTicketError(message);
+        toast.error(message, { position: "top-center" });
+        return;
+      }
+    }
     setCartItems([]);
     setCartError(null);
     setTicketError(null);
+    setHeldTicketId(null);
+    setHeldTicketNo(null);
   };
 
   const handleOpenCheckout = () => {
@@ -461,7 +902,7 @@ export function TransactionsClient() {
       setTicketError("No active shift.");
       return;
     }
-    if (cartItems.length === 0) {
+    if (cartItemCount === 0) {
       setTicketError("Cart is empty.");
       return;
     }
@@ -477,7 +918,7 @@ export function TransactionsClient() {
       setTicketError("No active shift.");
       return;
     }
-    if (cartItems.length === 0) {
+    if (cartItemCount === 0) {
       setTicketError("Cart is empty.");
       return;
     }
@@ -498,7 +939,7 @@ export function TransactionsClient() {
         service_id: entry.item.type === "service" ? entry.item.id : null,
         product_id: entry.item.type === "product" ? entry.item.id : null,
         qty: entry.qty,
-        unit_price: entry.item.price,
+        unit_price: entry.unitPrice,
       }));
 
       const result = await createUnpaidTicket({
@@ -548,8 +989,30 @@ export function TransactionsClient() {
     setTicketLoading(false);
   };
 
+  const handleCustomPriceConfirm = async (price: number) => {
+    if (!pendingCustomItem) {
+      return;
+    }
+    await handleAddCatalogItem(pendingCustomItem, price);
+    setPendingCustomItem(null);
+    setCustomPriceDialogOpen(false);
+  };
+
   return (
-          <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <>
+      <CustomPriceDialog
+        open={customPriceDialogOpen}
+        onOpenChange={(open) => {
+          setCustomPriceDialogOpen(open);
+          if (!open) {
+            setPendingCustomItem(null);
+          }
+        }}
+        title={pendingCustomItem?.name ?? "Custom price"}
+        description="Enter a custom price for this item."
+        onConfirm={handleCustomPriceConfirm}
+      />
+      <div className="flex flex-col gap-4 px-4 lg:px-6">
         {isShiftOpen ? (
           <>
             <div className="space-y-5">
@@ -671,7 +1134,7 @@ export function TransactionsClient() {
                             </p>
                           ) : filteredServices.length === 0 ? (
                             <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
-                              <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+                              <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background">
                                 <Scissors className="size-6 text-muted-foreground" />
                               </div>
                               <div>
@@ -690,7 +1153,7 @@ export function TransactionsClient() {
                                   key={service.code}
                                   type="button"
                                   className="flex flex-col items-start gap-2 rounded-xl border border-border bg-muted/40 px-5 py-4 text-left text-foreground transition hover:bg-muted/60"
-                                  onClick={() => addToCart(service)}
+                                  onClick={() => handleAddCatalogItem(service)}
                                 >
                                   <span className="text-xs text-muted-foreground">
                                     {service.code}
@@ -698,9 +1161,16 @@ export function TransactionsClient() {
                                   <span className="text-sm font-semibold">
                                     {service.name}
                                   </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatMoney(service.price)} · {service.meta}
-                                  </span>
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    {service.basePrice === null ? (
+                                      <Badge variant="secondary">Custom price</Badge>
+                                    ) : (
+                                      <span>{formatMoney(service.basePrice)}</span>
+                                    )}
+                                    <span className="text-muted-foreground">
+                                      · {service.meta}
+                                    </span>
+                                  </div>
                                 </button>
                               ))}
                             </div>
@@ -723,7 +1193,7 @@ export function TransactionsClient() {
                             </p>
                           ) : filteredProducts.length === 0 ? (
                             <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
-                              <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+                              <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background">
                                 <Package className="size-6 text-muted-foreground" />
                               </div>
                               <div>
@@ -742,7 +1212,7 @@ export function TransactionsClient() {
                                   key={product.code}
                                   type="button"
                                   className="flex flex-col items-start gap-2 rounded-xl border border-border bg-muted/40 px-5 py-4 text-left text-foreground transition hover:bg-muted/60"
-                                  onClick={() => addToCart(product)}
+                                  onClick={() => handleAddCatalogItem(product)}
                                 >
                                   <span className="text-xs text-muted-foreground">
                                     {product.code}
@@ -750,9 +1220,16 @@ export function TransactionsClient() {
                                   <span className="text-sm font-semibold">
                                     {product.name}
                                   </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatMoney(product.price)} · {product.meta}
-                                  </span>
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    {product.basePrice === null ? (
+                                      <Badge variant="secondary">Custom price</Badge>
+                                    ) : (
+                                      <span>{formatMoney(product.basePrice)}</span>
+                                    )}
+                                    <span className="text-muted-foreground">
+                                      · {product.meta}
+                                    </span>
+                                  </div>
                                 </button>
                               ))}
                             </div>
@@ -773,7 +1250,7 @@ export function TransactionsClient() {
                         <div>
                           <h3 className="text-sm font-semibold">Cart</h3>
                           <p className="text-xs text-muted-foreground">
-                            {cartItems.length} item(s)
+                            {cartItemCount} item(s)
                           </p>
                         </div>
                       </div>
@@ -781,15 +1258,15 @@ export function TransactionsClient() {
                         variant="outline"
                         size="sm"
                         onClick={handleClearCart}
-                        disabled={cartItems.length === 0}
+                        disabled={cartItemCount === 0}
                       >
                         Clear cart
                       </Button>
                     </div>
-                    {cartItems.length === 0 ? (
+                    {cartItemCount === 0 ? (
                       <div className="mt-4 overflow-hidden rounded-2xl border border-dashed border-border bg-muted/30 px-5 py-4 text-left">
                         <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:text-left">
-                          <div className="flex size-10 items-center justify-center rounded-full border border-border/70 bg-background shadow-sm">
+                          <div className="flex size-10 items-center justify-center rounded-full border border-border/70 bg-background">
                             <ShoppingCart className="size-4 text-muted-foreground" />
                           </div>
                           <div>
@@ -806,7 +1283,7 @@ export function TransactionsClient() {
                       <div className="mt-4 space-y-2">
                         {cartItems.map((entry) => (
                           <div
-                            key={entry.item.id}
+                            key={`${entry.item.id}-${entry.unitPrice.toFixed(2)}`}
                             className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-5 py-4 text-sm text-foreground"
                           >
                             <div className="min-w-0">
@@ -817,7 +1294,7 @@ export function TransactionsClient() {
                                 <span>{entry.item.code}</span>
                                 <span className="h-1 w-1 rounded-full bg-muted-foreground" />
                                 <span className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground">
-                                  {formatMoney(entry.item.price)}
+                                  {formatMoney(entry.unitPrice)}
                                 </span>
                               </div>
                             </div>
@@ -826,7 +1303,14 @@ export function TransactionsClient() {
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8 rounded-full"
-                                onClick={() => updateQty(entry.item.id, -1)}
+                                onClick={() =>
+                                  updateCartEntry(
+                                    entry.item,
+                                    entry.unitPrice,
+                                    heldTicketId,
+                                    -1
+                                  )
+                                }
                               >
                                 -
                               </Button>
@@ -837,11 +1321,19 @@ export function TransactionsClient() {
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8 rounded-full"
-                                onClick={() => updateQty(entry.item.id, 1)}
+                                onClick={() =>
+                                  updateCartEntry(
+                                    entry.item,
+                                    entry.unitPrice,
+                                    heldTicketId,
+                                    1
+                                  )
+                                }
                                 disabled={
                                   entry.item.type === "product" &&
                                   typeof entry.item.stockQty === "number" &&
-                                  entry.qty >= entry.item.stockQty
+                                  (cartQtyByItemId.get(entry.item.id) ?? entry.qty) >=
+                                    entry.item.stockQty
                                 }
                               >
                                 +
@@ -932,7 +1424,7 @@ export function TransactionsClient() {
                           <Button
                             className="h-10 min-h-10 w-full"
                             disabled={
-                              cartItems.length === 0 ||
+                              cartItemCount === 0 ||
                               ticketLoading ||
                               !activeShift
                             }
@@ -1058,7 +1550,7 @@ export function TransactionsClient() {
               </p>
             </div>
             <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
-              <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background shadow-sm">
+              <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
                 <Clock className="size-8 text-muted-foreground" />
               </div>
               <div className="space-y-1">
@@ -1113,5 +1605,6 @@ export function TransactionsClient() {
           </div>
         )}
       </div>
+    </>
   );
 }

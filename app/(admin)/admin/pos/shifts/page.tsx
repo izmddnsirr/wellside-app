@@ -30,8 +30,8 @@ export default async function Page() {
             ticket_items (
               qty,
               unit_price,
-              services:service_id (name, price),
-              products:product_id (name, price)
+              services:service_id (name, base_price),
+              products:product_id (name, base_price)
             )
           `
           )
@@ -98,7 +98,7 @@ export default async function Page() {
       const price =
         typeof item.unit_price === "number"
           ? item.unit_price
-          : detail.price ?? 0;
+          : detail.base_price ?? 0;
       const existing =
         shiftItems.get(key) ?? {
           key,

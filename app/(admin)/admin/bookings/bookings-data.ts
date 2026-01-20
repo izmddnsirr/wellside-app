@@ -15,7 +15,7 @@ export const getBookings = async () => {
       created_at,
       customer:customer_id (first_name, last_name, email, phone),
       barber:barber_id (first_name, last_name),
-      service:service_id (name, duration_minutes, price)
+      service:service_id (name, duration_minutes, base_price)
     `
     )
     .order("start_at", { ascending: true });

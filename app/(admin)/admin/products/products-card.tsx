@@ -49,7 +49,7 @@ type Product = {
   name: string;
   sku: string | null;
   description: string | null;
-  price: number | null;
+  base_price: number | null;
   stock_qty: number | null;
   is_active: boolean;
 };
@@ -70,7 +70,7 @@ const priceFormatter = new Intl.NumberFormat("en-MY", {
 
 const formatPrice = (value: number | null) => {
   if (value === null || Number.isNaN(value)) {
-    return "-";
+    return "Custom price";
   }
   return `RM ${priceFormatter.format(value)}`;
 };
@@ -134,16 +134,15 @@ const ProductFormFields = ({ product }: { product?: Product | null }) => (
     </div>
     <div className="space-y-2">
       <Label htmlFor={product ? `price-${product.id}` : "product-price"}>
-        Price (RM)
+        Base price (RM)
       </Label>
       <Input
         id={product ? `price-${product.id}` : "product-price"}
-        name="price"
+        name="base_price"
         type="number"
-        min="0"
+        min="0.01"
         step="0.01"
-        defaultValue={product?.price ?? ""}
-        required
+        defaultValue={product?.base_price ?? ""}
       />
     </div>
     <div className="space-y-2">
@@ -268,8 +267,8 @@ export function ProductsCard({
       const nameB = b.name.toLowerCase();
       const skuA = (a.sku ?? "").toLowerCase();
       const skuB = (b.sku ?? "").toLowerCase();
-      const priceA = a.price ?? 0;
-      const priceB = b.price ?? 0;
+      const priceA = a.base_price ?? 0;
+      const priceB = b.base_price ?? 0;
       const stockA = a.stock_qty ?? 0;
       const stockB = b.stock_qty ?? 0;
       if (sort === "sku_asc") {
@@ -442,7 +441,7 @@ export function ProductsCard({
                       {product.name}
                     </TableCell>
                     <TableCell className="w-[16%] px-4 py-3 text-foreground">
-                      {formatPrice(product.price)}
+                      {formatPrice(product.base_price)}
                     </TableCell>
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {formatStock(product.stock_qty)}
@@ -555,7 +554,7 @@ export function ProductsCard({
         </div>
       ) : (
         <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
-          <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background shadow-sm">
+          <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background">
             <Package className="size-8 text-muted-foreground" />
           </div>
           <div>
