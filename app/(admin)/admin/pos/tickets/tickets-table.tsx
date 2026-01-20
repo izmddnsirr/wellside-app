@@ -684,8 +684,8 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                     const price =
                       typeof item.unit_price === "number"
                         ? item.unit_price
-                        : typeof detail?.price === "number"
-                          ? detail.price
+                        : typeof detail?.base_price === "number"
+                          ? detail.base_price
                           : null;
                     const qty = item.qty ?? 0;
                     const lineTotal = price !== null ? price * qty : null;
