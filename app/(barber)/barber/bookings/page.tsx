@@ -68,6 +68,7 @@ export default async function Page() {
         .select(
           `
         id,
+        booking_ref,
         status,
         start_at,
         end_at,

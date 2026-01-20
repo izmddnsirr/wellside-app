@@ -41,7 +41,7 @@ type BookingRecord = {
   id: string;
   start_at: string;
   end_at: string;
-  booking_ref: string | null;
+  booking_ref: string;
   customer_id: string;
   service: {
     name: string | null;
@@ -209,6 +209,14 @@ export default async function BookingConfirmedPage({
                 </span>
                 <p className="text-base font-semibold text-foreground">
                   {durationLabel}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Booking ref
+                </p>
+                <p className="mt-1 text-base font-semibold text-foreground">
+                  {booking.booking_ref}
                 </p>
               </div>
             </div>

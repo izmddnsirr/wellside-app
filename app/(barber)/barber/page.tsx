@@ -74,8 +74,8 @@ type BookingRelation<T> = T | T[] | null;
 
 type BookingRow = {
   id: string;
-  status: string | null;
-  start_at: string | null;
+  status: string;
+  start_at: string;
   customer: BookingRelation<BookingCustomer>;
   service: BookingRelation<BookingService>;
 };

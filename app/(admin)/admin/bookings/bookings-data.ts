@@ -8,6 +8,7 @@ export const getBookings = async () => {
     .select(
       `
       id,
+      booking_ref,
       status,
       start_at,
       end_at,

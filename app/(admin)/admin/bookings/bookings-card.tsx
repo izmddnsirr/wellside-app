@@ -49,11 +49,12 @@ import type { DateRange } from "react-day-picker";
 
 export type BookingRow = {
   id: string;
-  status: string | null;
-  start_at: string | null;
-  end_at: string | null;
+  booking_ref: string;
+  status: string;
+  start_at: string;
+  end_at: string;
   booking_date: string | null;
-  created_at: string | null;
+  created_at: string;
   customer: {
     first_name: string | null;
     last_name: string | null;
@@ -498,6 +499,7 @@ export function BookingsCard({
       );
       const haystack = [
         booking.id,
+        booking.booking_ref,
         booking.status,
         customerName,
         booking.customer?.email,
@@ -994,6 +996,9 @@ export function BookingsCard({
                 >
                   <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
                     {formatDate(booking.booking_date ?? booking.start_at)}
+                    <div className="text-xs text-muted-foreground">
+                      Ref {booking.booking_ref}
+                    </div>
                   </TableCell>
                   <TableCell className="w-[14%] px-4 py-3 font-semibold text-foreground">
                     {formatTimeRange(booking.start_at, booking.end_at)}
@@ -1085,6 +1090,10 @@ export function BookingsCard({
                               <p className="font-medium">
                                 {formatDate(booking.booking_date ?? booking.start_at)}
                               </p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">Reference</p>
+                              <p className="font-medium">{booking.booking_ref}</p>
                             </div>
                             <div className="space-y-1">
                               <p className="text-xs text-muted-foreground">Time</p>
@@ -1256,6 +1265,9 @@ export function BookingsCard({
                 >
                   <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
                     {formatDate(booking.booking_date ?? booking.start_at)}
+                    <div className="text-xs text-muted-foreground">
+                      Ref {booking.booking_ref}
+                    </div>
                   </TableCell>
                   <TableCell className="w-[14%] px-4 py-3 font-semibold text-foreground">
                     {formatTimeRange(booking.start_at, booking.end_at)}
