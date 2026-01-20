@@ -163,28 +163,33 @@ export default async function Page() {
   const weekStartDateString = getMalaysiaDateString(weekStartDate);
   const weekStartTimestamp = `${weekStartDateString}T00:00:00+08:00`;
 
-  const { count: bookingsCount } = await supabase
-    .from("bookings")
-    .select("*", { count: "exact", head: true })
-    .eq("booking_date", todayDate);
-  const { count: ticketsTodayCount } = await supabase
-    .from("tickets")
-    .select("*", { count: "exact", head: true })
-    .gte("created_at", todayStartTimestamp)
-    .lte("created_at", todayEndTimestamp);
-
-  const totalBookingsToday = bookingsCount ?? 0;
-  const totalTicketsToday = ticketsTodayCount ?? 0;
-  const { data: salesRangeData } = await supabase
-    .from("tickets")
-    .select("total_amount, paid_at")
-    .eq("payment_status", "paid")
-    .gte("paid_at", rangeStartTimestamp)
-    .lte("paid_at", monthEndTimestamp);
-  const { data: salesMonthData } = await supabase
-    .from("tickets")
-    .select(
-      `
+  const [
+    { count: bookingsCount },
+    { count: ticketsTodayCount },
+    { data: salesRangeData },
+    { data: salesMonthData },
+    { data: salesWeekData },
+    { data: recentTicketsData },
+  ] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("*", { count: "exact", head: true })
+      .eq("booking_date", todayDate),
+    supabase
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStartTimestamp)
+      .lte("created_at", todayEndTimestamp),
+    supabase
+      .from("tickets")
+      .select("total_amount, paid_at")
+      .eq("payment_status", "paid")
+      .gte("paid_at", rangeStartTimestamp)
+      .lte("paid_at", monthEndTimestamp),
+    supabase
+      .from("tickets")
+      .select(
+        `
         id,
         total_amount,
         paid_at,
@@ -194,25 +199,25 @@ export default async function Page() {
           services:service_id (name, base_price)
         )
       `
-    )
-    .eq("payment_status", "paid")
-    .gte("paid_at", monthStartTimestamp)
-    .lte("paid_at", monthEndTimestamp);
-  const { data: salesWeekData } = await supabase
-    .from("tickets")
-    .select(
-      `
+      )
+      .eq("payment_status", "paid")
+      .gte("paid_at", monthStartTimestamp)
+      .lte("paid_at", monthEndTimestamp),
+    supabase
+      .from("tickets")
+      .select(
+        `
         total_amount,
         paid_at
       `
-    )
-    .eq("payment_status", "paid")
-    .gte("paid_at", weekStartTimestamp)
-    .lte("paid_at", todayEndTimestamp);
-  const { data: recentTicketsData } = await supabase
-    .from("tickets")
-    .select(
-      `
+      )
+      .eq("payment_status", "paid")
+      .gte("paid_at", weekStartTimestamp)
+      .lte("paid_at", todayEndTimestamp),
+    supabase
+      .from("tickets")
+      .select(
+        `
         id,
         ticket_no,
         total_amount,
@@ -220,11 +225,15 @@ export default async function Page() {
         created_at,
         barber:barber_id (first_name, last_name)
       `
-    )
-    .gte("created_at", todayStartTimestamp)
-    .lte("created_at", todayEndTimestamp)
-    .order("created_at", { ascending: false })
-    .limit(10);
+      )
+      .gte("created_at", todayStartTimestamp)
+      .lte("created_at", todayEndTimestamp)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+
+  const totalBookingsToday = bookingsCount ?? 0;
+  const totalTicketsToday = ticketsTodayCount ?? 0;
 
   const salesTickets = (salesMonthData ?? []) as unknown as TicketRow[];
   const rangeTickets = (salesRangeData ?? []) as unknown as SalesSummaryRow[];

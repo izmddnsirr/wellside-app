@@ -1,12 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { TicketRow } from "./tickets-table";
-
-const TicketsTable = dynamic(
-  () => import("./tickets-table").then((mod) => mod.TicketsTable),
-  { ssr: false }
-);
+import { TicketsTable } from "./tickets-table";
 
 type TicketsTableClientProps = {
   tickets: TicketRow[];

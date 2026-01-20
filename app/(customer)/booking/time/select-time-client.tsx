@@ -24,8 +24,8 @@ import {
 import { BookingSummaryCard } from "@/components/customer/booking-summary-card";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { createClient } from "@/utils/supabase/client";
-import { getAvailableSlots, type Slot } from "@/utils/slots";
+import { fetchAvailableSlots } from "./actions";
+import type { Slot } from "@/utils/slots";
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
 const MAX_DAYS_AHEAD = 14;
@@ -158,7 +158,11 @@ const buildInitials = (value: string) =>
     .map((part) => part[0]?.toUpperCase())
     .join("");
 
-export default function SelectTimeClient() {
+type SelectTimeClientProps = {
+  barbers: BarberRow[];
+};
+
+export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
@@ -195,9 +199,6 @@ export default function SelectTimeClient() {
   });
   const slotsCacheRef = useRef(new Map<string, Slot[]>());
   const [isBarberDialogOpen, setIsBarberDialogOpen] = useState(false);
-  const [barbers, setBarbers] = useState<BarberRow[]>([]);
-  const [isLoadingBarbers, setIsLoadingBarbers] = useState(false);
-  const [barberError, setBarberError] = useState<string | null>(null);
 
   const updateQuery = useCallback(
     (next: BookingQuery) => {
@@ -274,34 +275,6 @@ export default function SelectTimeClient() {
     ]
   );
 
-  const fetchBarbers = useCallback(async () => {
-    setIsLoadingBarbers(true);
-    setBarberError(null);
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(
-        "id, role, first_name, last_name, display_name, avatar_url, barber_level, is_active"
-      )
-      .eq("is_active", true)
-      .eq("role", "barber")
-      .order("display_name");
-
-    if (error) {
-      setBarberError("Unable to load barbers right now.");
-      setBarbers([]);
-    } else {
-      setBarbers(data ?? []);
-    }
-    setIsLoadingBarbers(false);
-  }, []);
-
-  useEffect(() => {
-    if (isBarberDialogOpen && barbers.length === 0 && !isLoadingBarbers) {
-      fetchBarbers();
-    }
-  }, [isBarberDialogOpen, barbers.length, isLoadingBarbers, fetchBarbers]);
-
   useEffect(() => {
     let isActive = true;
 
@@ -345,7 +318,7 @@ export default function SelectTimeClient() {
 
     setSlotState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-    getAvailableSlots(barberId, dateISO)
+    fetchAvailableSlots(barberId, dateISO)
       .then((slots) => {
         if (isActive) {
           slotsCacheRef.current.set(cacheKey, slots);
@@ -467,17 +440,7 @@ export default function SelectTimeClient() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="pt-4">
-                    {isLoadingBarbers ? (
-                      <p className="text-sm text-muted-foreground">
-                        Loading barbers...
-                      </p>
-                    ) : null}
-                    {barberError ? (
-                      <p className="text-sm text-destructive">{barberError}</p>
-                    ) : null}
-                    {!isLoadingBarbers &&
-                    !barberError &&
-                    professionals.length === 0 ? (
+                    {professionals.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         No barbers available right now.
                       </p>

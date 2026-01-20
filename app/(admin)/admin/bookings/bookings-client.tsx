@@ -1,12 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { BookingRow } from "./bookings-card";
-
-const BookingsCard = dynamic(
-  () => import("./bookings-card").then((mod) => mod.BookingsCard),
-  { ssr: false }
-);
+import { BookingsCard } from "./bookings-card";
 
 type BookingsClientProps = {
   bookings: BookingRow[];
