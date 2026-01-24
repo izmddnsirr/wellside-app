@@ -191,7 +191,7 @@ export default async function HomePage() {
           </div>
 
           <section
-            className="grid grid-cols-3 gap-3"
+            className="grid grid-cols-2 gap-3"
             style={{ animationDelay: "160ms" }}
           >
             <div className="text-card-foreground flex flex-col gap-3 rounded-3xl border border-border/60 bg-card px-4 py-4">
@@ -216,7 +216,7 @@ export default async function HomePage() {
               </div>
               <div className="text-sm text-muted-foreground">Bookings</div>
             </div>
-            <Link
+            {/* <Link
               href="/ai"
               className="flex flex-col gap-3 rounded-3xl border border-transparent bg-primary px-4 py-4 text-primary-foreground"
             >
@@ -228,7 +228,7 @@ export default async function HomePage() {
                 Suggest
               </div>
               <div className="text-sm text-primary-foreground/70">New look</div>
-            </Link>
+            </Link> */}
           </section>
         </div>
       </div>

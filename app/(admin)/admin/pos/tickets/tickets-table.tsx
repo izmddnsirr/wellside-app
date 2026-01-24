@@ -44,7 +44,7 @@ import { ChevronLeft, ChevronRight, Search, Ticket } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useRouter } from "next/navigation";
-import { deleteTicket } from "./actions";
+import { deleteTicket, refundTicket } from "./actions";
 
 type TicketItem = {
   qty: number | null;
@@ -251,6 +251,14 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
   } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [refundTarget, setRefundTarget] = useState<{
+    id: string;
+    label: string;
+    total: number | null;
+  } | null>(null);
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -287,6 +295,32 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
     setDeleteLoading(false);
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
+    router.refresh();
+  };
+
+  const handleRefundDialogOpenChange = (open: boolean) => {
+    setRefundDialogOpen(open);
+    if (!open) {
+      setRefundError(null);
+      setRefundTarget(null);
+    }
+  };
+
+  const handleRefundTicket = async () => {
+    if (!refundTarget) {
+      return;
+    }
+    setRefundLoading(true);
+    setRefundError(null);
+    const result = await refundTicket(refundTarget.id);
+    if (!result?.ok) {
+      setRefundError(result?.error ?? "Failed to refund ticket.");
+      setRefundLoading(false);
+      return;
+    }
+    setRefundLoading(false);
+    setRefundDialogOpen(false);
+    setRefundTarget(null);
     router.refresh();
   };
 
@@ -849,7 +883,25 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                                   </p>
                                 </div>
                               </div>
-                              <div className="mt-4 flex justify-end">
+                              <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                                {isPaid ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setRefundTarget({
+                                        id: ticket.id,
+                                        label: ticket.ticket_no ?? ticket.id,
+                                        total: totalAmount,
+                                      });
+                                      setRefundDialogOpen(true);
+                                      setRefundError(null);
+                                    }}
+                                    disabled={refundLoading}
+                                  >
+                                    Refund (full)
+                                  </Button>
+                                ) : null}
                                 <Button
                                   variant="destructive"
                                   size="sm"
@@ -913,6 +965,52 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 disabled={deleteLoading}
               >
                 {deleteLoading ? "Deleting..." : "Delete ticket"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+      {isMounted ? (
+        <Dialog open={refundDialogOpen} onOpenChange={handleRefundDialogOpenChange}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Refund ticket</DialogTitle>
+              <DialogDescription>
+                This will mark the ticket as refunded (full amount). This action
+                cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                Ticket:{" "}
+                <span className="font-medium text-foreground">
+                  {refundTarget?.label ?? "-"}
+                </span>
+              </p>
+              <p>
+                Refund amount:{" "}
+                <span className="font-medium text-foreground">
+                  {formatMoney(refundTarget?.total ?? null)}
+                </span>
+              </p>
+              {refundError ? (
+                <p className="text-sm text-red-600">{refundError}</p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => handleRefundDialogOpenChange(false)}
+                disabled={refundLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRefundTicket}
+                disabled={refundLoading}
+              >
+                {refundLoading ? "Refunding..." : "Refund ticket"}
               </Button>
             </DialogFooter>
           </DialogContent>

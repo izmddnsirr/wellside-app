@@ -91,23 +91,15 @@ const getLocalDateValue = () =>
 type AddItemResult = {
   ok: boolean;
   unitPrice?: number;
-  ticketId?: string | null;
-  ticketNo?: string | null;
   error?: string;
   requiresCustomPrice?: boolean;
   itemName?: string | null;
 };
 
 const addServiceToTicket = async ({
-  ticketId,
-  shiftId,
-  barberId,
   serviceId,
   customPrice,
 }: {
-  ticketId: string | null;
-  shiftId: string;
-  barberId: string | null;
   serviceId: string;
   customPrice?: number | null;
 }): Promise<AddItemResult> => {
@@ -151,50 +143,6 @@ const addServiceToTicket = async ({
       return { ok: false, error: "Invalid price." };
     }
 
-    if (!ticketId) {
-      const result = await createUnpaidTicket({
-        shiftId,
-        barberId,
-        items: [
-          {
-            item_type: "service",
-            service_id: serviceId,
-            product_id: null,
-            qty: 1,
-            unit_price: unitPrice,
-          },
-        ],
-      });
-
-      if (!result.ok) {
-        return { ok: false, error: result.error ?? "Failed to create ticket." };
-      }
-
-      return {
-        ok: true,
-        unitPrice,
-        ticketId: result.ticketId ?? null,
-        ticketNo: result.ticketNo ?? null,
-      };
-    }
-
-    const { error } = await supabase.from("ticket_items").insert({
-      ticket_id: ticketId,
-      item_type: "service",
-      service_id: serviceId,
-      product_id: null,
-      qty: 1,
-      unit_price: unitPrice,
-    });
-
-    if (error) {
-      console.error("Failed to add service to ticket", error);
-      return {
-        ok: false,
-        error: error.message || error.details || "Failed to add service.",
-      };
-    }
-
     return { ok: true, unitPrice };
   } catch (error) {
     console.error("Failed to add service to ticket", error);
@@ -203,15 +151,9 @@ const addServiceToTicket = async ({
 };
 
 const addProductToTicket = async ({
-  ticketId,
-  shiftId,
-  barberId,
   productId,
   customPrice,
 }: {
-  ticketId: string | null;
-  shiftId: string;
-  barberId: string | null;
   productId: string;
   customPrice?: number | null;
 }): Promise<AddItemResult> => {
@@ -255,103 +197,10 @@ const addProductToTicket = async ({
       return { ok: false, error: "Invalid price." };
     }
 
-    if (!ticketId) {
-      const result = await createUnpaidTicket({
-        shiftId,
-        barberId,
-        items: [
-          {
-            item_type: "product",
-            service_id: null,
-            product_id: productId,
-            qty: 1,
-            unit_price: unitPrice,
-          },
-        ],
-      });
-
-      if (!result.ok) {
-        return { ok: false, error: result.error ?? "Failed to create ticket." };
-      }
-
-      return {
-        ok: true,
-        unitPrice,
-        ticketId: result.ticketId ?? null,
-        ticketNo: result.ticketNo ?? null,
-      };
-    }
-
-    const { error } = await supabase.from("ticket_items").insert({
-      ticket_id: ticketId,
-      item_type: "product",
-      service_id: null,
-      product_id: productId,
-      qty: 1,
-      unit_price: unitPrice,
-    });
-
-    if (error) {
-      console.error("Failed to add product to ticket", error);
-      return {
-        ok: false,
-        error: error.message || error.details || "Failed to add product.",
-      };
-    }
-
     return { ok: true, unitPrice };
   } catch (error) {
     console.error("Failed to add product to ticket", error);
     return { ok: false, error: "Failed to add product." };
-  }
-};
-
-const removeTicketItem = async (input: {
-  ticketId: string;
-  item: CatalogItem;
-  unitPrice: number;
-}) => {
-  try {
-    const supabase = createAdminClient();
-    const idFilter =
-      input.item.type === "service" ? "service_id" : "product_id";
-    const { data: itemRow, error: fetchError } = await supabase
-      .from("ticket_items")
-      .select("id")
-      .eq("ticket_id", input.ticketId)
-      .eq("item_type", input.item.type)
-      .eq(idFilter, input.item.id)
-      .eq("unit_price", input.unitPrice)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (fetchError) {
-      console.error("Failed to locate ticket item", fetchError);
-      return { ok: false, error: "Failed to update ticket items." };
-    }
-
-    if (!itemRow?.id) {
-      return { ok: false, error: "Ticket item not found." };
-    }
-
-    const { error } = await supabase
-      .from("ticket_items")
-      .delete()
-      .eq("id", itemRow.id);
-
-    if (error) {
-      console.error("Failed to remove ticket item", error);
-      return {
-        ok: false,
-        error: error.message || error.details || "Failed to remove item.",
-      };
-    }
-
-    return { ok: true };
-  } catch (error) {
-    console.error("Failed to remove ticket item", error);
-    return { ok: false, error: "Failed to remove item." };
   }
 };
 
@@ -370,8 +219,6 @@ export function TransactionsClient() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "ewallet">("cash");
   const [ticketLoading, setTicketLoading] = useState(false);
   const [ticketError, setTicketError] = useState<string | null>(null);
-  const [heldTicketId, setHeldTicketId] = useState<string | null>(null);
-  const [heldTicketNo, setHeldTicketNo] = useState<string | null>(null);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
   const [cartError, setCartError] = useState<string | null>(null);
@@ -697,13 +544,8 @@ export function TransactionsClient() {
   const updateCartEntry = (
     item: CatalogItem,
     unitPrice: number,
-    ticketId: string | null,
     delta: number
   ) => {
-    if (!ticketId) {
-      setTicketError("No active ticket.");
-      return;
-    }
     const unitKey = unitPrice.toFixed(2);
 
     if (delta > 0) {
@@ -723,44 +565,21 @@ export function TransactionsClient() {
         return;
       }
 
-      const addItem =
-        item.type === "service"
-          ? addServiceToTicket({
-              ticketId,
-              shiftId: activeShift?.id ?? "",
-              barberId: selectedBarberId,
-              serviceId: item.id,
-              customPrice: unitPrice,
-            })
-          : addProductToTicket({
-              ticketId,
-              shiftId: activeShift?.id ?? "",
-              barberId: selectedBarberId,
-              productId: item.id,
-              customPrice: unitPrice,
-            });
-
-      addItem.then((result) => {
-        if (!result.ok) {
-          toast.error(result.error ?? "Failed to add item.");
-          return;
-        }
-        setCartItems((prev) => {
-          const existing = prev.find(
-            (entry) =>
-              entry.item.id === item.id &&
-              entry.unitPrice.toFixed(2) === unitKey
+      setCartItems((prev) => {
+        const existing = prev.find(
+          (entry) =>
+            entry.item.id === item.id &&
+            entry.unitPrice.toFixed(2) === unitKey
+        );
+        if (existing) {
+          return prev.map((entry) =>
+            entry.item.id === item.id &&
+            entry.unitPrice.toFixed(2) === unitKey
+              ? { ...entry, qty: entry.qty + 1 }
+              : entry
           );
-          if (existing) {
-            return prev.map((entry) =>
-              entry.item.id === item.id &&
-              entry.unitPrice.toFixed(2) === unitKey
-                ? { ...entry, qty: entry.qty + 1 }
-                : entry
-            );
-          }
-          return [...prev, { item, qty: 1, unitPrice }];
-        });
+        }
+        return [...prev, { item, qty: 1, unitPrice }];
       });
       return;
     }
@@ -775,26 +594,20 @@ export function TransactionsClient() {
       return;
     }
 
-    removeTicketItem({ ticketId, item, unitPrice }).then((result) => {
-      if (!result.ok) {
-        toast.error(result.error ?? "Failed to remove item.");
-        return;
-      }
-      setCartItems((prev) =>
-        prev
-          .map((cartEntry) => {
-            if (
-              cartEntry.item.id !== item.id ||
-              cartEntry.unitPrice.toFixed(2) !== unitKey
-            ) {
-              return cartEntry;
-            }
-            const nextQty = cartEntry.qty - 1;
-            return { ...cartEntry, qty: nextQty };
-          })
-          .filter((cartEntry) => cartEntry.qty > 0)
-      );
-    });
+    setCartItems((prev) =>
+      prev
+        .map((cartEntry) => {
+          if (
+            cartEntry.item.id !== item.id ||
+            cartEntry.unitPrice.toFixed(2) !== unitKey
+          ) {
+            return cartEntry;
+          }
+          const nextQty = cartEntry.qty - 1;
+          return { ...cartEntry, qty: nextQty };
+        })
+        .filter((cartEntry) => cartEntry.qty > 0)
+    );
   };
 
   const appendCartItem = (item: CatalogItem, unitPrice: number) => {
@@ -843,16 +656,10 @@ export function TransactionsClient() {
     const addResult =
       item.type === "service"
         ? await addServiceToTicket({
-            ticketId: heldTicketId,
-            shiftId: activeShift.id,
-            barberId: selectedBarberId,
             serviceId: item.id,
             customPrice,
           })
         : await addProductToTicket({
-            ticketId: heldTicketId,
-            shiftId: activeShift.id,
-            barberId: selectedBarberId,
             productId: item.id,
             customPrice,
           });
@@ -869,11 +676,6 @@ export function TransactionsClient() {
       return;
     }
 
-    if (!heldTicketId && addResult.ticketId) {
-      setHeldTicketId(addResult.ticketId ?? null);
-      setHeldTicketNo(addResult.ticketNo ?? null);
-    }
-
     if (typeof addResult.unitPrice === "number") {
       appendCartItem(item, addResult.unitPrice);
     }
@@ -881,20 +683,9 @@ export function TransactionsClient() {
   };
 
   const handleClearCart = async () => {
-    if (heldTicketId) {
-      const result = await deleteTicket(heldTicketId);
-      if (!result.ok) {
-        const message = result.error ?? "Failed to clear ticket.";
-        setTicketError(message);
-        toast.error(message, { position: "top-center" });
-        return;
-      }
-    }
     setCartItems([]);
     setCartError(null);
     setTicketError(null);
-    setHeldTicketId(null);
-    setHeldTicketNo(null);
   };
 
   const handleOpenCheckout = () => {
@@ -930,35 +721,28 @@ export function TransactionsClient() {
     setTicketLoading(true);
     setTicketError(null);
 
-    let ticketId = heldTicketId;
-    let ticketNo = heldTicketNo;
+    const itemsPayload = cartItems.map((entry) => ({
+      item_type: entry.item.type,
+      service_id: entry.item.type === "service" ? entry.item.id : null,
+      product_id: entry.item.type === "product" ? entry.item.id : null,
+      qty: entry.qty,
+      unit_price: entry.unitPrice,
+    }));
 
-    if (!ticketId) {
-      const itemsPayload = cartItems.map((entry) => ({
-        item_type: entry.item.type,
-        service_id: entry.item.type === "service" ? entry.item.id : null,
-        product_id: entry.item.type === "product" ? entry.item.id : null,
-        qty: entry.qty,
-        unit_price: entry.unitPrice,
-      }));
+    const result = await createUnpaidTicket({
+      shiftId: activeShift.id,
+      barberId: selectedBarberId,
+      items: itemsPayload,
+    });
 
-      const result = await createUnpaidTicket({
-        shiftId: activeShift.id,
-        barberId: selectedBarberId,
-        items: itemsPayload,
-      });
-
-      if (!result.ok) {
-        setTicketError(result.error ?? "Failed to create ticket.");
-        setTicketLoading(false);
-        return;
-      }
-
-      ticketId = result.ticketId ?? null;
-      ticketNo = result.ticketNo ?? null;
-      setHeldTicketId(result.ticketId ?? null);
-      setHeldTicketNo(result.ticketNo ?? null);
+    if (!result.ok) {
+      setTicketError(result.error ?? "Failed to create ticket.");
+      setTicketLoading(false);
+      return;
     }
+
+    const ticketId = result.ticketId ?? null;
+    const ticketNo = result.ticketNo ?? null;
 
     if (!ticketId) {
       setTicketError("Failed to create ticket.");
@@ -973,14 +757,16 @@ export function TransactionsClient() {
     });
 
     if (!payResult.ok) {
+      const cleanup = await deleteTicket(ticketId);
+      if (!cleanup.ok) {
+        console.error("Failed to cleanup unpaid ticket", cleanup.error);
+      }
       setTicketError(payResult.error ?? "Failed to pay ticket.");
       setTicketLoading(false);
       return;
     }
 
     setCartItems([]);
-    setHeldTicketId(null);
-    setHeldTicketNo(null);
     setCashReceived("");
     setCheckoutDialogOpen(false);
     toast.success(`Payment confirmed for ${ticketNo ?? ticketId ?? "-"}.`, {
@@ -1307,7 +1093,6 @@ export function TransactionsClient() {
                                   updateCartEntry(
                                     entry.item,
                                     entry.unitPrice,
-                                    heldTicketId,
                                     -1
                                   )
                                 }
@@ -1325,7 +1110,6 @@ export function TransactionsClient() {
                                   updateCartEntry(
                                     entry.item,
                                     entry.unitPrice,
-                                    heldTicketId,
                                     1
                                   )
                                 }
