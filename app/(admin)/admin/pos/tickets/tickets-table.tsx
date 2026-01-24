@@ -899,7 +899,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                                     }}
                                     disabled={refundLoading}
                                   >
-                                    Refund (full)
+                                    Refund
                                   </Button>
                                 ) : null}
                                 <Button
