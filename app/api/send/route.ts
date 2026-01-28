@@ -1,10 +1,17 @@
 import { Resend } from "resend";
 import { WelcomeEmail } from "@/components/emails/welcome-email";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST() {
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return Response.json(
+        { ok: false, error: "Missing RESEND_API_KEY" },
+        { status: 500 }
+      );
+    }
+
+    const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
       from: "Wellside <no-reply@mail.wellside.xyz>",
       to: ["delivered@resend.dev"], // test inbox Resend
