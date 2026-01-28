@@ -67,6 +67,9 @@ type ShiftItemSummary = {
 type ShiftsTableProps = {
   shifts: ShiftSummary[];
   salesByShift: Record<string, number>;
+  cashSalesByShift: Record<string, number>;
+  ewalletSalesByShift: Record<string, number>;
+  refundedSalesByShift: Record<string, number>;
   ticketsCountByShift: Record<string, number>;
   itemsByShift: Record<string, ShiftItemSummary[]>;
 };
@@ -234,6 +237,9 @@ const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "S
 export function ShiftsTable({
   shifts,
   salesByShift,
+  cashSalesByShift,
+  ewalletSalesByShift,
+  refundedSalesByShift,
   ticketsCountByShift,
   itemsByShift,
 }: ShiftsTableProps) {
@@ -651,6 +657,13 @@ export function ShiftsTable({
                   ? "-"
                   : formatDateTime(shift.end_at);
                 const salesTotal = formatMoney(salesByShift[shift.id] ?? 0);
+                const cashSalesTotal = formatMoney(cashSalesByShift[shift.id] ?? 0);
+                const ewalletSalesTotal = formatMoney(
+                  ewalletSalesByShift[shift.id] ?? 0
+                );
+                const refundedSalesTotal = formatMoney(
+                  refundedSalesByShift[shift.id] ?? 0
+                );
                 const totalTickets = ticketsCountByShift[shift.id] ?? 0;
                 const shiftItems = itemsByShift[shift.id] ?? [];
                 const itemsTotal = shiftItems.reduce(
@@ -706,22 +719,6 @@ export function ShiftsTable({
                                   Shift ID: {shift.id}
                                 </SheetDescription>
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                                  {shiftCode ? (
-                                    <Badge
-                                      variant="outline"
-                                      className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
-                                    >
-                                      {shiftCode}
-                                    </Badge>
-                                  ) : null}
-                                  {shiftLabel && shiftLabel !== shiftCode ? (
-                                    <Badge
-                                      variant="outline"
-                                      className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
-                                    >
-                                      {shiftLabel}
-                                    </Badge>
-                                  ) : null}
                                 <Badge
                                   variant="outline"
                                   className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
@@ -744,14 +741,6 @@ export function ShiftsTable({
                                         </span>
                                         <span className="font-medium text-foreground">
                                           {shiftCode ?? "-"}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Label
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {shiftLabel ?? "-"}
                                         </span>
                                       </div>
                                       <div className="flex items-center justify-between py-2">
@@ -784,6 +773,30 @@ export function ShiftsTable({
                                         </span>
                                         <span className="font-medium text-foreground">
                                           {salesTotal}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Refunded
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {refundedSalesTotal}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          Cash
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {cashSalesTotal}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between py-2">
+                                        <span className="text-muted-foreground">
+                                          E-wallet
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                          {ewalletSalesTotal}
                                         </span>
                                       </div>
                                       <div className="flex items-center justify-between py-2">
@@ -834,15 +847,7 @@ export function ShiftsTable({
                                       </p>
                                     )}
                                   </div>
-                                  <div className="space-y-1">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Shift ID
-                                    </p>
-                                    <p className="break-all text-xs font-medium text-foreground">
-                                      {shift.id}
-                                    </p>
-                                  </div>
-                                  <div className="border-t border-dashed border-border pt-4">
+                                  <div className="pt-2">
                                     <Button
                                       variant="destructive"
                                       size="sm"

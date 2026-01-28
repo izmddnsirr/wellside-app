@@ -2,10 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  IconDashboard,
-  IconFolder,
-} from "@tabler/icons-react";
+import { Folder, History, Home, ListChecks } from "lucide-react";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import {
@@ -26,12 +23,23 @@ const data = {
         {
           title: "Dashboard",
           url: "/barber",
-          icon: IconDashboard,
+          icon: Home,
         },
         {
           title: "Bookings",
-          url: "/barber/bookings",
-          icon: IconFolder,
+          icon: Folder,
+          items: [
+            {
+              title: "Active",
+              url: "/barber/bookings/active",
+              icon: ListChecks,
+            },
+            {
+              title: "Past",
+              url: "/barber/bookings/past",
+              icon: History,
+            },
+          ],
         },
       ],
     },

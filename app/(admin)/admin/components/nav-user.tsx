@@ -1,14 +1,13 @@
 "use client"
 
 import {
-  IconCreditCard,
-  IconDotsVertical,
-  IconLogout,
-  IconNotification,
-  IconSun,
-  IconSettings,
-  IconUserCircle,
-} from "@tabler/icons-react"
+  Bell,
+  LogOut,
+  MoreVertical,
+  Settings,
+  Sun,
+  UserCircle,
+} from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -85,7 +84,7 @@ export function NavUser({
           {user.email}
         </span>
       </div>
-      <IconDotsVertical className="ml-auto size-4" />
+      <MoreVertical className="ml-auto size-4" />
     </SidebarMenuButton>
   )
 
@@ -128,7 +127,7 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <IconSun />
+                  <Sun />
                   Theme
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
@@ -149,7 +148,7 @@ export function NavUser({
                   router.push("/admin/account")
                 }}
               >
-                <IconUserCircle />
+                <UserCircle />
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -158,17 +157,17 @@ export function NavUser({
                   router.push("/admin/settings")
                 }}
               >
-                <IconSettings />
+                <Settings />
                 Settings
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <IconNotification />
+                <Bell />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
-              <IconLogout />
+              <LogOut />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

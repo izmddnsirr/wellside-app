@@ -81,6 +81,7 @@ type BookingsCardProps = {
   deleteBooking?: (formData: FormData) => Promise<void>;
   allowCancel?: boolean;
   allowDelete?: boolean;
+  showActions?: boolean;
   view?: "tabs" | "active" | "past" | "calendar";
 };
 
@@ -415,6 +416,7 @@ export function BookingsCard({
   deleteBooking,
   allowCancel = true,
   allowDelete = true,
+  showActions = true,
   view = "tabs",
 }: BookingsCardProps) {
   const router = useRouter();
@@ -981,9 +983,11 @@ export function BookingsCard({
               <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Status
               </TableHead>
-              <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Actions
-              </TableHead>
+              {showActions ? (
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions
+                </TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1035,177 +1039,202 @@ export function BookingsCard({
                       {formatStatusLabel(booking.status ?? null)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="w-[10%] px-4 py-3">
-                    <Dialog
-                      open={openDialogId === booking.id}
-                      onOpenChange={(open) =>
-                        setOpenDialogId(open ? booking.id : null)
-                      }
-                    >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setOpenDialogId(booking.id)}
-                        >
-                          <Pencil />
-                          Manage
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Manage booking</DialogTitle>
-                          <DialogDescription>
-                            Update status or cancel this booking.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="w-full rounded-xl border border-border bg-muted/40 p-4">
-                          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
-                            <div className="min-w-0">
-                              <p className="text-lg font-semibold leading-tight">
-                                {joinName(
-                                  booking.customer?.first_name ?? null,
-                                  booking.customer?.last_name ?? null
-                                )}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {booking.customer?.phone ||
-                                  booking.customer?.email ||
-                                  "-"}
-                              </p>
-                            </div>
-                            <div className="flex justify-start sm:justify-end">
-                              <Badge
-                                variant="outline"
-                                className={`gap-2 ${tone.badge} shrink-0`}
-                              >
-                                <span className={`size-2 rounded-full ${tone.dot}`} />
-                                {formatStatusLabel(booking.status ?? null)}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Date</p>
-                              <p className="font-medium">
-                                {formatDate(booking.booking_date ?? booking.start_at)}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Reference</p>
-                              <p className="font-medium">{booking.booking_ref}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Time</p>
-                              <p className="font-medium">
-                                {formatTimeRange(booking.start_at, booking.end_at)}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Service</p>
-                              <p className="font-medium">
-                                {booking.service?.name ?? "-"}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {booking.service?.duration_minutes
-                                  ? `${booking.service.duration_minutes} min`
-                                  : "Duration not set"}{" "}
-                                · {formatMoney(booking.service?.base_price ?? null)}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">Barber</p>
-                              <p className="font-medium">
-                                {joinName(
-                                  booking.barber?.first_name ?? null,
-                                  booking.barber?.last_name ?? null
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
-                            <label
-                              className="text-sm font-semibold"
-                              htmlFor={`status-${booking.id}`}
-                            >
-                              Update status
-                            </label>
-                            <form
-                              id={`update-booking-${booking.id}`}
-                              action={updateBookingStatus}
-                              className="contents"
-                              onSubmit={() => setOpenDialogId(null)}
-                            >
-                              <input type="hidden" name="id" value={booking.id} />
-                              <input
-                                type="hidden"
-                                name="status"
-                                value={
-                                  statusSelections[booking.id] ??
-                                  booking.status ??
-                                  "scheduled"
-                                }
-                              />
-                              <Select
-                                value={
-                                  statusSelections[booking.id] ??
-                                  booking.status ??
-                                  "scheduled"
-                                }
-                                onValueChange={(value) =>
-                                  setStatusSelections((prev) => ({
-                                    ...prev,
-                                    [booking.id]: value,
-                                  }))
-                                }
-                              >
-                                <SelectTrigger
-                                  id={`status-${booking.id}`}
-                                  className={`${statusSelectClass(
-                                    statusSelections[booking.id] ??
-                                      booking.status ??
-                                      "scheduled"
-                                  )} w-full`}
+                  {showActions ? (
+                    <TableCell className="w-[10%] px-4 py-3">
+                      <Dialog
+                        open={openDialogId === booking.id}
+                        onOpenChange={(open) =>
+                          setOpenDialogId(open ? booking.id : null)
+                        }
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setOpenDialogId(booking.id)}
+                          >
+                            <Pencil />
+                            Manage
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Manage booking</DialogTitle>
+                            <DialogDescription>
+                              Update status or cancel this booking.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="w-full rounded-xl border border-border bg-muted/40 p-4">
+                            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                              <div className="min-w-0">
+                                <p className="text-lg font-semibold leading-tight">
+                                  {joinName(
+                                    booking.customer?.first_name ?? null,
+                                    booking.customer?.last_name ?? null
+                                  )}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {booking.customer?.phone ||
+                                    booking.customer?.email ||
+                                    "-"}
+                                </p>
+                              </div>
+                              <div className="flex justify-start sm:justify-end">
+                                <Badge
+                                  variant="outline"
+                                  className={`gap-2 ${tone.badge} shrink-0`}
                                 >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {statusOptions.map((status) => (
-                                    <SelectItem key={status} value={status}>
-                                      {formatStatusLabel(status)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </form>
-                            <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                              <Button
-                                variant="outline"
-                                type="submit"
-                                form={`update-booking-${booking.id}`}
+                                  <span
+                                    className={`size-2 rounded-full ${tone.dot}`}
+                                  />
+                                  {formatStatusLabel(booking.status ?? null)}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Date</p>
+                                <p className="font-medium">
+                                  {formatDate(
+                                    booking.booking_date ?? booking.start_at
+                                  )}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">
+                                  Reference
+                                </p>
+                                <p className="font-medium">
+                                  {booking.booking_ref}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Time</p>
+                                <p className="font-medium">
+                                  {formatTimeRange(
+                                    booking.start_at,
+                                    booking.end_at
+                                  )}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">
+                                  Service
+                                </p>
+                                <p className="font-medium">
+                                  {booking.service?.name ?? "-"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {booking.service?.duration_minutes
+                                    ? `${booking.service.duration_minutes} min`
+                                    : "Duration not set"}{" "}
+                                  · {formatMoney(booking.service?.base_price ?? null)}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">
+                                  Barber
+                                </p>
+                                <p className="font-medium">
+                                  {joinName(
+                                    booking.barber?.first_name ?? null,
+                                    booking.barber?.last_name ?? null
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
+                              <label
+                                className="text-sm font-semibold"
+                                htmlFor={`status-${booking.id}`}
                               >
                                 Update status
-                              </Button>
-                              {allowCancel && cancelBooking ? (
-                                <form
-                                  id={`cancel-booking-${booking.id}`}
-                                  action={cancelBooking}
-                                  onSubmit={() => setOpenDialogId(null)}
+                              </label>
+                              <form
+                                id={`update-booking-${booking.id}`}
+                                action={updateBookingStatus}
+                                className="contents"
+                                onSubmit={() => setOpenDialogId(null)}
+                              >
+                                <input
+                                  type="hidden"
+                                  name="id"
+                                  value={booking.id}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="status"
+                                  value={
+                                    statusSelections[booking.id] ??
+                                    booking.status ??
+                                    "scheduled"
+                                  }
+                                />
+                                <Select
+                                  value={
+                                    statusSelections[booking.id] ??
+                                    booking.status ??
+                                    "scheduled"
+                                  }
+                                  onValueChange={(value) =>
+                                    setStatusSelections((prev) => ({
+                                      ...prev,
+                                      [booking.id]: value,
+                                    }))
+                                  }
                                 >
-                                  <input type="hidden" name="id" value={booking.id} />
-                                  <Button variant="destructive" type="submit">
-                                    Cancel booking
-                                  </Button>
-                                </form>
-                              ) : null}
+                                  <SelectTrigger
+                                    id={`status-${booking.id}`}
+                                    className={`${statusSelectClass(
+                                      statusSelections[booking.id] ??
+                                        booking.status ??
+                                        "scheduled"
+                                    )} w-full`}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {statusOptions.map((status) => (
+                                      <SelectItem key={status} value={status}>
+                                        {formatStatusLabel(status)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </form>
+                              <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                                <Button
+                                  variant="outline"
+                                  type="submit"
+                                  form={`update-booking-${booking.id}`}
+                                >
+                                  Update status
+                                </Button>
+                                {allowCancel && cancelBooking ? (
+                                  <form
+                                    id={`cancel-booking-${booking.id}`}
+                                    action={cancelBooking}
+                                    onSubmit={() => setOpenDialogId(null)}
+                                  >
+                                    <input
+                                      type="hidden"
+                                      name="id"
+                                      value={booking.id}
+                                    />
+                                    <Button variant="destructive" type="submit">
+                                      Cancel booking
+                                    </Button>
+                                  </form>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               );
             })}
@@ -1250,9 +1279,11 @@ export function BookingsCard({
               <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Status
               </TableHead>
-              <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Actions
-              </TableHead>
+              {showActions ? (
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions
+                </TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1304,17 +1335,19 @@ export function BookingsCard({
                       {formatStatusLabel(booking.status ?? null)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="w-[10%] px-4 py-3">
-                    {allowDelete && deleteBooking ? (
-                      <form action={deleteBooking}>
-                        <input type="hidden" name="id" value={booking.id} />
-                        <Button variant="destructive" size="sm" type="submit">
-                          <Trash2 />
-                          Delete
-                        </Button>
-                      </form>
-                    ) : null}
-                  </TableCell>
+                  {showActions ? (
+                    <TableCell className="w-[10%] px-4 py-3">
+                      {allowDelete && deleteBooking ? (
+                        <form action={deleteBooking}>
+                          <input type="hidden" name="id" value={booking.id} />
+                          <Button variant="destructive" size="sm" type="submit">
+                            <Trash2 />
+                            Delete
+                          </Button>
+                        </form>
+                      ) : null}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               );
             })}

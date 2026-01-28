@@ -12,6 +12,7 @@ type BookingsClientProps = {
   deleteBooking?: (formData: FormData) => Promise<void>;
   allowCancel?: boolean;
   allowDelete?: boolean;
+  showActions?: boolean;
   view?: "tabs" | "active" | "past" | "calendar";
 };
 

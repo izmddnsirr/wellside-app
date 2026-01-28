@@ -9,6 +9,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useOnboarding } from "./onboarding-context";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -74,10 +75,9 @@ export function StepOneForm() {
         </Field>
         <Field>
           <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             value={data.password}
             onChange={(event) => update({ password: event.target.value })}
             className="dark:bg-[#151515] dark:border-white/10 dark:text-white dark:placeholder:text-white/40"
@@ -85,10 +85,9 @@ export function StepOneForm() {
         </Field>
         <Field>
           <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
-          <Input
+          <PasswordInput
             id="confirmPassword"
             name="confirmPassword"
-            type="password"
             value={data.confirmPassword}
             onChange={(event) => update({ confirmPassword: event.target.value })}
             className="dark:bg-[#151515] dark:border-white/10 dark:text-white dark:placeholder:text-white/40"

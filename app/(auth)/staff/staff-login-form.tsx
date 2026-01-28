@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Loader2 } from "lucide-react";
 import { useFormStatus } from "react-dom";
 
@@ -51,7 +52,11 @@ export function StaffLoginForm({ action, errorMessage }: StaffLoginFormProps) {
           <div className="flex items-center">
             <FieldLabel htmlFor="password">Password</FieldLabel>
           </div>
-          <Input id="password" name="password" type="password" required />
+          <PasswordInput
+            id="password"
+            name="password"
+            required
+          />
         </Field>
         {errorMessage ? (
           <FieldDescription className="text-center text-red-600">

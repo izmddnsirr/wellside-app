@@ -68,6 +68,9 @@ const formatCurrency = (value: number | null) => {
   }).format(value)}`;
 };
 
+const formatStatusLabel = (status: "completed" | "cancelled" | "no_show") =>
+  status.replace(/_/g, " ").toUpperCase();
+
 const logout = async () => {
   "use server";
 
@@ -251,7 +254,7 @@ export default async function ProfilePage() {
                             : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                         }`}
                       >
-                        {item.status.toUpperCase()}
+                        {formatStatusLabel(item.status)}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">

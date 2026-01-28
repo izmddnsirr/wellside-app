@@ -5,6 +5,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { LoginSubmit } from "./login-submit";
@@ -111,7 +112,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" name="password" type="password" required />
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  required
+                />
               </Field>
               {errorMessage ? (
                 <FieldDescription className="text-center text-red-600">

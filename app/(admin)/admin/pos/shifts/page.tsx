@@ -27,6 +27,8 @@ export default async function Page() {
             `
             shift_id,
             total_amount,
+            payment_status,
+            payment_method,
             ticket_items (
               qty,
               unit_price,
@@ -52,6 +54,58 @@ export default async function Page() {
   }));
 
   const salesByShift = normalizedTickets.reduce<Record<string, number>>(
+    (acc, ticket) => {
+      if (!ticket.shift_id) {
+        return acc;
+      }
+      acc[ticket.shift_id] =
+        (acc[ticket.shift_id] ?? 0) + Number(ticket.total_amount ?? 0);
+      return acc;
+    },
+    {}
+  );
+
+  const paidTickets = normalizedTickets.filter(
+    (ticket) => (ticket.payment_status ?? "").toLowerCase() === "paid"
+  );
+
+  const refundedTickets = normalizedTickets.filter(
+    (ticket) => (ticket.payment_status ?? "").toLowerCase() === "refunded"
+  );
+
+  const cashSalesByShift = paidTickets.reduce<Record<string, number>>(
+    (acc, ticket) => {
+      if (!ticket.shift_id) {
+        return acc;
+      }
+      const method = (ticket.payment_method ?? "").toLowerCase();
+      if (method !== "cash") {
+        return acc;
+      }
+      acc[ticket.shift_id] =
+        (acc[ticket.shift_id] ?? 0) + Number(ticket.total_amount ?? 0);
+      return acc;
+    },
+    {}
+  );
+
+  const ewalletSalesByShift = paidTickets.reduce<Record<string, number>>(
+    (acc, ticket) => {
+      if (!ticket.shift_id) {
+        return acc;
+      }
+      const method = (ticket.payment_method ?? "").toLowerCase();
+      if (method !== "ewallet") {
+        return acc;
+      }
+      acc[ticket.shift_id] =
+        (acc[ticket.shift_id] ?? 0) + Number(ticket.total_amount ?? 0);
+      return acc;
+    },
+    {}
+  );
+
+  const refundedSalesByShift = refundedTickets.reduce<Record<string, number>>(
     (acc, ticket) => {
       if (!ticket.shift_id) {
         return acc;
@@ -130,6 +184,9 @@ export default async function Page() {
         <ShiftsTable
           shifts={normalizedShifts}
           salesByShift={salesByShift}
+          cashSalesByShift={cashSalesByShift}
+          ewalletSalesByShift={ewalletSalesByShift}
+          refundedSalesByShift={refundedSalesByShift}
           ticketsCountByShift={ticketsCountByShift}
           itemsByShift={itemsByShift}
         />

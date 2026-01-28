@@ -1145,7 +1145,7 @@ export function TransactionsClient() {
                       <div className="flex items-center justify-between text-sm">
                         <Label>Checkout details</Label>
                       </div>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-end">
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:items-end">
                         <div className="grid gap-3">
                           <div>
                             <Label htmlFor="barber-id" className="text-xs">
@@ -1170,7 +1170,7 @@ export function TransactionsClient() {
                               >
                                 <SelectTrigger
                                   id="barber-id"
-                                  className="mt-2 h-10 min-h-10 w-full bg-background"
+                                  className="mt-2 h-10 min-h-10 w-full overflow-hidden text-ellipsis whitespace-nowrap bg-background"
                                 >
                                   <SelectValue placeholder="No barber selected" />
                                 </SelectTrigger>

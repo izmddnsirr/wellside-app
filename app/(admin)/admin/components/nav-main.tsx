@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconChevronDown, type Icon } from "@tabler/icons-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   SidebarGroup,
@@ -20,7 +20,7 @@ import React from "react";
 type NavItem = {
   title: string;
   url?: string;
-  icon?: Icon;
+  icon?: LucideIcon;
   items?: NavItem[];
 };
 
@@ -77,7 +77,7 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                           >
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
-                            <IconChevronDown
+                            <ChevronDown
                               className={cn(
                                 "ml-auto size-4 transition-transform",
                                 isOpen && "rotate-180"

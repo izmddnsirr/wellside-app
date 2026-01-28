@@ -3,19 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  IconCashBanknote,
-  IconChartBar,
-  IconDashboard,
-  IconFolder,
-  IconCalendarEvent,
-  IconListDetails,
-  IconReport,
-  IconScissors,
-  IconTicket,
-  IconTimeline,
-  IconReceipt,
-  IconUsers,
-} from "@tabler/icons-react";
+  Banknote,
+  Calendar,
+  FileText,
+  Folder,
+  History,
+  Home,
+  ListChecks,
+  Clock,
+  Package,
+  Receipt,
+  Scissors,
+  Ticket,
+  Users,
+} from "lucide-react";
 
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
@@ -37,54 +38,54 @@ const data = {
         {
           title: "Dashboard",
           url: "/admin",
-          icon: IconDashboard,
+          icon: Home,
         },
         {
           title: "Bookings",
-          icon: IconFolder,
+          icon: Folder,
           items: [
             {
               title: "Calendar",
               url: "/admin/bookings/calendar",
-              icon: IconCalendarEvent,
+              icon: Calendar,
             },
             {
               title: "Active",
               url: "/admin/bookings/active",
-              icon: IconListDetails,
+              icon: ListChecks,
             },
             {
               title: "Past",
               url: "/admin/bookings/past",
-              icon: IconTimeline,
+              icon: History,
             },
           ],
         },
         {
           title: "POS",
-          icon: IconCashBanknote,
+          icon: Banknote,
           items: [
             {
               title: "Transactions",
               url: "/admin/pos/transactions",
-              icon: IconReceipt,
+              icon: Receipt,
             },
             {
               title: "Tickets",
               url: "/admin/pos/tickets",
-              icon: IconTicket,
+              icon: Ticket,
             },
             {
               title: "Shifts",
               url: "/admin/pos/shifts",
-              icon: IconTimeline,
+              icon: Clock,
             },
           ],
         },
         {
           title: "Report",
           url: "/admin/report",
-          icon: IconReport,
+          icon: FileText, // TODO: verify icon match
         },
       ],
     },
@@ -94,12 +95,12 @@ const data = {
         {
           title: "Services",
           url: "/admin/services",
-          icon: IconChartBar,
+          icon: Scissors,
         },
         {
           title: "Products",
           url: "/admin/products",
-          icon: IconListDetails,
+          icon: Package,
         },
       ],
     },
@@ -109,12 +110,12 @@ const data = {
         {
           title: "Customers",
           url: "/admin/customers",
-          icon: IconUsers,
+          icon: Users,
         },
         {
           title: "Barbers",
           url: "/admin/barbers",
-          icon: IconScissors,
+          icon: Scissors,
         },
       ],
     },
