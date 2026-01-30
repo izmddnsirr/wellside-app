@@ -90,7 +90,21 @@ export default async function AccountPage() {
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" defaultValue={phone} />
+                <div className="flex">
+                  <div className="flex items-center gap-2 rounded-l-md border border-border bg-muted/40 px-3 text-sm font-medium text-foreground/80">
+                    <span aria-hidden="true" className="text-base">
+                      🇲🇾
+                    </span>
+                    <span className="text-sm">+60</span>
+                  </div>
+                  <Input
+                    id="phone"
+                    defaultValue={phone}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="rounded-l-none"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-between">

@@ -33,6 +33,7 @@ import { Pencil, Plus, Search, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/client";
+import { isValidE164, normalizePhone } from "@/src/lib/phone";
 
 type Barber = {
   id: string;
@@ -236,12 +237,19 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
         displayNameInput ?? fallbackDisplayName
       ) : null;
 
+    const phoneInput = normalizeValue(formData.get("phone"));
+    const normalizedPhone = phoneInput ? normalizePhone(phoneInput, "MY") : null;
+    if (normalizedPhone && !isValidE164(normalizedPhone)) {
+      setUpdateError("Phone number must be a valid E.164 value.");
+      return;
+    }
+
     const payload = {
       first_name: firstName,
       last_name: lastName,
       display_name: displayName,
       email: normalizeValue(formData.get("email")),
-      phone: normalizeValue(formData.get("phone")),
+      phone: normalizedPhone,
       working_start_time: normalizeValue(formData.get("working_start_time")),
       working_end_time: normalizeValue(formData.get("working_end_time")),
       barber_level: selectedBarberLevel || null,
@@ -384,11 +392,26 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="barber-phone">Phone</Label>
-                    <Input
-                      id="barber-phone"
-                      name="phone"
-                      placeholder="+60 12-345 6789"
-                    />
+                    <div className="flex">
+                      <div className="flex items-center gap-2 rounded-l-md border border-border bg-muted/40 px-3 text-sm font-medium text-foreground/80">
+                        <span aria-hidden="true" className="text-base">
+                          🇲🇾
+                        </span>
+                        <span className="text-sm">+60</span>
+                      </div>
+                      <Input
+                        id="barber-phone"
+                        name="phone"
+                        placeholder="123456789"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        onInput={(event) => {
+                          const target = event.currentTarget;
+                          target.value = target.value.replace(/\D/g, "");
+                        }}
+                        className="rounded-l-none"
+                      />
+                    </div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
@@ -486,11 +509,26 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="update-barber-phone">Phone</Label>
-              <Input
-                id="update-barber-phone"
-                name="phone"
-                defaultValue={selectedBarber?.phone ?? ""}
-              />
+              <div className="flex">
+                <div className="flex items-center gap-2 rounded-l-md border border-border bg-muted/40 px-3 text-sm font-medium text-foreground/80">
+                  <span aria-hidden="true" className="text-base">
+                    🇲🇾
+                  </span>
+                  <span className="text-sm">+60</span>
+                </div>
+                <Input
+                  id="update-barber-phone"
+                  name="phone"
+                  defaultValue={selectedBarber?.phone ?? ""}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onInput={(event) => {
+                    const target = event.currentTarget;
+                    target.value = target.value.replace(/\D/g, "");
+                  }}
+                  className="rounded-l-none"
+                />
+              </div>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">

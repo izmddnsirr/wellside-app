@@ -99,7 +99,9 @@ export function StepOneForm() {
           </FieldDescription>
         ) : null}
         <Field>
-          <Button type="submit">Continue</Button>
+          <Button type="submit" size="lg" className="w-full">
+            Continue
+          </Button>
         </Field>
         <FieldDescription className="text-center">
           Already have an account? <a href="/login">Login</a>
