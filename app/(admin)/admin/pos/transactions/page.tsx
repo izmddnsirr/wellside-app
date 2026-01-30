@@ -4,9 +4,7 @@ import { ShiftHeader } from "./shift-header";
 
 export default function Page() {
   return (
-    <AdminShell
-      headerMeta={<ShiftHeader />}
-    >
+    <AdminShell title="Transactions">
       <TransactionsClient />
     </AdminShell>
   );

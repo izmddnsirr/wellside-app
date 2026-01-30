@@ -53,8 +53,6 @@ export function ShiftHeader() {
   const shiftLabel = shift.shift_code || shift.label || shift.id;
 
   return (
-    <div className="rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-semibold text-muted-foreground">
-      Shift: <span className="text-foreground">{shiftLabel}</span>
-    </div>
+    <div className="text-base font-medium text-foreground">{shiftLabel}</div>
   );
 }

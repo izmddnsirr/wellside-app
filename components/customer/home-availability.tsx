@@ -109,7 +109,7 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-xs tracking-[0.2em] text-muted-foreground">
           Today
         </p>
         <span className="rounded-full border border-border px-3 py-1 text-xs">

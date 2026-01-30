@@ -106,7 +106,7 @@ export default async function HomePage() {
 
             <div className="bg-primary px-6 py-5 text-primary-foreground">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-primary-foreground/70">
+                <p className="text-[11px] tracking-[0.2em] text-primary-foreground/70">
                   Upcoming
                 </p>
                 {upcoming ? (
@@ -145,7 +145,7 @@ export default async function HomePage() {
               <div className="px-6 py-5">
                 <div className="flex items-center justify-between gap-6">
                   <div>
-                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    <div className="flex items-center gap-2 text-xs tracking-[0.2em] text-muted-foreground">
                       <Scissors className="h-3.5 w-3.5" />
                       Service
                     </div>
@@ -154,7 +154,7 @@ export default async function HomePage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center justify-end gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    <div className="flex items-center justify-end gap-2 text-xs tracking-[0.2em] text-muted-foreground">
                       <User className="h-3.5 w-3.5" />
                       Barber
                     </div>
@@ -195,7 +195,7 @@ export default async function HomePage() {
             style={{ animationDelay: "160ms" }}
           >
             <div className="text-card-foreground flex flex-col gap-3 rounded-3xl border border-border/60 bg-card px-4 py-4">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 Next
               </div>
@@ -207,7 +207,7 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="flex flex-col gap-3 rounded-3xl border border-border/60 bg-card px-4 py-4">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
                 Total
               </div>
@@ -220,7 +220,7 @@ export default async function HomePage() {
               href="/ai"
               className="flex flex-col gap-3 rounded-3xl border border-transparent bg-primary px-4 py-4 text-primary-foreground"
             >
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-primary-foreground/70">
+              <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-primary-foreground/70">
                 <Sparkles className="h-3.5 w-3.5" />
                 Try AI
               </div>

@@ -76,6 +76,7 @@ export default async function SelectServicesPage({
     .from("services")
     .select("id, service_code, name, base_price, duration_minutes, is_active")
     .eq("is_active", true)
+    .not("base_price", "is", null)
     .order("service_code", { ascending: true })
     .order("name", { ascending: true });
   const services = servicesData ?? [];

@@ -80,7 +80,7 @@ const formatTime = (value: string | null) => {
   return timeFormatter
     .formatToParts(new Date(value))
     .map((part) =>
-      part.type === "dayPeriod" ? part.value.toUpperCase() : part.value
+      part.type === "dayPeriod" ? part.value.toUpperCase() : part.value,
     )
     .join("");
 };
@@ -216,7 +216,9 @@ export function TransactionsClient() {
   const [openShiftLoading, setOpenShiftLoading] = useState(false);
   const [closeShiftLoading, setCloseShiftLoading] = useState(false);
   const [shiftActionError, setShiftActionError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "ewallet">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "ewallet">(
+    "cash",
+  );
   const [ticketLoading, setTicketLoading] = useState(false);
   const [ticketError, setTicketError] = useState<string | null>(null);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
@@ -233,9 +235,8 @@ export function TransactionsClient() {
   const [barbersError, setBarbersError] = useState<string | null>(null);
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [customPriceDialogOpen, setCustomPriceDialogOpen] = useState(false);
-  const [pendingCustomItem, setPendingCustomItem] = useState<CatalogItem | null>(
-    null
-  );
+  const [pendingCustomItem, setPendingCustomItem] =
+    useState<CatalogItem | null>(null);
   useEffect(() => {
     let isMounted = true;
 
@@ -273,7 +274,9 @@ export function TransactionsClient() {
       const supabase = createAdminClient();
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, base_price, duration_minutes, service_code, is_active")
+        .select(
+          "id, name, base_price, duration_minutes, service_code, is_active",
+        )
         .eq("is_active", true)
         .order("service_code", { ascending: true });
 
@@ -502,8 +505,8 @@ export function TransactionsClient() {
     }
     return services.filter((service) =>
       [service.code, service.name].some((value) =>
-        value.toLowerCase().includes(trimmed)
-      )
+        value.toLowerCase().includes(trimmed),
+      ),
     );
   }, [query, services]);
 
@@ -514,14 +517,14 @@ export function TransactionsClient() {
     }
     return products.filter((product) =>
       [product.code, product.name].some((value) =>
-        value.toLowerCase().includes(trimmed)
-      )
+        value.toLowerCase().includes(trimmed),
+      ),
     );
   }, [query, products]);
 
   const cartItemCount = useMemo(
     () => cartItems.reduce((total, entry) => total + entry.qty, 0),
-    [cartItems]
+    [cartItems],
   );
 
   const cartQtyByItemId = useMemo(() => {
@@ -536,15 +539,15 @@ export function TransactionsClient() {
     () =>
       cartItems.reduce(
         (total, entry) => total + entry.unitPrice * entry.qty,
-        0
+        0,
       ),
-    [cartItems]
+    [cartItems],
   );
 
   const updateCartEntry = (
     item: CatalogItem,
     unitPrice: number,
-    delta: number
+    delta: number,
   ) => {
     const unitKey = unitPrice.toFixed(2);
 
@@ -568,15 +571,13 @@ export function TransactionsClient() {
       setCartItems((prev) => {
         const existing = prev.find(
           (entry) =>
-            entry.item.id === item.id &&
-            entry.unitPrice.toFixed(2) === unitKey
+            entry.item.id === item.id && entry.unitPrice.toFixed(2) === unitKey,
         );
         if (existing) {
           return prev.map((entry) =>
-            entry.item.id === item.id &&
-            entry.unitPrice.toFixed(2) === unitKey
+            entry.item.id === item.id && entry.unitPrice.toFixed(2) === unitKey
               ? { ...entry, qty: entry.qty + 1 }
-              : entry
+              : entry,
           );
         }
         return [...prev, { item, qty: 1, unitPrice }];
@@ -587,7 +588,7 @@ export function TransactionsClient() {
     const entry = cartItems.find(
       (cartEntry) =>
         cartEntry.item.id === item.id &&
-        cartEntry.unitPrice.toFixed(2) === unitKey
+        cartEntry.unitPrice.toFixed(2) === unitKey,
     );
 
     if (!entry) {
@@ -606,7 +607,7 @@ export function TransactionsClient() {
           const nextQty = cartEntry.qty - 1;
           return { ...cartEntry, qty: nextQty };
         })
-        .filter((cartEntry) => cartEntry.qty > 0)
+        .filter((cartEntry) => cartEntry.qty > 0),
     );
   };
 
@@ -615,13 +616,13 @@ export function TransactionsClient() {
     setCartItems((prev) => {
       const existing = prev.find(
         (entry) =>
-          entry.item.id === item.id && entry.unitPrice.toFixed(2) === unitKey
+          entry.item.id === item.id && entry.unitPrice.toFixed(2) === unitKey,
       );
       if (existing) {
         return prev.map((entry) =>
           entry.item.id === item.id && entry.unitPrice.toFixed(2) === unitKey
             ? { ...entry, qty: entry.qty + 1 }
-            : entry
+            : entry,
         );
       }
       return [...prev, { item, qty: 1, unitPrice }];
@@ -630,7 +631,7 @@ export function TransactionsClient() {
 
   const handleAddCatalogItem = async (
     item: CatalogItem,
-    customPrice?: number | null
+    customPrice?: number | null,
   ) => {
     if (!activeShift?.id) {
       setTicketError("No active shift.");
@@ -808,18 +809,18 @@ export function TransactionsClient() {
                     {shiftLoading
                       ? "Loading shift..."
                       : shiftError
-                      ? "Shift unavailable"
-                      : activeShift?.shift_code ||
-                        activeShift?.label ||
-                        activeShift?.id ||
-                        "No shift code"}
+                        ? "Shift unavailable"
+                        : activeShift?.shift_code ||
+                          activeShift?.label ||
+                          activeShift?.id ||
+                          "No shift code"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {shiftLoading
                       ? "Loading shift time..."
                       : shiftError
-                      ? "Unable to load shift time"
-                      : `Opened at ${formatTime(activeShift?.start_at ?? null)}`}
+                        ? "Unable to load shift time"
+                        : `Opened at ${formatTime(activeShift?.start_at ?? null)}`}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 lg:gap-4">
@@ -839,9 +840,7 @@ export function TransactionsClient() {
                       </DialogHeader>
                       <div className="space-y-3 text-sm">
                         <div>
-                          <p className="text-xs text-muted-foreground">
-                            Shift
-                          </p>
+                          <p className="text-xs text-muted-foreground">Shift</p>
                           <p className="font-semibold">
                             {activeShift?.shift_code ||
                               activeShift?.label ||
@@ -933,7 +932,7 @@ export function TransactionsClient() {
                               </div>
                             </div>
                           ) : (
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                            <div className="grid gap-4 grid-cols-3 md:grid-cols-4">
                               {filteredServices.map((service) => (
                                 <button
                                   key={service.code}
@@ -941,21 +940,21 @@ export function TransactionsClient() {
                                   className="flex flex-col items-start gap-2 rounded-xl border border-border bg-muted/40 px-5 py-4 text-left text-foreground transition hover:bg-muted/60"
                                   onClick={() => handleAddCatalogItem(service)}
                                 >
-                                  <span className="text-xs text-muted-foreground">
-                                    {service.code}
-                                  </span>
-                                  <span className="text-sm font-semibold">
+                                  {/* code hidden per request */}
+                                  <span className="w-full truncate text-sm font-semibold">
                                     {service.name}
                                   </span>
                                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                     {service.basePrice === null ? (
-                                      <Badge variant="secondary">Custom price</Badge>
+                                      <p>Custom</p>
                                     ) : (
-                                      <span>{formatMoney(service.basePrice)}</span>
+                                      <span>
+                                        {formatMoney(service.basePrice)}
+                                      </span>
                                     )}
-                                    <span className="text-muted-foreground">
+                                    {/* <span className="text-muted-foreground">
                                       · {service.meta}
-                                    </span>
+                                    </span> */}
                                   </div>
                                 </button>
                               ))}
@@ -992,7 +991,7 @@ export function TransactionsClient() {
                               </div>
                             </div>
                           ) : (
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                            <div className="grid gap-4 grid-cols-3 md:grid-cols-4">
                               {filteredProducts.map((product) => (
                                 <button
                                   key={product.code}
@@ -1000,21 +999,21 @@ export function TransactionsClient() {
                                   className="flex flex-col items-start gap-2 rounded-xl border border-border bg-muted/40 px-5 py-4 text-left text-foreground transition hover:bg-muted/60"
                                   onClick={() => handleAddCatalogItem(product)}
                                 >
-                                  <span className="text-xs text-muted-foreground">
-                                    {product.code}
-                                  </span>
-                                  <span className="text-sm font-semibold">
+                                  {/* code hidden per request */}
+                                  <span className="w-full truncate text-sm font-semibold">
                                     {product.name}
                                   </span>
-                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                                     {product.basePrice === null ? (
-                                      <Badge variant="secondary">Custom price</Badge>
+                                      <p>Custom</p>
                                     ) : (
-                                      <span>{formatMoney(product.basePrice)}</span>
+                                      <span>
+                                        {formatMoney(product.basePrice)}
+                                      </span>
                                     )}
-                                    <span className="text-muted-foreground">
-                                      · {product.meta}
-                                    </span>
+                                    {/* <span className="text-muted-foreground">
+                                      {product.meta}
+                                    </span> */}
                                   </div>
                                 </button>
                               ))}
@@ -1093,7 +1092,7 @@ export function TransactionsClient() {
                                   updateCartEntry(
                                     entry.item,
                                     entry.unitPrice,
-                                    -1
+                                    -1,
                                   )
                                 }
                               >
@@ -1110,14 +1109,14 @@ export function TransactionsClient() {
                                   updateCartEntry(
                                     entry.item,
                                     entry.unitPrice,
-                                    1
+                                    1,
                                   )
                                 }
                                 disabled={
                                   entry.item.type === "product" &&
                                   typeof entry.item.stockQty === "number" &&
-                                  (cartQtyByItemId.get(entry.item.id) ?? entry.qty) >=
-                                    entry.item.stockQty
+                                  (cartQtyByItemId.get(entry.item.id) ??
+                                    entry.qty) >= entry.item.stockQty
                                 }
                               >
                                 +
@@ -1164,7 +1163,7 @@ export function TransactionsClient() {
                                 value={selectedBarberId ?? "none"}
                                 onValueChange={(value) =>
                                   setSelectedBarberId(
-                                    value === "none" ? null : value
+                                    value === "none" ? null : value,
                                   )
                                 }
                               >
@@ -1175,14 +1174,19 @@ export function TransactionsClient() {
                                   <SelectValue placeholder="No barber selected" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="none">No barber</SelectItem>
+                                  <SelectItem value="none">
+                                    No barber
+                                  </SelectItem>
                                   {barbers.length === 0 ? (
                                     <SelectItem value="no-barbers" disabled>
                                       No active barbers
                                     </SelectItem>
                                   ) : (
                                     barbers.map((barber) => (
-                                      <SelectItem key={barber.id} value={barber.id}>
+                                      <SelectItem
+                                        key={barber.id}
+                                        value={barber.id}
+                                      >
                                         {[barber.first_name, barber.last_name]
                                           .filter(Boolean)
                                           .join(" ") || "Unnamed barber"}
@@ -1217,7 +1221,9 @@ export function TransactionsClient() {
                             {ticketLoading ? "Processing..." : "Checkout"}
                           </Button>
                           <DialogContent
-                            onInteractOutside={(event) => event.preventDefault()}
+                            onInteractOutside={(event) =>
+                              event.preventDefault()
+                            }
                             onEscapeKeyDown={(event) => event.preventDefault()}
                           >
                             <DialogHeader>
@@ -1236,11 +1242,17 @@ export function TransactionsClient() {
                                 </p>
                               </div>
                               <div className="space-y-2">
-                                <Label className="text-xs">Payment method</Label>
+                                <Label className="text-xs">
+                                  Payment method
+                                </Label>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                   <Button
                                     type="button"
-                                    variant={paymentMethod === "cash" ? "default" : "outline"}
+                                    variant={
+                                      paymentMethod === "cash"
+                                        ? "default"
+                                        : "outline"
+                                    }
                                     className="h-11 w-full"
                                     onClick={() => setPaymentMethod("cash")}
                                   >
@@ -1249,7 +1261,9 @@ export function TransactionsClient() {
                                   <Button
                                     type="button"
                                     variant={
-                                      paymentMethod === "ewallet" ? "default" : "outline"
+                                      paymentMethod === "ewallet"
+                                        ? "default"
+                                        : "outline"
                                     }
                                     className="h-11 w-full"
                                     onClick={() => setPaymentMethod("ewallet")}
@@ -1260,7 +1274,10 @@ export function TransactionsClient() {
                               </div>
                               {paymentMethod === "cash" ? (
                                 <div className="space-y-2">
-                                  <Label htmlFor="cash-received" className="text-xs">
+                                  <Label
+                                    htmlFor="cash-received"
+                                    className="text-xs"
+                                  >
                                     Cash received
                                   </Label>
                                   <div className="rounded-2xl border border-border bg-background px-4 py-3 text-center">
@@ -1305,7 +1322,8 @@ export function TransactionsClient() {
                                 disabled={
                                   ticketLoading ||
                                   (paymentMethod === "cash" &&
-                                    (cashReceived.trim() === "" || changeDue < 0))
+                                    (cashReceived.trim() === "" ||
+                                      changeDue < 0))
                                 }
                               >
                                 {ticketLoading ? "Charging..." : "Charge"}
@@ -1353,7 +1371,9 @@ export function TransactionsClient() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Open shift</DialogTitle>
-                    <DialogDescription>Start a new shift for today.</DialogDescription>
+                    <DialogDescription>
+                      Start a new shift for today.
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-3">
                     <div className="space-y-2">

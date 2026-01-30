@@ -42,28 +42,20 @@ export function BookingFlowActions({ backHref }: BookingFlowActionsProps) {
             <X className="h-4 w-4" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="rounded-3xl border-border bg-card p-10 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[640px] **:data-[slot=dialog-close]:right-6 **:data-[slot=dialog-close]:top-6 [&_[data-slot=dialog-close]_*]:size-5">
-          <DialogHeader className="space-y-3 text-left">
-            <DialogTitle className="text-3xl font-semibold text-foreground">
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
               Are you sure you want to leave this booking?
             </DialogTitle>
-            <DialogDescription className="text-base text-muted-foreground">
+            <DialogDescription>
               All selections will be lost
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex w-full flex-col gap-3 pt-2 sm:flex-row sm:justify-start sm:gap-4">
+          <DialogFooter>
             <DialogClose asChild>
-              <Button
-                variant="outline"
-                className="h-12 w-full rounded-full border-border text-base font-semibold text-foreground sm:w-auto sm:min-w-[180px]"
-              >
-                Cancel
-              </Button>
+              <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button
-              asChild
-              className="h-12 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground shadow-[0_14px_30px_rgba(15,23,42,0.25)] hover:bg-primary/90 sm:w-auto sm:min-w-[180px]"
-            >
+            <Button asChild>
               <Link href="/booking">Yes, exit</Link>
             </Button>
           </DialogFooter>

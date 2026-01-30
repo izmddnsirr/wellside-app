@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
 
 type BookingSearchParams = {
   serviceId?: string | string[];
@@ -27,6 +26,7 @@ type BookingSearchParams = {
   startAt?: string | string[];
   endAt?: string | string[];
   error?: string | string[];
+  cancelled?: string | string[];
 };
 
 const readParam = (value?: string | string[]) =>
@@ -54,7 +54,11 @@ export default async function ReviewBookingPage({
       ? "Unable to create booking. Please try again."
       : readParam(params.error) === "active"
       ? "You already have an active booking."
+      : readParam(params.error) === "cancel"
+      ? "Unable to cancel booking. Please try again."
       : null;
+  const cancelledMessage =
+    readParam(params.cancelled) === "1" ? "Booking cancelled." : null;
 
   if (
     !readParam(params.service) ||
@@ -96,74 +100,24 @@ export default async function ReviewBookingPage({
   const createBooking = async () => {
     "use server";
 
-    const redirectWithError = (code: "booking" | "active") => {
-      redirect(
-        `/booking/review?service=${encodeURIComponent(
-          serviceName
-        )}&duration=${encodeURIComponent(
-          serviceDuration
-        )}&price=${encodeURIComponent(servicePrice)}&total=${encodeURIComponent(
-          totalPrice
-        )}&date=${encodeURIComponent(bookingDate)}&time=${encodeURIComponent(
-          bookingTime
-        )}&barber=${encodeURIComponent(
-          barberName
-        )}&barberId=${encodeURIComponent(
-          barberId
-        )}&serviceId=${encodeURIComponent(
-          serviceId
-        )}&startAt=${encodeURIComponent(startAt)}&endAt=${encodeURIComponent(
-          endAt
-        )}&error=${code}`
-      );
+    const baseParams = {
+      service: serviceName,
+      duration: serviceDuration,
+      price: servicePrice,
+      total: totalPrice,
+      date: bookingDate,
+      time: bookingTime,
+      barber: barberName,
+      barberId,
+      serviceId,
+      startAt,
+      endAt,
     };
-
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      redirect("/login");
-    }
-
-    const { data: existingBooking, error: existingError } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("customer_id", user.id)
-      .in("status", ["scheduled", "in_progress"])
-      .limit(1)
-      .maybeSingle();
-
-    if (existingError) {
-      redirectWithError("booking");
-    }
-
-    if (existingBooking) {
-      redirectWithError("active");
-    }
-
-    const { data, error } = await supabase
-      .from("bookings")
-      .insert({
-        customer_id: user.id,
-        barber_id: barberId,
-        service_id: serviceId,
-        start_at: startAt,
-        end_at: endAt,
-        status: "scheduled",
-      })
-      .select("id")
-      .single();
-
-    const bookingId = data?.id;
-
-    if (error || !bookingId) {
-      redirectWithError("booking");
-    }
-
-    redirect(`/booking/confirmed?bookingId=${bookingId}`);
+    const confirmingQuery = new URLSearchParams({
+      ...baseParams,
+      startedAt: Date.now().toString(),
+    });
+    redirect(`/booking/confirming?${confirmingQuery.toString()}`);
   };
 
   return (
@@ -312,6 +266,11 @@ export default async function ReviewBookingPage({
             {errorMessage ? (
               <p className="px-5 pb-4 text-sm font-medium text-destructive">
                 {errorMessage}
+              </p>
+            ) : null}
+            {cancelledMessage ? (
+              <p className="px-5 pb-4 text-sm font-medium text-emerald-600">
+                {cancelledMessage}
               </p>
             ) : null}
           </div>

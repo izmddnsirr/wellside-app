@@ -129,7 +129,7 @@ export async function getAvailableSlots(
     }
 
     slots.push({
-      label: `${fmtHHmm(slotStart)} - ${fmtHHmm(slotEnd)}`,
+      label: fmtHHmm(slotStart),
       start_at: slotStart.toISOString(),
       end_at: slotEnd.toISOString(),
     });

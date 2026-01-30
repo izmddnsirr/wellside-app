@@ -2,7 +2,7 @@ import { SiteHeader } from "./site-header";
 import * as React from "react";
 
 type AdminShellProps = {
-  title?: string;
+  title?: React.ReactNode;
   description?: string;
   headerMeta?: React.ReactNode;
   children?: React.ReactNode;

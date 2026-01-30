@@ -1,5 +1,9 @@
 import { revalidatePath } from "next/cache";
 import { createBarberClient } from "@/utils/supabase/server";
+import {
+  buildBookingCancellationPayload,
+  sendBookingCancellationEmailTo,
+} from "@/utils/email/booking-cancellation";
 
 export const allowedStatuses = [
   "scheduled",
@@ -28,7 +32,19 @@ export const updateBookingStatus = async (formData: FormData) => {
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, barber_id")
+    .select(
+      `
+      id,
+      barber_id,
+      booking_ref,
+      start_at,
+      end_at,
+      booking_date,
+      customer:customer_id (first_name, last_name, email, phone),
+      barber:barber_id (display_name, first_name, last_name),
+      service:service_id (name, base_price)
+    `
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -44,6 +60,25 @@ export const updateBookingStatus = async (formData: FormData) => {
   if (error) {
     console.error("Failed to update booking status", error);
     return;
+  }
+
+  if (status === "cancelled") {
+    try {
+      const payload = buildBookingCancellationPayload(booking);
+      if (!payload) {
+        console.error("Missing customer email for booking cancellation", {
+          bookingId: id,
+        });
+      } else {
+        await sendBookingCancellationEmailTo(
+          payload,
+          payload.customerEmail,
+          "Customer"
+        );
+      }
+    } catch (emailError) {
+      console.error("Failed to send booking cancellation email", emailError);
+    }
   }
 
   revalidatePath("/barber/bookings");

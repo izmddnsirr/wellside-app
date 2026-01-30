@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogFooter,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -11,6 +12,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/server";
+import {
+  buildBookingCancellationPayload,
+  sendBookingCancellationEmailTo,
+} from "@/utils/email/booking-cancellation";
 import { redirect } from "next/navigation";
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
@@ -81,12 +86,79 @@ const cancelBooking = async (formData: FormData) => {
   }
 
   const supabase = await createClient();
+  const { data: bookingDetails, error: bookingDetailsError } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id,
+      booking_ref,
+      start_at,
+      end_at,
+      booking_date,
+      customer:customer_id (first_name, last_name, email, phone),
+      barber:barber_id (display_name, first_name, last_name),
+      service:service_id (name, base_price)
+    `
+    )
+    .eq("id", bookingId)
+    .single();
   const { error } = await supabase.rpc("cancel_booking", {
     p_booking_id: bookingId,
   });
 
   if (error) {
     redirect("/booking?error=cancel");
+  }
+
+  try {
+    if (bookingDetailsError || !bookingDetails) {
+      console.error("Failed to load booking details for cancellation email", {
+        bookingId,
+        bookingDetailsError,
+      });
+    } else {
+      const payload = buildBookingCancellationPayload(bookingDetails);
+      if (!payload) {
+        console.error("Missing customer email for booking cancellation", {
+          bookingId,
+        });
+      } else {
+        const { data: adminRows, error: adminError } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("role", "admin")
+          .not("email", "is", null);
+
+        if (adminError) {
+          console.error("Failed to load admin emails", adminError);
+        }
+
+        const adminEmails = (adminRows ?? [])
+          .map((row) => row.email)
+          .filter((email): email is string => Boolean(email));
+
+        const sendOps: Promise<unknown>[] = [];
+        sendOps.push(
+          sendBookingCancellationEmailTo(
+            payload,
+            payload.customerEmail,
+            "Customer"
+          )
+        );
+
+        if (adminEmails.length > 0) {
+          sendOps.push(
+            sendBookingCancellationEmailTo(payload, adminEmails, "Admin")
+          );
+        } else {
+          console.error("Missing admin emails for booking cancellation");
+        }
+
+        await Promise.allSettled(sendOps);
+      }
+    }
+  } catch (emailError) {
+    console.error("Failed to send booking cancellation email", emailError);
   }
 
   redirect("/booking");
@@ -123,7 +195,7 @@ export default async function BookingPage({
           </div>
         </header>
         <section className="space-y-4" style={{ animationDelay: "80ms" }}>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
             Upcoming
           </p>
           <div className="border border-border/60 bg-card/85">
@@ -224,7 +296,7 @@ export default async function BookingPage({
               <div className="bg-primary px-6 py-6 text-primary-foreground">
                 <div className="flex items-start justify-between gap-6">
                   <div className="space-y-2">
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-primary-foreground/70">
+                    <p className="text-[11px] tracking-[0.2em] text-primary-foreground/70">
                       {dayLabel}
                     </p>
                     <p className="text-2xl font-semibold">{timeLabel}</p>
@@ -244,7 +316,7 @@ export default async function BookingPage({
                       <Clock className="h-4 w-4" />
                     </span>
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                      <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
                         Duration
                       </p>
                       <p className="text-base font-semibold text-foreground">
@@ -257,7 +329,7 @@ export default async function BookingPage({
                       <span className="text-xs font-semibold">RM</span>
                     </span>
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                      <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
                         Total
                       </p>
                       <p className="text-base font-semibold text-foreground">
@@ -272,23 +344,19 @@ export default async function BookingPage({
                       Cancel booking
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="rounded-3xl border-border bg-card p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[520px]">
-                    <DialogHeader className="space-y-3 text-left">
-                      <DialogTitle className="text-2xl font-semibold text-destructive">
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
                         Cancel this booking?
                       </DialogTitle>
-                      <DialogDescription className="text-sm text-muted-foreground">
+                      <DialogDescription>
                         You can cancel up to 2 hours before your appointment.
                         After that, please contact your barber.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:justify-end">
+                    <DialogFooter>
                       <DialogClose asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="rounded-full border-border px-6 py-3 text-sm font-semibold text-foreground"
-                        >
+                        <Button type="button" variant="outline">
                           Keep booking
                         </Button>
                       </DialogClose>
@@ -300,12 +368,12 @@ export default async function BookingPage({
                         />
                         <Button
                           type="submit"
-                          className="w-full rounded-full bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90"
+                          variant="destructive"
                         >
                           Yes, cancel
                         </Button>
                       </form>
-                    </div>
+                    </DialogFooter>
                   </DialogContent>
                 </Dialog>
                 <p className="text-xs text-muted-foreground text-center">
@@ -352,22 +420,20 @@ export default async function BookingPage({
       </section>
       {errorMessage ? (
         <Dialog defaultOpen>
-          <DialogContent className="rounded-3xl border-border bg-card p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[520px]">
-            <DialogHeader className="space-y-3 text-left">
-              <DialogTitle className="text-2xl font-semibold text-destructive">
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
                 Unable to cancel booking
               </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
+              <DialogDescription>
                 {errorMessage}
               </DialogDescription>
             </DialogHeader>
-            <div className="pt-4">
+            <DialogFooter>
               <DialogClose asChild>
-                <Button className="rounded-full bg-destructive px-6 py-3 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90">
-                  Okay
-                </Button>
+                <Button variant="destructive">Okay</Button>
               </DialogClose>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       ) : null}

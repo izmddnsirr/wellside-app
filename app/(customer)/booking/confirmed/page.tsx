@@ -165,7 +165,7 @@ export default async function BookingConfirmedPage({
         <div className="text-card-foreground flex flex-col gap-6 overflow-hidden rounded-3xl border border-border/60 bg-card/85 shadow-none">
           <div className="@container/card-header auto-rows-min grid-rows-[auto_auto] gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 flex flex-row items-start justify-between bg-primary py-6 text-primary-foreground">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-primary-foreground/70">
+              <p className="text-[11px] tracking-[0.2em] text-primary-foreground/70">
                 Confirmed
               </p>
               <p className="mt-3 text-xl font-semibold">
@@ -181,7 +181,7 @@ export default async function BookingConfirmedPage({
           </div>
 
           <div className="px-6 py-6">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
               Appointment
             </p>
             <div className="mt-4 space-y-4">
@@ -212,7 +212,7 @@ export default async function BookingConfirmedPage({
                 </p>
               </div>
               <div className="rounded-2xl border border-border/60 bg-muted/40 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
                   Booking ref
                 </p>
                 <p className="mt-1 text-base font-semibold text-foreground">

@@ -151,12 +151,8 @@ export default async function Page() {
   ).padStart(2, "0")}`;
   const monthStartTimestamp = `${monthStart}T00:00:00+08:00`;
   const monthEndTimestamp = `${monthEnd}T23:59:59.999+08:00`;
-  const monthOptions = Array.from({ length: 12 }, (_, index) => {
-    const date = new Date(year, month - 1 - (11 - index), 1);
-    return formatMonthValue(date);
-  });
-  const defaultMonth = monthOptions[monthOptions.length - 1] ?? monthStart.slice(0, 7);
-  const rangeStartMonth = monthOptions[0] ?? defaultMonth;
+  const rangeStartMonth = `${year}-01`;
+  const defaultMonth = monthStart.slice(0, 7);
   const rangeStartTimestamp = `${rangeStartMonth}-01T00:00:00+08:00`;
   const weekStartDate = new Date(`${todayDate}T00:00:00+08:00`);
   weekStartDate.setDate(weekStartDate.getDate() - 6);
@@ -270,6 +266,28 @@ export default async function Page() {
       (rangeSalesMap.get(dateKey) ?? 0) + (ticket.total_amount ?? 0)
     );
   });
+  const currentYearMonths = Array.from({ length: 12 }, (_, index) =>
+    `${year}-${pad2(index + 1)}`
+  );
+  const dataMonths = Array.from(
+    new Set(
+      rangeTickets
+        .filter((ticket) => ticket.paid_at)
+        .map((ticket) => {
+          const paidDate = new Date(ticket.paid_at as string);
+          if (Number.isNaN(paidDate.getTime())) {
+            return "";
+          }
+          return `${paidDate.getFullYear()}-${pad2(paidDate.getMonth() + 1)}`;
+        })
+        .filter(Boolean)
+    )
+  ).sort();
+  const dataYears = Array.from(
+    new Set(dataMonths.map((value) => Number(value.split("-")[0])))
+  ).filter(Boolean);
+  const monthOptions = Array.from(new Set([...currentYearMonths])).sort();
+  const defaultMonthOption = defaultMonth;
   const monthSeries = Object.fromEntries(
     monthOptions.map((monthValue) => {
       const [monthYear, monthNumber] = monthValue.split("-").map(Number);
@@ -312,12 +330,40 @@ export default async function Page() {
     };
   });
 
-  const todaySalesData = [
-    {
-      date: todayDate,
-      sales: totalSalesToday,
-    },
-  ];
+  const yearSalesMap = new Map<number, Map<string, number>>();
+  rangeTickets.forEach((ticket) => {
+    if (!ticket.paid_at) {
+      return;
+    }
+    const paidDate = new Date(ticket.paid_at);
+    if (Number.isNaN(paidDate.getTime())) {
+      return;
+    }
+    const paidYear = paidDate.getFullYear();
+    const monthKey = `${paidYear}-${pad2(paidDate.getMonth() + 1)}`;
+    const yearBucket = yearSalesMap.get(paidYear) ?? new Map<string, number>();
+    yearBucket.set(
+      monthKey,
+      (yearBucket.get(monthKey) ?? 0) + (ticket.total_amount ?? 0)
+    );
+    yearSalesMap.set(paidYear, yearBucket);
+  });
+  const availableYears = Array.from(
+    new Set(monthOptions.map((value) => Number(value.split("-")[0])))
+  ).filter(Boolean);
+  const yearSeries = Object.fromEntries(
+    availableYears.map((yearValue) => {
+      const bucket = yearSalesMap.get(yearValue) ?? new Map<string, number>();
+      const series = Array.from({ length: 12 }, (_, index) => {
+        const monthKey = `${yearValue}-${pad2(index + 1)}`;
+        return {
+          date: monthKey,
+          sales: bucket.get(monthKey) ?? 0,
+        };
+      });
+      return [String(yearValue), series];
+    })
+  );
 
   const serviceMap = new Map<string, { ticketIds: Set<string>; revenue: number }>();
   salesTickets.forEach((ticket) => {
@@ -414,12 +460,15 @@ export default async function Page() {
       <div className="px-4 lg:px-6">
         <BookingsChartCard
           data={{
-            today: todaySalesData,
             week: weekSalesData,
           }}
           monthSeries={monthSeries}
-          defaultMonth={defaultMonth}
+          yearSeries={yearSeries}
+          defaultMonth={defaultMonthOption}
           availableMonths={monthOptions}
+          dataMonths={dataMonths}
+          availableYears={availableYears}
+          dataYears={dataYears}
         />
       </div>
       <div className="px-4 lg:px-6">

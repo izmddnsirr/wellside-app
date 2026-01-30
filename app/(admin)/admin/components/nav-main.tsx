@@ -22,6 +22,7 @@ type NavItem = {
   url?: string;
   icon?: LucideIcon;
   items?: NavItem[];
+  notification?: boolean;
 };
 
 type NavGroup = {
@@ -77,6 +78,12 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                           >
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
+                            {item.notification ? (
+                              <span
+                                className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
+                                aria-hidden="true"
+                              />
+                            ) : null}
                             <ChevronDown
                               className={cn(
                                 "ml-auto size-4 transition-transform",
@@ -119,6 +126,12 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                           <Link href={item.url ?? "#"}>
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
+                            {item.notification ? (
+                              <span
+                                className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
+                                aria-hidden="true"
+                              />
+                            ) : null}
                           </Link>
                         </SidebarMenuButton>
                       )}

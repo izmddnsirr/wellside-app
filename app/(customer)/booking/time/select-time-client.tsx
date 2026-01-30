@@ -430,12 +430,12 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="rounded-3xl border-border bg-card p-8 shadow-[0_24px_60px_rgba(15,23,42,0.2)] sm:max-w-[720px]">
-                  <DialogHeader className="space-y-3 text-left">
-                    <DialogTitle className="text-2xl font-semibold text-foreground">
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
                       Select barber
                     </DialogTitle>
-                    <DialogDescription className="text-sm text-muted-foreground">
+                    <DialogDescription>
                       Switch to another barber for this slot.
                     </DialogDescription>
                   </DialogHeader>

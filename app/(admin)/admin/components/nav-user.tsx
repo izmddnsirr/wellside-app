@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Check,
   LogOut,
   MoreVertical,
   Settings,
@@ -48,8 +49,9 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
-  const { setTheme } = useTheme()
+  const { setTheme, theme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const currentTheme = theme ?? "system"
   const initials = user.name
     .split(" ")
     .filter(Boolean)
@@ -131,14 +133,38 @@ export function NavUser({
                   Theme
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuItem onSelect={() => setTheme("light")}>
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onSelect={() => setTheme("light")}
+                  >
                     Light
+                    <Check
+                      className={`ml-auto size-4 ${
+                        currentTheme === "light" ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setTheme("dark")}>
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onSelect={() => setTheme("dark")}
+                  >
                     Dark
+                    <Check
+                      className={`ml-auto size-4 ${
+                        currentTheme === "dark" ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setTheme("system")}>
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onSelect={() => setTheme("system")}
+                  >
                     System
+                    <Check
+                      className={`ml-auto size-4 ${
+                        currentTheme === "system" ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>

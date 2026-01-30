@@ -1,6 +1,6 @@
 "use client";
 
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import { useMemo, useState } from "react";
 import {
   Card,
@@ -44,13 +44,17 @@ type SalesChartPoint = {
   sales: number;
 };
 
-type SalesPeriod = "today" | "week" | "month";
+type SalesPeriod = "week" | "month" | "year";
 
 type BookingsChartCardProps = {
-  data: Record<"today" | "week", SalesChartPoint[]>;
+  data: Record<"week", SalesChartPoint[]>;
   monthSeries: Record<string, SalesChartPoint[]>;
+  yearSeries: Record<string, SalesChartPoint[]>;
   defaultMonth: string;
   availableMonths: string[];
+  dataMonths: string[];
+  availableYears: number[];
+  dataYears: number[];
 };
 
 const formatCurrency = (value: number) =>
@@ -60,22 +64,10 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-const formatChartDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString("en-MY", {
-    month: "short",
-    day: "2-digit",
-    timeZone: "Asia/Kuala_Lumpur",
-  });
-};
-
 const periodOptions: { value: SalesPeriod; label: string }[] = [
-  { value: "today", label: "Today" },
   { value: "week", label: "Last 7 days" },
   { value: "month", label: "Month" },
+  { value: "year", label: "Year" },
 ];
 
 const MONTH_LABELS = [
@@ -105,34 +97,109 @@ const formatMonthLabel = (value: string) => {
   }).format(new Date(year, month - 1, 1));
 };
 
+const formatChartDate = (value: string, period: SalesPeriod) => {
+  if (period === "year") {
+    const [year, month] = value.split("-").map(Number);
+    if (!year || !month) {
+      return value;
+    }
+    return new Intl.DateTimeFormat("en-MY", {
+      month: "short",
+      timeZone: "Asia/Kuala_Lumpur",
+    }).format(new Date(year, month - 1, 1));
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString("en-MY", {
+    month: "short",
+    day: "2-digit",
+    timeZone: "Asia/Kuala_Lumpur",
+  });
+};
+
+const formatChartLabel = (value: string, period: SalesPeriod) => {
+  if (period === "year") {
+    const [year, month] = value.split("-").map(Number);
+    if (!year || !month) {
+      return value;
+    }
+    return new Intl.DateTimeFormat("en-MY", {
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Kuala_Lumpur",
+    }).format(new Date(year, month - 1, 1));
+  }
+  return formatChartDate(value, period);
+};
+
 export function BookingsChartCard({
   data,
   monthSeries,
+  yearSeries,
   defaultMonth,
   availableMonths,
+  dataMonths,
+  availableYears,
+  dataYears,
 }: BookingsChartCardProps) {
   const [period, setPeriod] = useState<SalesPeriod>("month");
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const latestDataYear = dataYears[dataYears.length - 1];
+    const latestYear = availableYears[availableYears.length - 1];
+    const fallback = latestDataYear ?? latestYear;
+    return fallback ? String(fallback) : String(new Date().getFullYear());
+  });
+  const [yearPickerIndex, setYearPickerIndex] = useState(0);
   const [monthPickerYear, setMonthPickerYear] = useState(() => {
     const yearValue = Number(defaultMonth.split("-")[0]);
     return yearValue || new Date().getFullYear();
   });
-  const availableMonthsSet = useMemo(
-    () => new Set(availableMonths),
-    [availableMonths]
+  const monthsForYear = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => {
+        const monthValue = String(index + 1).padStart(2, "0");
+        return {
+          value: `${monthPickerYear}-${monthValue}`,
+          month: index + 1,
+        };
+      }),
+    [monthPickerYear]
+  );
+  const dataMonthsSet = useMemo(() => new Set(dataMonths), [dataMonths]);
+  const dataYearsSet = useMemo(() => new Set(dataYears), [dataYears]);
+  const yearsSorted = useMemo(
+    () => [...availableYears].sort((a, b) => a - b),
+    [availableYears]
+  );
+  const yearsPerPage = 12;
+  const maxYearPage = Math.max(
+    0,
+    Math.ceil(yearsSorted.length / yearsPerPage) - 1
+  );
+  const yearPageStart = yearPickerIndex * yearsPerPage;
+  const yearsPage = yearsSorted.slice(
+    yearPageStart,
+    yearPageStart + yearsPerPage
   );
   const chartData =
-    period === "month" ? monthSeries[selectedMonth] ?? [] : data[period];
+    period === "month"
+      ? monthSeries[selectedMonth] ?? []
+      : period === "year"
+      ? yearSeries[selectedYear] ?? []
+      : data[period];
   const hasSales = useMemo(
     () => chartData.some((point) => point.sales > 0),
     [chartData]
   );
   const description =
-    period === "today"
-      ? "Showing paid ticket sales for today."
-      : period === "week"
+    period === "week"
       ? "Showing paid ticket sales for the last 7 days."
-      : `Showing paid ticket sales for ${formatMonthLabel(selectedMonth)}.`;
+      : period === "month"
+      ? `Showing paid ticket sales for ${formatMonthLabel(selectedMonth)}.`
+      : `Showing paid ticket sales for ${selectedYear}.`;
 
   return (
     <Card className="border-border/60 bg-card pt-0">
@@ -154,7 +221,11 @@ export function BookingsChartCard({
                   {formatMonthLabel(selectedMonth)}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[260px] p-3" align="end">
+              <PopoverContent
+                id="bookings-month-popover"
+                className="w-[260px] p-3"
+                align="end"
+              >
                 <div className="flex items-center justify-between">
                   <Button
                     variant="ghost"
@@ -175,22 +246,85 @@ export function BookingsChartCard({
                   </Button>
                 </div>
                 <div className="mt-3 grid grid-cols-4 gap-2">
-                  {MONTH_LABELS.map((label, index) => {
-                    const value = `${monthPickerYear}-${String(
-                      index + 1
-                    ).padStart(2, "0")}`;
+                  {monthsForYear.map(({ value, month }) => {
+                    const label = MONTH_LABELS[month - 1] ?? value;
                     const isActive = selectedMonth === value;
-                    const isAvailable = availableMonthsSet.has(value);
+                    const isDisabled = !dataMonthsSet.has(value);
                     return (
                       <Button
-                        key={label}
+                        key={value}
                         variant={isActive ? "default" : "ghost"}
                         size="sm"
                         className="h-8"
-                        disabled={!isAvailable}
+                        disabled={isDisabled}
                         onClick={() => setSelectedMonth(value)}
                       >
                         {label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : null}
+          {period === "year" ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-9 min-w-[120px] justify-between bg-background"
+                >
+                  {selectedYear}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                id="bookings-year-popover"
+                className="w-[260px] p-3"
+                align="end"
+              >
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      setYearPickerIndex((prev) => Math.max(0, prev - 1))
+                    }
+                    disabled={yearPickerIndex === 0}
+                    aria-label="Previous years"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <div className="text-sm font-semibold text-foreground">
+                    {yearsSorted.length === 0 ? "No years" : "Select year"}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      setYearPickerIndex((prev) =>
+                        Math.min(maxYearPage, prev + 1)
+                      )
+                    }
+                    disabled={yearPickerIndex >= maxYearPage}
+                    aria-label="Next years"
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {yearsPage.map((yearValue) => {
+                    const isActive = selectedYear === String(yearValue);
+                    const isDisabled = !dataYearsSet.has(yearValue);
+                    return (
+                      <Button
+                        key={yearValue}
+                        variant={isActive ? "default" : "ghost"}
+                        size="sm"
+                        className="h-8"
+                        disabled={isDisabled}
+                        onClick={() => setSelectedYear(String(yearValue))}
+                      >
+                        {yearValue}
                       </Button>
                     );
                   })}
@@ -229,24 +363,11 @@ export function BookingsChartCard({
           </div>
         ) : (
           <ChartContainer
+            id="bookings-sales-chart"
             config={chartConfig}
             className="aspect-auto h-[250px] w-full"
           >
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="fillSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="5%"
-                    stopColor="var(--color-sales)"
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor="var(--color-sales)"
-                    stopOpacity={0.1}
-                  />
-                </linearGradient>
-              </defs>
+            <BarChart data={chartData}>
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="date"
@@ -254,14 +375,18 @@ export function BookingsChartCard({
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={24}
-                tickFormatter={formatChartDate}
+                tickFormatter={(value) =>
+                  formatChartDate(String(value), period)
+                }
               />
               <ChartTooltip
                 cursor={false}
                 content={
                   <ChartTooltipContent
                     indicator="dot"
-                    labelFormatter={(value) => formatChartDate(String(value))}
+                    labelFormatter={(value) =>
+                      formatChartLabel(String(value), period)
+                    }
                     formatter={(value) => (
                       <span className="font-medium text-foreground">
                         {formatCurrency(Number(value))}
@@ -271,14 +396,12 @@ export function BookingsChartCard({
                 }
               />
               <ChartLegend content={<ChartLegendContent />} />
-              <Area
+              <Bar
                 dataKey="sales"
-                type="monotone"
-                stroke="var(--color-sales)"
-                fill="url(#fillSales)"
-                strokeWidth={2}
+                fill="var(--color-sales)"
+                radius={[5, 5, 5, 5]}
               />
-            </AreaChart>
+            </BarChart>
           </ChartContainer>
         )}
       </CardContent>

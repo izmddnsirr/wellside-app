@@ -130,9 +130,16 @@ type SidebarUser = {
 
 type AppSidebarClientProps = React.ComponentProps<typeof Sidebar> & {
   user: SidebarUser;
+  scheduledCount?: number;
 };
 
-export function AppSidebarClient({ user, ...props }: AppSidebarClientProps) {
+export function AppSidebarClient({
+  user,
+  scheduledCount = 0,
+  ...props
+}: AppSidebarClientProps) {
+  const hasScheduled = scheduledCount > 0;
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -166,7 +173,19 @@ export function AppSidebarClient({ user, ...props }: AppSidebarClientProps) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain groups={data.navMain} />
+        <NavMain
+          groups={[
+            {
+              ...data.navMain[0],
+              items: data.navMain[0].items.map((item) =>
+                item.title === "Bookings"
+                  ? { ...item, notification: hasScheduled }
+                  : item
+              ),
+            },
+            ...data.navMain.slice(1),
+          ]}
+        />
       </SidebarContent>
       <SidebarFooter className="rounded-2xl">
         <NavUser user={user} />
