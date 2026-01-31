@@ -92,7 +92,7 @@ const createBarber = async (formData: FormData) => {
     userId = await findUserIdByEmail(email);
   }
 
-  let status: "invited" | "converted" = "converted";
+  let status: "created" | "converted" = "converted";
 
   const metadata = {
     display_name: displayName ?? undefined,

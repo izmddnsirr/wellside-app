@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Field,
   FieldDescription,
@@ -5,62 +7,48 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/utils/supabase/server";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { useState } from "react";
 
-type ForgotPasswordPageProps = {
-  searchParams?: Promise<{
-    error?: string;
-    sent?: string;
-  }>;
-};
+export default function ForgotPasswordPage() {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-const requestReset = async (formData: FormData) => {
-  "use server";
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
 
-  const email = String(formData.get("email") || "").trim();
-  if (!email) {
-    redirect("/forgot-password?error=missing");
-  }
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") || "").trim();
+    if (!email) {
+      setErrorMessage("Email is required.");
+      return;
+    }
 
-  const headerStore = await headers();
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    headerStore.get("origin") ??
-    "http://localhost:3000";
+    setIsSubmitting(true);
+    const supabase = createClient();
+    const origin =
+      process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/auth/callback?type=recovery`,
+    });
+    setIsSubmitting(false);
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback`,
-  });
+    if (error) {
+      setErrorMessage("Failed to send reset email. Please try again.");
+      return;
+    }
 
-  if (error) {
-    redirect("/forgot-password?error=failed");
-  }
-
-  redirect("/forgot-password?sent=1");
-};
-
-export default async function ForgotPasswordPage({
-  searchParams,
-}: ForgotPasswordPageProps) {
-  const params = await searchParams;
-  const errorMessage =
-    params?.error === "missing"
-      ? "Email is required."
-      : params?.error === "failed"
-      ? "Failed to send reset email. Please try again."
-      : null;
-  const successMessage = params?.sent
-    ? "Reset email sent. Check your inbox."
-    : null;
+    setSuccessMessage("Reset email sent. Check your inbox.");
+  };
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
-          <form className="w-full max-w-xs" action={requestReset}>
+          <form className="w-full max-w-xs" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <img
@@ -95,9 +83,10 @@ export default async function ForgotPasswordPage({
               <Field>
                 <button
                   type="submit"
-                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isSubmitting}
                 >
-                  Send reset link
+                  {isSubmitting ? "Sending..." : "Send reset link"}
                 </button>
               </Field>
               <FieldDescription className="text-center">

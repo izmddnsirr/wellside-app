@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Field,
   FieldDescription,
@@ -5,57 +7,51 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { useState } from "react";
 
-type SetPasswordPageProps = {
-  searchParams?: Promise<{
-    error?: string;
-    type?: string;
-  }>;
-};
+export default function SetPasswordPage() {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-const updatePassword = async (formData: FormData) => {
-  "use server";
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
 
-  const password = String(formData.get("password") || "");
-  const confirm = String(formData.get("confirm_password") || "");
+    const formData = new FormData(event.currentTarget);
+    const password = String(formData.get("password") || "");
+    const confirm = String(formData.get("confirm_password") || "");
 
-  if (!password || password.length < 8) {
-    redirect("/set-password?error=weak");
-  }
-  if (password !== confirm) {
-    redirect("/set-password?error=mismatch");
-  }
+    if (!password || password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password });
+    setIsSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    setIsSubmitting(false);
 
-  if (error) {
-    redirect("/set-password?error=failed");
-  }
+    if (error) {
+      setErrorMessage("Unable to update password. Please try again.");
+      return;
+    }
 
-  redirect("/home");
-};
-
-export default async function SetPasswordPage({
-  searchParams,
-}: SetPasswordPageProps) {
-  const params = await searchParams;
-  const errorMessage =
-    params?.error === "weak"
-      ? "Password must be at least 8 characters."
-      : params?.error === "mismatch"
-      ? "Passwords do not match."
-      : params?.error === "failed"
-      ? "Unable to update password. Please try again."
-      : null;
+    setSuccessMessage("Password updated. You can now log in.");
+    window.location.assign("/home");
+  };
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
-          <form className="w-full max-w-xs" action={updatePassword}>
+          <form className="w-full max-w-xs" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <img
@@ -86,13 +82,18 @@ export default async function SetPasswordPage({
                 <FieldDescription className="text-center text-red-600">
                   {errorMessage}
                 </FieldDescription>
+              ) : successMessage ? (
+                <FieldDescription className="text-center text-emerald-600">
+                  {successMessage}
+                </FieldDescription>
               ) : null}
               <Field>
                 <button
                   type="submit"
-                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isSubmitting}
                 >
-                  Update password
+                  {isSubmitting ? "Updating..." : "Update password"}
                 </button>
               </Field>
             </FieldGroup>
