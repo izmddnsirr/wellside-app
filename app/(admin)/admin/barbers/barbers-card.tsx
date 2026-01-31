@@ -31,9 +31,10 @@ import {
 } from "@/components/ui/table";
 import { Pencil, Plus, Search, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/client";
 import { isValidE164, normalizePhone } from "@/src/lib/phone";
+import { toast } from "sonner";
 
 type Barber = {
   id: string;
@@ -52,6 +53,7 @@ type Barber = {
 type BarbersCardProps = {
   barbers: Barber[];
   errorMessage?: string | null;
+  createBarber: (formData: FormData) => Promise<void>;
 };
 
 const formatDate = (value: string | null) => {
@@ -91,7 +93,11 @@ const getStatusTone = (isActive: boolean | null) =>
         dot: "bg-rose-500",
       };
 
-export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
+export function BarbersCard({
+  barbers,
+  errorMessage,
+  createBarber,
+}: BarbersCardProps) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all", level: "all" });
@@ -100,8 +106,31 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedBarberLevel, setSelectedBarberLevel] = useState<string>("");
   const [selectedBarberActive, setSelectedBarberActive] = useState(true);
+  const [newBarberLevel, setNewBarberLevel] = useState("");
+  const [newBarberActive, setNewBarberActive] = useState(true);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const toastKey = searchParams.get("toast");
+  const searchParamsString = searchParams.toString();
+
+  useEffect(() => {
+    if (!toastKey) {
+      return;
+    }
+    const message = {
+      "barber-invited": "Invite sent to barber.",
+      "barber-converted": "Customer converted to barber.",
+    }[toastKey];
+    if (message) {
+      toast.success(message, { id: toastKey });
+    }
+    const params = new URLSearchParams(searchParamsString);
+    params.delete("toast");
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [toastKey, pathname, router, searchParamsString]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -362,7 +391,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                     Invite a barber and create their profile.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <form action={createBarber} className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="barber-first-name">First name</Label>
@@ -388,6 +417,7 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                       name="email"
                       type="email"
                       placeholder="haziq@wellside.com"
+                      required
                     />
                   </div>
                   <div className="space-y-2">
@@ -436,7 +466,10 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="barber-level">Barber level</Label>
-                      <Select>
+                      <Select
+                        value={newBarberLevel}
+                        onValueChange={(value) => setNewBarberLevel(value)}
+                      >
                         <SelectTrigger id="barber-level">
                           <SelectValue placeholder="Select level" />
                         </SelectTrigger>
@@ -450,19 +483,35 @@ export function BarbersCard({ barbers, errorMessage }: BarbersCardProps) {
                       </Select>
                     </div>
                   </div>
+                  <input
+                    type="hidden"
+                    name="barber_level"
+                    value={newBarberLevel}
+                  />
+                  <input
+                    type="hidden"
+                    name="is_active"
+                    value={newBarberActive ? "on" : ""}
+                  />
                   <div className="flex items-center gap-2 text-sm">
-                    <Checkbox id="barber-active" defaultChecked />
+                    <Checkbox
+                      id="barber-active"
+                      checked={newBarberActive}
+                      onCheckedChange={(value) =>
+                        setNewBarberActive(value === true)
+                      }
+                    />
                     <Label htmlFor="barber-active" className="text-sm">
                       Active barber
                     </Label>
                   </div>
                   <DialogFooter>
-                    <Button type="button" disabled>
+                    <Button type="submit">
                       <Plus />
                       Add barber
                     </Button>
                   </DialogFooter>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
           </div>
