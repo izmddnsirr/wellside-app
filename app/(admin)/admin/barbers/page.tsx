@@ -98,8 +98,8 @@ const createBarber = async (formData: FormData) => {
   if (!userId) {
     const headerStore = await headers();
     const origin =
-      headerStore.get("origin") ??
       process.env.NEXT_PUBLIC_SITE_URL ??
+      headerStore.get("origin") ??
       "http://localhost:3000";
     const { data: inviteData, error: inviteError } =
       await supabase.auth.admin.inviteUserByEmail(email, {
