@@ -89,6 +89,12 @@ const createBarber = async (formData: FormData) => {
 
   let status: "invited" | "converted" = "converted";
 
+  const metadata = {
+    display_name: displayName ?? undefined,
+    first_name: firstName ?? undefined,
+    last_name: lastName ?? undefined,
+  };
+
   if (!userId) {
     const headerStore = await headers();
     const origin =
@@ -97,7 +103,7 @@ const createBarber = async (formData: FormData) => {
       "http://localhost:3000";
     const { data: inviteData, error: inviteError } =
       await supabase.auth.admin.inviteUserByEmail(email, {
-        data: { role: "barber" },
+        data: { role: "barber", ...metadata },
         redirectTo: `${origin}/auth/callback`,
       });
 
@@ -112,6 +118,14 @@ const createBarber = async (formData: FormData) => {
 
   if (!userId) {
     return;
+  }
+
+  const { error: updateUserError } = await supabase.auth.admin.updateUserById(
+    userId,
+    { user_metadata: metadata }
+  );
+  if (updateUserError) {
+    console.error("Failed to update barber auth metadata", updateUserError);
   }
 
   const { error: profileError } = await supabase.from("profiles").upsert(
