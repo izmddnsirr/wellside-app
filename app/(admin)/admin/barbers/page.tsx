@@ -1,6 +1,5 @@
 import { AdminShell } from "../components/admin-shell";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/server";
 import { createAdminAuthClient } from "@/utils/supabase/admin";
@@ -28,9 +27,15 @@ const createBarber = async (formData: FormData) => {
     displayNameInput || fallbackDisplayName
       ? (displayNameInput ?? fallbackDisplayName)
       : null;
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm_password") ?? "");
 
   if (!email) {
     return;
+  }
+
+  if (!password || password.length < 8 || password !== confirm) {
+    redirect("/admin/barbers?toast=barber-password-invalid");
   }
 
   const phoneInput = normalizeValue(formData.get("phone"));
@@ -96,24 +101,21 @@ const createBarber = async (formData: FormData) => {
   };
 
   if (!userId) {
-    const headerStore = await headers();
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL ??
-      headerStore.get("origin") ??
-      "http://localhost:3000";
-    const { data: inviteData, error: inviteError } =
-      await supabase.auth.admin.inviteUserByEmail(email, {
-        data: { role: "barber", ...metadata },
-        redirectTo: `${origin}/auth/callback`,
+    const { data: createData, error: createError } =
+      await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: metadata,
       });
 
-    if (inviteError || !inviteData?.user?.id) {
-      console.error("Failed to invite barber", inviteError);
-      return;
+    if (createError || !createData?.user?.id) {
+      console.error("Failed to create barber user", createError);
+      redirect("/admin/barbers?toast=barber-password-failed");
     }
 
-    userId = inviteData.user.id;
-    status = "invited";
+    userId = createData.user.id;
+    status = "created";
   }
 
   if (!userId) {
@@ -122,7 +124,7 @@ const createBarber = async (formData: FormData) => {
 
   const { error: updateUserError } = await supabase.auth.admin.updateUserById(
     userId,
-    { user_metadata: metadata }
+    { password, user_metadata: metadata }
   );
   if (updateUserError) {
     console.error("Failed to update barber auth metadata", updateUserError);

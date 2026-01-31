@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   Select,
   SelectContent,
@@ -120,8 +121,10 @@ export function BarbersCard({
       return;
     }
     const message = {
-      "barber-invited": "Invite sent to barber.",
+      "barber-created": "Barber account created.",
       "barber-converted": "Customer converted to barber.",
+      "barber-password-invalid": "Password invalid or mismatch.",
+      "barber-password-failed": "Failed to update password.",
     }[toastKey];
     if (message) {
       toast.success(message, { id: toastKey });
@@ -388,7 +391,7 @@ export function BarbersCard({
                 <DialogHeader>
                   <DialogTitle>Add barber</DialogTitle>
                   <DialogDescription>
-                    Invite a barber and create their profile.
+                    Create a barber account and set their password.
                   </DialogDescription>
                 </DialogHeader>
                 <form action={createBarber} className="space-y-4">
@@ -419,6 +422,26 @@ export function BarbersCard({
                       placeholder="haziq@wellside.com"
                       required
                     />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="barber-password">Password</Label>
+                      <PasswordInput
+                        id="barber-password"
+                        name="password"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="barber-confirm-password">
+                        Confirm password
+                      </Label>
+                      <PasswordInput
+                        id="barber-confirm-password"
+                        name="confirm_password"
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="barber-phone">Phone</Label>
@@ -521,14 +544,14 @@ export function BarbersCard({
         open={isUpdateOpen}
         onOpenChange={(open) => (open ? null : closeUpdateDialog())}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update barber</DialogTitle>
-            <DialogDescription>
-              Update barber profile details and working hours.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleUpdateSubmit}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update barber</DialogTitle>
+              <DialogDescription>
+                Update barber profile details and working hours.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleUpdateSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="update-barber-first-name">First name</Label>
@@ -640,19 +663,19 @@ export function BarbersCard({
             {updateError ? (
               <p className="text-sm text-red-600">{updateError}</p>
             ) : null}
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeUpdateDialog}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Update barber</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeUpdateDialog}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Update barber</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
