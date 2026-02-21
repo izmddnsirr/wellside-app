@@ -2,7 +2,6 @@ import {
   Calendar,
   Clock,
   LogOut,
-  Scissors,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

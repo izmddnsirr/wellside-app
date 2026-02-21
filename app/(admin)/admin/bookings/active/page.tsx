@@ -16,7 +16,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Active bookings"
-      description="Upcoming and in-progress appointments."
     >
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <BookingsClient

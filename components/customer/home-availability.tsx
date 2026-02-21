@@ -48,39 +48,45 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
     isLoading: false,
     error: null,
   });
-
-  useEffect(() => {
+  const resolvedSelectedId = useMemo(() => {
     if (!barbers.length) {
-      setSelectedId("");
-      return;
+      return "";
     }
-    if (!selectedId || !barbers.some((barber) => barber.id === selectedId)) {
-      setSelectedId(barbers[0]?.id ?? "");
+    if (selectedId && barbers.some((barber) => barber.id === selectedId)) {
+      return selectedId;
     }
+    return barbers[0]?.id ?? "";
   }, [barbers, selectedId]);
 
   useEffect(() => {
     let isActive = true;
 
-    if (!selectedId) {
-      setSlotState({ slots: [], isLoading: false, error: null });
+    if (!resolvedSelectedId) {
       return () => {
         isActive = false;
       };
     }
 
-    const cacheKey = `${selectedId}|${dateISO}`;
+    const cacheKey = `${resolvedSelectedId}|${dateISO}`;
     const cachedSlots = slotsCacheRef.current.get(cacheKey);
     if (cachedSlots) {
-      setSlotState({ slots: cachedSlots, isLoading: false, error: null });
+      queueMicrotask(() => {
+        if (isActive) {
+          setSlotState({ slots: cachedSlots, isLoading: false, error: null });
+        }
+      });
       return () => {
         isActive = false;
       };
     }
 
-    setSlotState((prev) => ({ ...prev, isLoading: true, error: null }));
+    queueMicrotask(() => {
+      if (isActive) {
+        setSlotState((prev) => ({ ...prev, isLoading: true, error: null }));
+      }
+    });
 
-    getAvailableSlots(selectedId, dateISO)
+    getAvailableSlots(resolvedSelectedId, dateISO)
       .then((slots) => {
         if (isActive) {
           slotsCacheRef.current.set(cacheKey, slots);
@@ -100,10 +106,13 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
     return () => {
       isActive = false;
     };
-  }, [dateISO, selectedId]);
+  }, [dateISO, resolvedSelectedId]);
 
-  const slotsLabel = slotState.slots.length
-    ? `${slotState.slots.length} slots left`
+  const effectiveSlotState = resolvedSelectedId
+    ? slotState
+    : { slots: [], isLoading: false, error: null };
+  const slotsLabel = effectiveSlotState.slots.length
+    ? `${effectiveSlotState.slots.length} slots left`
     : "No slots";
 
   return (
@@ -120,7 +129,7 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-(--font-display) text-2xl">Your barber</h2>
           {barbers.length ? (
-            <Select value={selectedId} onValueChange={setSelectedId}>
+            <Select value={resolvedSelectedId} onValueChange={setSelectedId}>
               <SelectTrigger
                 className="h-9 w-40 rounded-full text-xs"
                 size="sm"
@@ -146,17 +155,17 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
             </span>
           )}
         </div>
-        {slotState.isLoading ? (
+        {effectiveSlotState.isLoading ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
             Loading slots...
           </div>
-        ) : slotState.error ? (
+        ) : effectiveSlotState.error ? (
           <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-            {slotState.error}
+            {effectiveSlotState.error}
           </div>
-        ) : slotState.slots.length ? (
+        ) : effectiveSlotState.slots.length ? (
           <div className="grid max-h-[260px] gap-3 overflow-y-auto pr-1">
-            {slotState.slots.map((slot) => (
+            {effectiveSlotState.slots.map((slot) => (
               <button
                 key={slot.start_at}
                 className="flex items-center justify-between rounded-2xl border border-border bg-muted/60 px-4 py-3 text-sm"

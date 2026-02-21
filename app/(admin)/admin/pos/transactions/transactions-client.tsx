@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CustomPriceDialog } from "@/components/custom-price-dialog";
 import { Input } from "@/components/ui/input";

@@ -3,14 +3,12 @@ import * as React from "react";
 
 type AdminShellProps = {
   title?: React.ReactNode;
-  description?: string;
   headerMeta?: React.ReactNode;
   children?: React.ReactNode;
 };
 
 export async function AdminShell({
   title,
-  description,
   headerMeta,
   children,
 }: AdminShellProps) {

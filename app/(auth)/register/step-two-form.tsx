@@ -11,13 +11,13 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { useOnboarding } from "./onboarding-context";
 import { isValidE164, normalizePhone } from "@/src/lib/phone";
+import Image from "next/image";
 
 const phoneSchema = z
   .string()
@@ -53,6 +53,7 @@ export function StepTwoForm() {
   });
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/incompatible-library
     const subscription = form.watch((values) => {
       update({
         firstName: values.firstName ?? "",
@@ -138,10 +139,13 @@ export function StepTwoForm() {
     >
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
-          <img
+          <Image
             src="/wellside-logo.png"
             alt="Wellside"
+            width={160}
+            height={56}
             className="h-14 w-auto dark:invert"
+            priority
           />
           <h1 className="text-2xl font-bold">Tell us about yourself</h1>
           <p className="text-muted-foreground text-sm text-balance">

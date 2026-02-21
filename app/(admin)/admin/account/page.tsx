@@ -56,7 +56,7 @@ export default async function AccountPage() {
   const initials = buildInitials(fullName || email || "Admin");
 
   return (
-    <AdminShell title="Account" description="Manage your admin profile.">
+    <AdminShell title="Account">
       <div className="grid gap-4 px-4 lg:px-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>

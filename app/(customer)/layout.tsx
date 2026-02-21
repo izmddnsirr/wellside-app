@@ -1,17 +1,10 @@
+import * as React from "react";
 import { CustomerNav } from "@/components/customer/customer-nav";
-import { Manrope, Sora } from "next/font/google";
 
-const display = Sora({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "500", "600", "700"],
-});
-
-const body = Manrope({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["400", "500", "600", "700"],
-});
+const fontVars = {
+  "--font-display": "\"Sora\", ui-sans-serif, system-ui, sans-serif",
+  "--font-body": "\"Manrope\", ui-sans-serif, system-ui, sans-serif",
+} as React.CSSProperties;
 
 export default function CustomerLayout({
   children,
@@ -20,7 +13,8 @@ export default function CustomerLayout({
 }>) {
   return (
     <div
-      className={`${display.variable} ${body.variable} relative min-h-screen bg-background font-semibold text-foreground`}
+      className="relative min-h-screen bg-background font-semibold text-foreground"
+      style={fontVars}
     >
       <div
         aria-hidden="true"

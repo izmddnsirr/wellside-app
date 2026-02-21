@@ -1,20 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Instrument_Sans, Space_Grotesk } from "next/font/google";
+import * as React from "react";
 import { HomeAvailability } from "@/components/customer/home-availability";
 import { createClient } from "@/utils/supabase/server";
 
-const display = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["400", "500", "600", "700"],
-});
-
-const body = Instrument_Sans({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["400", "500", "600", "700"],
-});
+const fontVars = {
+  "--font-display": "\"Space Grotesk\", ui-sans-serif, system-ui, sans-serif",
+  "--font-body": "\"Instrument Sans\", ui-sans-serif, system-ui, sans-serif",
+} as React.CSSProperties;
 
 const featuredBarbers = [
   {
@@ -97,7 +90,8 @@ export default async function CustomerHome() {
 
   return (
     <div
-      className={`${display.variable} ${body.variable} min-h-screen bg-background font-(--font-body) text-foreground`}
+      className="min-h-screen bg-background font-(--font-body) text-foreground"
+      style={fontVars}
     >
       <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/70 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
@@ -317,7 +311,7 @@ export default async function CustomerHome() {
               Customer mood
             </p>
             <h2 className=" text-3xl font-semibold">
-              "Best cut I have had this year."
+              &quot;Best cut I have had this year.&quot;
             </h2>
             <p className="text-sm text-muted-foreground">
               From instant confirmations to the vibe check on arrival, Wellside+

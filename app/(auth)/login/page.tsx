@@ -9,6 +9,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { LoginSubmit } from "./login-submit";
+import Image from "next/image";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -82,10 +83,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <form className="w-full max-w-xs" action={login}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
-                <img
+                <Image
                   src="/wellside-logo.png"
                   alt="Wellside"
+                  width={160}
+                  height={56}
                   className="h-14 w-auto dark:invert"
+                  priority
                 />
                 <h1 className="text-2xl font-bold">Login to your account</h1>
                 <p className="text-muted-foreground text-sm text-balance">
@@ -137,10 +141,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <img
+        <Image
           src="/placeholder.svg"
           alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          fill
+          className="object-cover dark:brightness-[0.2] dark:grayscale"
+          sizes="(min-width: 1024px) 50vw, 100vw"
         />
       </div>
     </div>

@@ -77,7 +77,6 @@ export function BookingSummaryCard({
     barber: hasBarber,
   };
   const isReady = required.every((field) => readiness[field]);
-  const subtotalLabel = resolvedTotalPrice ?? "-";
   const totalLabel = resolvedTotalPrice ?? "-";
 
   return (

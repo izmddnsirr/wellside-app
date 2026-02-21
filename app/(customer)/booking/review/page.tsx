@@ -9,7 +9,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { redirect } from "next/navigation";
 

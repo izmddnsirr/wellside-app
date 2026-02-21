@@ -172,7 +172,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Barbers"
-      description="Manage staff schedules and performance."
     >
       <div className="px-4 lg:px-6">
         <BarbersCard

@@ -54,9 +54,6 @@ const getMalaysiaDateParts = () => {
 
 const pad2 = (value: number) => String(value).padStart(2, "0");
 
-const formatMonthValue = (value: Date) =>
-  `${value.getFullYear()}-${pad2(value.getMonth() + 1)}`;
-
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-MY", {
     style: "currency",
@@ -401,7 +398,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Dashboard"
-      description="Quick overview of today's performance."
     >
       <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-border/60 bg-card">
@@ -465,7 +461,6 @@ export default async function Page() {
           monthSeries={monthSeries}
           yearSeries={yearSeries}
           defaultMonth={defaultMonthOption}
-          availableMonths={monthOptions}
           dataMonths={dataMonths}
           availableYears={availableYears}
           dataYears={dataYears}

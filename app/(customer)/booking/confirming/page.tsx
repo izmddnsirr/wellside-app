@@ -39,7 +39,7 @@ export default async function ConfirmingBookingPage({
   const startedAt =
     startedAtParam && !Number.isNaN(Number(startedAtParam))
       ? Number(startedAtParam)
-      : Date.now();
+      : 0;
 
   const baseParams = {
     service: readParam(params.service) ?? "",

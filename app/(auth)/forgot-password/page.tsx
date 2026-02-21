@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
+import Image from "next/image";
 import { useState } from "react";
 
 export default function ForgotPasswordPage() {
@@ -51,10 +52,13 @@ export default function ForgotPasswordPage() {
           <form className="w-full max-w-xs" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
-                <img
+                <Image
                   src="/wellside-logo.png"
                   alt="Wellside"
+                  width={160}
+                  height={56}
                   className="h-14 w-auto dark:invert"
+                  priority
                 />
                 <h1 className="text-2xl font-bold">Reset your password</h1>
                 <p className="text-muted-foreground text-sm text-balance">
@@ -100,10 +104,12 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <img
+        <Image
           src="/placeholder.svg"
           alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          fill
+          className="object-cover dark:brightness-[0.2] dark:grayscale"
+          sizes="(min-width: 1024px) 50vw, 100vw"
         />
       </div>
     </div>

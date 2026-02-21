@@ -136,7 +136,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Services"
-      description="Maintain service menus, durations, and pricing."
     >
       <div className="px-4 lg:px-6">
         <ServicesCard

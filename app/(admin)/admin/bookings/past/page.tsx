@@ -16,7 +16,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Past bookings"
-      description="Completed and cancelled bookings."
     >
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <BookingsClient

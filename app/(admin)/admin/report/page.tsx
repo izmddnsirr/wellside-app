@@ -20,7 +20,6 @@ export default function Page() {
   return (
     <AdminShell
       title="Reports"
-      description="View revenue, staffing, and service insights."
     >
       <div className="px-4 lg:px-6">
         <Tabs defaultValue="daily">

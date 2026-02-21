@@ -17,7 +17,7 @@ export default async function Page() {
       change_due,
       paid_at,
       created_at,
-      shifts:shift_id (shift_code, label),
+      barber:barber_id (display_name, first_name, last_name),
       ticket_items (
         qty,
         unit_price,
@@ -33,9 +33,9 @@ export default async function Page() {
     : null;
   const normalizedTickets = (tickets ?? []).map((ticket) => ({
     ...ticket,
-    shifts: Array.isArray(ticket.shifts)
-      ? ticket.shifts[0] ?? null
-      : ticket.shifts ?? null,
+    barber: Array.isArray(ticket.barber)
+      ? ticket.barber[0] ?? null
+      : ticket.barber ?? null,
     ticket_items:
       ticket.ticket_items?.map((item) => ({
         ...item,
@@ -49,7 +49,7 @@ export default async function Page() {
   }));
 
   return (
-    <AdminShell title="Ticket history" description="All recorded tickets.">
+    <AdminShell title="Ticket history">
       <div className="px-4 lg:px-6">
         {errorMessage ? (
           <p className="text-sm text-red-600">{errorMessage}</p>

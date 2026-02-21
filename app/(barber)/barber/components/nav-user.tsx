@@ -8,7 +8,6 @@ import {
   UserCircle,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
 
 import {
   Avatar,
@@ -43,7 +42,6 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const initials = user.name
     .split(" ")
     .filter(Boolean)
@@ -51,10 +49,6 @@ export function NavUser({
     .map((part) => part[0]?.toUpperCase())
     .join("")
   const avatarSrc = user.avatar || undefined
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const handleLogout = async () => {
     const supabase = createBarberClient()
@@ -81,14 +75,6 @@ export function NavUser({
       <MoreVertical className="ml-auto size-4" />
     </SidebarMenuButton>
   )
-
-  if (!mounted) {
-    return (
-      <SidebarMenu>
-        <SidebarMenuItem>{menuButton}</SidebarMenuItem>
-      </SidebarMenu>
-    )
-  }
 
   return (
     <SidebarMenu>

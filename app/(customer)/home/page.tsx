@@ -3,7 +3,6 @@ import {
   CalendarCheck,
   Clock,
   Scissors,
-  Sparkles,
   User,
 } from "lucide-react";
 import Link from "next/link";

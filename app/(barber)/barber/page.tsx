@@ -1,6 +1,5 @@
 import { BarberShell } from "./components/barber-shell";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -127,12 +126,12 @@ export default async function Page() {
   return (
     <BarberShell
       title="Dashboard"
-      description="Quick overview of today's performance."
+      description="Quick overview of today&apos;s performance."
     >
       <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardDescription>Today's bookings</CardDescription>
+            <CardDescription>Today&apos;s bookings</CardDescription>
             <CardTitle className="text-3xl">{totalBookingsToday}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
@@ -160,7 +159,7 @@ export default async function Page() {
         <Card>
           <CardHeader>
             <CardTitle>Upcoming schedule</CardTitle>
-            <CardDescription>Today's confirmed appointments.</CardDescription>
+            <CardDescription>Today&apos;s confirmed appointments.</CardDescription>
           </CardHeader>
           <CardContent>
             {upcomingBookings.length > 0 ? (

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Loader2 } from "lucide-react";
 import { useFormStatus } from "react-dom";
+import Image from "next/image";
 
 type StaffLoginFormProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -28,10 +29,13 @@ export function StaffLoginForm({ action, errorMessage }: StaffLoginFormProps) {
     <form className="w-full max-w-xs" action={action}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
-          <img
+          <Image
             src="/wellside-logo.png"
             alt="Wellside"
+            width={160}
+            height={56}
             className="h-14 w-auto dark:invert"
+            priority
           />
           <h1 className="text-2xl font-bold">Login to your account</h1>
           <p className="text-muted-foreground text-sm text-balance">

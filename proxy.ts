@@ -4,15 +4,18 @@ import { type NextRequest, NextResponse } from "next/server";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
-const requireAuthRedirect = (request: NextRequest) => {
+const requireAuthRedirect = (
+  request: NextRequest,
+  targetPathname: string
+) => {
   const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = "/staff";
+  redirectUrl.pathname = targetPathname;
   return NextResponse.redirect(redirectUrl);
 };
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (!supabaseUrl || !supabaseKey) {
-    return requireAuthRedirect(request);
+    return requireAuthRedirect(request, "/staff");
   }
 
   let response = NextResponse.next({
@@ -45,7 +48,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return requireAuthRedirect(request);
+    const pathname = request.nextUrl.pathname;
+    const isHome = pathname.startsWith("/home");
+    return requireAuthRedirect(request, isHome ? "/login" : "/staff");
   }
 
   const { data: profile, error } = await supabase
@@ -55,23 +60,22 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     .maybeSingle();
 
   if (error || !profile) {
-    return requireAuthRedirect(request);
+    const pathname = request.nextUrl.pathname;
+    const isHome = pathname.startsWith("/home");
+    return requireAuthRedirect(request, isHome ? "/login" : "/staff");
   }
 
   const pathname = request.nextUrl.pathname;
   if (pathname.startsWith("/admin") && profile.role !== "admin") {
-    return requireAuthRedirect(request);
+    return requireAuthRedirect(request, "/staff");
   }
 
   if (pathname.startsWith("/barber") && profile.role !== "barber") {
-    return requireAuthRedirect(request);
+    return requireAuthRedirect(request, "/staff");
   }
 
-  if (
-    pathname.startsWith("/home") &&
-    !["customer", "admin", "barber"].includes(profile.role)
-  ) {
-    return requireAuthRedirect(request);
+  if (pathname.startsWith("/home") && profile.role !== "customer") {
+    return requireAuthRedirect(request, "/login");
   }
 
   return response;

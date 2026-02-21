@@ -243,7 +243,6 @@ export function ShiftsTable({
   ticketsCountByShift,
   itemsByShift,
 }: ShiftsTableProps) {
-  const [isMounted, setIsMounted] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -267,25 +266,31 @@ export function ShiftsTable({
   const router = useRouter();
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (filters.date !== "month" || filters.month) {
-      return;
-    }
-    const now = new Date();
-    const currentMonth = formatMonthValue(now);
-    setFilters((prev) => ({ ...prev, month: currentMonth }));
-    setMonthPickerYear(now.getFullYear());
-  }, [filters.date, filters.month]);
-
-  useEffect(() => {
     const handle = setTimeout(() => {
       setDebouncedSearch(searchInput.trim().toLowerCase());
     }, 300);
     return () => clearTimeout(handle);
   }, [searchInput]);
+
+  const handleDateFilterChange = (value: string) => {
+    if (value === "month") {
+      const now = new Date();
+      const currentMonth = formatMonthValue(now);
+      setFilters((prev) => ({
+        ...prev,
+        date: value,
+        month: prev.month || currentMonth,
+      }));
+      setMonthPickerYear(now.getFullYear());
+      return;
+    }
+
+    setFilters((prev) => ({
+      ...prev,
+      date: value,
+      month: value === "month" ? prev.month : "",
+    }));
+  };
 
   const handleDeleteDialogOpenChange = (open: boolean) => {
     setDeleteDialogOpen(open);
@@ -314,7 +319,6 @@ export function ShiftsTable({
   };
 
   const filteredShifts = useMemo(() => {
-    const now = new Date();
     const customStart = parseDateInput(filters.dateFrom);
     const customEnd = parseDateInput(filters.dateTo);
     const isCustomRangeValid =
@@ -413,28 +417,20 @@ export function ShiftsTable({
       <div className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            {isMounted ? (
-              <Select
-                value={filters.date}
-                onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, date: value }))
-                }
-              >
-                <SelectTrigger className="h-9 w-[150px]">
-                  <SelectValue placeholder="Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All shifts</SelectItem>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="custom">Date range</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Button variant="outline" className="h-9 w-[160px]" disabled>
-                Date
-              </Button>
-            )}
-            {isMounted && filters.date === "month" ? (
+            <Select
+              value={filters.date}
+              onValueChange={handleDateFilterChange}
+            >
+              <SelectTrigger className="h-9 w-[150px]">
+                <SelectValue placeholder="Date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All shifts</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+                <SelectItem value="custom">Date range</SelectItem>
+              </SelectContent>
+            </Select>
+            {filters.date === "month" ? (
               <div className="flex flex-wrap items-center gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -505,7 +501,7 @@ export function ShiftsTable({
                 </Button>
               </div>
             ) : null}
-            {isMounted && filters.date === "custom" ? (
+            {filters.date === "custom" ? (
               <div className="flex flex-wrap items-center gap-3">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -554,27 +550,21 @@ export function ShiftsTable({
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {isMounted ? (
-              <Select value={sort} onValueChange={setSort}>
-                <SelectTrigger className="h-9 w-[180px]">
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="opened_desc">
-                    Opened date: Newest → Oldest
-                  </SelectItem>
-                  <SelectItem value="opened_asc">
-                    Opened date: Oldest → Newest
-                  </SelectItem>
-                  <SelectItem value="sales_desc">Sales: High → Low</SelectItem>
-                  <SelectItem value="sales_asc">Sales: Low → High</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Button variant="outline" className="h-9 w-[200px]" disabled>
-                Sort
-              </Button>
-            )}
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-9 w-[180px]">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="opened_desc">
+                  Opened date: Newest → Oldest
+                </SelectItem>
+                <SelectItem value="opened_asc">
+                  Opened date: Oldest → Newest
+                </SelectItem>
+                <SelectItem value="sales_desc">Sales: High → Low</SelectItem>
+                <SelectItem value="sales_asc">Sales: Low → High</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="relative w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -702,47 +692,46 @@ export function ShiftsTable({
                       </Badge>
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      {isMounted ? (
-                        <Sheet>
-                          <SheetTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              Manage
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent className="p-0">
-                            <div className="flex h-full flex-col bg-muted/10">
-                              <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
-                                <SheetTitle className="text-base font-semibold text-foreground">
-                                  {shiftTitle}
-                                </SheetTitle>
-                                <SheetDescription className="text-xs text-muted-foreground">
-                                  Shift ID: {shift.id}
-                                </SheetDescription>
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
-                                >
-                                  <span className={`size-2 rounded-full ${tone.dot}`} />
-                                  {formatStatusLabel(shift.status, shift.end_at)}
-                                </Badge>
-                                </div>
-                              </SheetHeader>
-                              <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
-                                <div className="space-y-6">
-                                  <div className="space-y-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Shift details
-                                    </p>
-                                    <div className="divide-y divide-border/60 text-sm">
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Shift code
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {shiftCode ?? "-"}
-                                        </span>
-                                      </div>
+                      <Sheet>
+                        <SheetTrigger asChild>
+                          <Button size="sm" variant="outline">
+                            Manage
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent className="p-0">
+                          <div className="flex h-full flex-col bg-muted/10">
+                            <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
+                              <SheetTitle className="text-base font-semibold text-foreground">
+                                {shiftTitle}
+                              </SheetTitle>
+                              <SheetDescription className="text-xs text-muted-foreground">
+                                Shift ID: {shift.id}
+                              </SheetDescription>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
+                              >
+                                <span className={`size-2 rounded-full ${tone.dot}`} />
+                                {formatStatusLabel(shift.status, shift.end_at)}
+                              </Badge>
+                              </div>
+                            </SheetHeader>
+                            <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
+                              <div className="space-y-6">
+                                <div className="space-y-2">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Shift details
+                                  </p>
+                                  <div className="divide-y divide-border/60 text-sm">
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Shift code
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {shiftCode ?? "-"}
+                                      </span>
+                                    </div>
                                       <div className="flex items-center justify-between py-2">
                                         <span className="text-muted-foreground">
                                           Opened
@@ -868,11 +857,6 @@ export function ShiftsTable({
                             </div>
                           </SheetContent>
                         </Sheet>
-                      ) : (
-                        <Button size="sm" variant="outline" disabled>
-                          Manage
-                        </Button>
-                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -881,46 +865,44 @@ export function ShiftsTable({
           </Table>
         </div>
       )}
-      {isMounted ? (
-        <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete shift</DialogTitle>
-              <DialogDescription>
-                This will delete the shift and all related tickets and items.
-                This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Shift:{" "}
-                <span className="font-medium text-foreground">
-                  {deleteTarget?.title ?? "-"}
-                </span>
-              </p>
-              {deleteError ? (
-                <p className="text-sm text-red-600">{deleteError}</p>
-              ) : null}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={() => handleDeleteDialogOpenChange(false)}
-                disabled={deleteLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteShift}
-                disabled={deleteLoading}
-              >
-                {deleteLoading ? "Deleting..." : "Delete shift"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
+      <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete shift</DialogTitle>
+            <DialogDescription>
+              This will delete the shift and all related tickets and items.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              Shift:{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.title ?? "-"}
+              </span>
+            </p>
+            {deleteError ? (
+              <p className="text-sm text-red-600">{deleteError}</p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => handleDeleteDialogOpenChange(false)}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteShift}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? "Deleting..." : "Delete shift"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

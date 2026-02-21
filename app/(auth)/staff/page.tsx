@@ -1,6 +1,7 @@
 import { StaffLoginForm } from "./staff-login-form";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import Image from "next/image";
 
 type StaffLoginPageProps = {
   searchParams?: Promise<{
@@ -80,10 +81,12 @@ export default async function LoginStaffPage({ searchParams }: StaffLoginPagePro
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <img
+        <Image
           src="/placeholder.svg"
           alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          fill
+          className="object-cover dark:brightness-[0.2] dark:grayscale"
+          sizes="(min-width: 1024px) 50vw, 100vw"
         />
       </div>
     </div>

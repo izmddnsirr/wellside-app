@@ -2,10 +2,8 @@
 
 import {
   ArrowLeft,
-  Bell,
   Calendar,
   Home,
-  Sparkles,
   User,
   X,
 } from "lucide-react";

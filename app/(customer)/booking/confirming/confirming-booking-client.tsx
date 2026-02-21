@@ -25,19 +25,36 @@ export function ConfirmingBookingClient({
   const [status, setStatus] = useState<Status>("counting");
   const [now, setNow] = useState(() => Date.now());
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [startedAtState] = useState(() => startedAt || Date.now());
+  const statusRef = useRef(status);
+  const hasSubmittedRef = useRef(hasSubmitted);
   const confirmFormRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
-    if (!startedAt) {
-      return;
-    }
-    const tick = () => setNow(Date.now());
+    statusRef.current = status;
+    hasSubmittedRef.current = hasSubmitted;
+  }, [status, hasSubmitted]);
+
+  useEffect(() => {
+    const tick = () => {
+      const current = Date.now();
+      setNow(current);
+      const start = startedAtState;
+      if (
+        statusRef.current === "counting" &&
+        !hasSubmittedRef.current &&
+        current - start >= GRACE_PERIOD_MS
+      ) {
+        setStatus("confirming");
+        setHasSubmitted(true);
+      }
+    };
     tick();
     const interval = window.setInterval(tick, 120);
     return () => window.clearInterval(interval);
-  }, [startedAt]);
+  }, [startedAtState]);
 
-  const elapsedMs = Math.max(0, now - startedAt);
+  const elapsedMs = Math.max(0, now - startedAtState);
   const remainingMs = Math.max(0, GRACE_PERIOD_MS - elapsedMs);
   const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
   const progress = Math.min(elapsedMs / PROGRESS_DURATION_MS, 1);
@@ -51,16 +68,6 @@ export function ConfirmingBookingClient({
     }
     return `Confirming your booking… You have ${remainingSeconds} seconds to cancel.`;
   }, [status, remainingSeconds]);
-
-  useEffect(() => {
-    if (status !== "counting" || hasSubmitted) {
-      return;
-    }
-    if (remainingMs <= 0) {
-      setStatus("confirming");
-      setHasSubmitted(true);
-    }
-  }, [remainingMs, status, hasSubmitted]);
 
   useEffect(() => {
     if (!hasSubmitted) {

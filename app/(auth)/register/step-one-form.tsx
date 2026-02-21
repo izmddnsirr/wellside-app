@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useOnboarding } from "./onboarding-context";
+import Image from "next/image";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -51,10 +52,13 @@ export function StepOneForm() {
     <form className="flex w-full flex-col gap-6" onSubmit={handleSubmit}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
-          <img
+          <Image
             src="/wellside-logo.png"
             alt="Wellside"
+            width={160}
+            height={56}
             className="h-14 w-auto dark:invert"
+            priority
           />
           <h1 className="text-2xl font-bold">Create your account</h1>
           <p className="text-muted-foreground text-sm text-balance">

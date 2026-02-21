@@ -43,7 +43,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Customers"
-      description="Track customer profiles and engagement."
     >
       <div className="px-4 lg:px-6">
         <CustomersCard

@@ -199,6 +199,10 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
   });
   const slotsCacheRef = useRef(new Map<string, Slot[]>());
   const [isBarberDialogOpen, setIsBarberDialogOpen] = useState(false);
+  const slotsKey = barberId && dateISO ? `${barberId}|${dateISO}` : null;
+  const effectiveSlotState = slotsKey
+    ? slotState
+    : { slots: [], isLoading: false, error: null };
 
   const updateQuery = useCallback(
     (next: BookingQuery) => {
@@ -300,28 +304,35 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
       };
     }
 
-    if (!barberId || !dateISO) {
-      setSlotState({
-        slots: [],
-        isLoading: false,
-        error: null,
-      });
-      return;
+    if (!slotsKey) {
+      return () => {
+        isActive = false;
+      };
     }
 
-    const cacheKey = `${barberId}|${dateISO}`;
-    const cachedSlots = slotsCacheRef.current.get(cacheKey);
+    const cachedSlots = slotsCacheRef.current.get(slotsKey);
     if (cachedSlots) {
-      setSlotState({ slots: cachedSlots, isLoading: false, error: null });
-      return;
+      queueMicrotask(() => {
+        if (isActive) {
+          setSlotState({ slots: cachedSlots, isLoading: false, error: null });
+        }
+      });
+      return () => {
+        isActive = false;
+      };
     }
 
-    setSlotState((prev) => ({ ...prev, isLoading: true, error: null }));
+    const resolvedDateISO = dateISO ?? "";
+    queueMicrotask(() => {
+      if (isActive) {
+        setSlotState((prev) => ({ ...prev, isLoading: true, error: null }));
+      }
+    });
 
-    fetchAvailableSlots(barberId, dateISO)
+    fetchAvailableSlots(barberId, resolvedDateISO)
       .then((slots) => {
         if (isActive) {
-          slotsCacheRef.current.set(cacheKey, slots);
+          slotsCacheRef.current.set(slotsKey, slots);
           setSlotState({ slots, isLoading: false, error: null });
         }
       })
@@ -338,7 +349,18 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
     return () => {
       isActive = false;
     };
-  }, [barberId, dateISO]);
+  }, [
+    barberId,
+    barberName,
+    dateISO,
+    router,
+    serviceDuration,
+    serviceId,
+    serviceName,
+    servicePrice,
+    slotsKey,
+    totalPrice,
+  ]);
 
   const professionals = useMemo(
     () =>
@@ -532,28 +554,30 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
             </section>
 
             <section className="space-y-4" style={{ animationDelay: "160ms" }}>
-              {!barberId ? (
+              {!slotsKey ? (
                 <p className="text-sm text-muted-foreground">
                   Select a barber to see available slots.
                 </p>
               ) : null}
-              {barberId && slotState.isLoading ? (
+              {slotsKey && effectiveSlotState.isLoading ? (
                 <p className="text-sm text-muted-foreground">
                   Loading available slots...
                 </p>
               ) : null}
-              {barberId && slotState.error ? (
-                <p className="text-sm text-destructive">{slotState.error}</p>
+              {slotsKey && effectiveSlotState.error ? (
+                <p className="text-sm text-destructive">
+                  {effectiveSlotState.error}
+                </p>
               ) : null}
-              {barberId &&
-              !slotState.isLoading &&
-              !slotState.error &&
-              slotState.slots.length === 0 ? (
+              {slotsKey &&
+              !effectiveSlotState.isLoading &&
+              !effectiveSlotState.error &&
+              effectiveSlotState.slots.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No available slots right now.
                 </p>
               ) : null}
-              {slotState.slots.map((slot) => {
+              {effectiveSlotState.slots.map((slot) => {
                 const isSelected = selectedTime === slot.label;
                 return (
                   <Button

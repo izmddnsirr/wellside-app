@@ -2,6 +2,7 @@
 import { OnboardingProvider, useOnboarding } from "./onboarding-context";
 import { StepOneForm } from "./step-one-form";
 import { StepTwoForm } from "./step-two-form";
+import Image from "next/image";
 
 function RegisterCard() {
   const { step } = useOnboarding();
@@ -16,10 +17,12 @@ function RegisterCard() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <img
+        <Image
           src="/placeholder.svg"
           alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          fill
+          className="object-cover dark:brightness-[0.2] dark:grayscale"
+          sizes="(min-width: 1024px) 50vw, 100vw"
         />
       </div>
     </div>

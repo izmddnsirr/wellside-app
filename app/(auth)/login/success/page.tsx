@@ -1,14 +1,18 @@
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function LoginSuccessPage() {
   return (
     <div className="flex min-h-svh items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center gap-3 text-center">
-          <img
+          <Image
             src="/wellside-logo.png"
             alt="Wellside"
+            width={140}
+            height={48}
             className="h-12 w-auto dark:invert"
+            priority
           />
           <div>
             <p className="text-sm font-semibold text-muted-foreground">

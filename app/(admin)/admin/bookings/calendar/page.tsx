@@ -16,7 +16,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Calendar"
-      description="Visual schedule overview by staff."
     >
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <BookingsClient

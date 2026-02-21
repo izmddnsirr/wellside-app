@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,11 +31,12 @@ export function CustomPriceDialog({
 }: CustomPriceDialogProps) {
   const [value, setValue] = useState("");
 
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       setValue("");
     }
-  }, [open]);
+    onOpenChange(nextOpen);
+  };
 
   const displayValue = value.length ? value : "0.00";
   const parsedValue = Number(value);
@@ -93,7 +94,7 @@ export function CustomPriceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

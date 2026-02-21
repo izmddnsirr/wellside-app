@@ -51,7 +51,6 @@ type BookingsChartCardProps = {
   monthSeries: Record<string, SalesChartPoint[]>;
   yearSeries: Record<string, SalesChartPoint[]>;
   defaultMonth: string;
-  availableMonths: string[];
   dataMonths: string[];
   availableYears: number[];
   dataYears: number[];
@@ -139,7 +138,6 @@ export function BookingsChartCard({
   monthSeries,
   yearSeries,
   defaultMonth,
-  availableMonths,
   dataMonths,
   availableYears,
   dataYears,
@@ -184,12 +182,15 @@ export function BookingsChartCard({
     yearPageStart,
     yearPageStart + yearsPerPage
   );
-  const chartData =
-    period === "month"
-      ? monthSeries[selectedMonth] ?? []
-      : period === "year"
-      ? yearSeries[selectedYear] ?? []
-      : data[period];
+  const chartData = useMemo(() => {
+    if (period === "month") {
+      return monthSeries[selectedMonth] ?? [];
+    }
+    if (period === "year") {
+      return yearSeries[selectedYear] ?? [];
+    }
+    return data[period];
+  }, [data, monthSeries, period, selectedMonth, selectedYear, yearSeries]);
   const hasSales = useMemo(
     () => chartData.some((point) => point.sales > 0),
     [chartData]

@@ -11,7 +11,6 @@ import {
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
 
 import {
   Avatar,
@@ -50,7 +49,6 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const router = useRouter()
   const { setTheme, theme } = useTheme()
-  const [mounted, setMounted] = useState(false)
   const currentTheme = theme ?? "system"
   const initials = user.name
     .split(" ")
@@ -59,10 +57,6 @@ export function NavUser({
     .map((part) => part[0]?.toUpperCase())
     .join("")
   const avatarSrc = user.avatar || undefined
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const handleLogout = async () => {
     const supabase = createAdminClient()
@@ -89,14 +83,6 @@ export function NavUser({
       <MoreVertical className="ml-auto size-4" />
     </SidebarMenuButton>
   )
-
-  if (!mounted) {
-    return (
-      <SidebarMenu>
-        <SidebarMenuItem>{menuButton}</SidebarMenuItem>
-      </SidebarMenu>
-    )
-  }
 
   return (
     <SidebarMenu>

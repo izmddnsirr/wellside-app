@@ -21,7 +21,7 @@ export const createClient = async () => {
           cookiesToSet.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options);
           });
-        } catch (error) {
+        } catch {
           // Cookies can only be modified in Server Actions or Route Handlers
           // This is expected when called from Server Components
         }

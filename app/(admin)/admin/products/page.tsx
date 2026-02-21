@@ -140,7 +140,6 @@ export default async function Page() {
   return (
     <AdminShell
       title="Products"
-      description="Manage product catalog and inventory."
     >
       <div className="px-4 lg:px-6">
         <ProductsCard

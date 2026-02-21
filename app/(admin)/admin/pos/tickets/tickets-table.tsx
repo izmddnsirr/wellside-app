@@ -27,7 +27,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -41,7 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ChevronLeft, ChevronRight, Search, Ticket } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useRouter } from "next/navigation";
 import { deleteTicket, refundTicket } from "./actions";
@@ -63,7 +62,11 @@ export type TicketRow = {
   change_due: number | null;
   paid_at: string | null;
   created_at: string | null;
-  shifts: { shift_code: string | null; label: string | null } | null;
+  barber: {
+    display_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
   ticket_items: TicketItem[] | null;
 };
 
@@ -89,6 +92,21 @@ const timeFormatter = new Intl.DateTimeFormat("en-MY", {
   hour: "numeric",
   minute: "2-digit",
   hour12: true,
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const dayGroupLabelFormatter = new Intl.DateTimeFormat("en-MY", {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
   timeZone: "Asia/Kuala_Lumpur",
 });
 
@@ -121,6 +139,28 @@ const formatDateTime = (value: string | null) => {
   return `${formatDate(date)}, ${formatTime(date)}`.trim();
 };
 
+const getDayKey = (value: string | null) => {
+  if (!value) {
+    return "unknown";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "unknown";
+  }
+  return dayKeyFormatter.format(date);
+};
+
+const formatDayGroupLabel = (value: string | null) => {
+  if (!value) {
+    return "Unknown date";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown date";
+  }
+  return dayGroupLabelFormatter.format(date);
+};
+
 const getStatusTone = (status: string) => {
   if (status === "paid") {
     return {
@@ -147,13 +187,30 @@ const toTitleCase = (value: string | null) => {
   return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
-const getItemsLabel = (items: TicketItem[] | null) =>
-  items
-    ?.map((item) => {
-      const name = item.services?.name || item.products?.name || "Item";
-      return `${name} x${item.qty ?? 0}`;
-    })
-    .join(", ") || "-";
+const formatPaymentMethod = (value: string | null) => {
+  if (!value) {
+    return "-";
+  }
+  const normalized = value.toLowerCase();
+  if (normalized === "ewallet") {
+    return "E-wallet";
+  }
+  if (normalized === "cash") {
+    return "Cash";
+  }
+  return toTitleCase(value);
+};
+
+const formatBarberName = (barber: TicketRow["barber"]) => {
+  if (!barber) {
+    return "-";
+  }
+  return (
+    barber.display_name ||
+    [barber.first_name, barber.last_name].filter(Boolean).join(" ") ||
+    "-"
+  );
+};
 
 const startOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -229,7 +286,6 @@ const MONTH_LABELS = [
 ];
 
 export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
-  const [isMounted, setIsMounted] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -260,10 +316,6 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -324,15 +376,25 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
     router.refresh();
   };
 
-  useEffect(() => {
-    if (filters.date !== "month" || filters.month) {
+  const handleDateFilterChange = (value: string) => {
+    if (value === "month") {
+      const now = new Date();
+      const currentMonth = formatMonthValue(now);
+      setFilters((prev) => ({
+        ...prev,
+        date: value,
+        month: prev.month || currentMonth,
+      }));
+      setMonthPickerYear(now.getFullYear());
       return;
     }
-    const now = new Date();
-    const currentMonth = formatMonthValue(now);
-    setFilters((prev) => ({ ...prev, month: currentMonth }));
-    setMonthPickerYear(now.getFullYear());
-  }, [filters.date, filters.month]);
+
+    setFilters((prev) => ({
+      ...prev,
+      date: value,
+      month: value === "month" ? prev.month : "",
+    }));
+  };
 
   const hasVoidStatus = useMemo(
     () =>
@@ -362,9 +424,8 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
       if (!debouncedSearch) {
         return true;
       }
-      const shiftLabel =
-        ticket.shifts?.shift_code || ticket.shifts?.label || "-";
-      return [ticket.ticket_no, ticket.id, shiftLabel]
+      const barberLabel = formatBarberName(ticket.barber);
+      return [ticket.ticket_no, ticket.id, barberLabel]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -465,9 +526,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
           </Select>
           <Select
             value={filters.date}
-            onValueChange={(value) =>
-              setFilters((prev) => ({ ...prev, date: value }))
-            }
+            onValueChange={handleDateFilterChange}
           >
             <SelectTrigger className="h-9 w-[160px]">
               <SelectValue placeholder="Date scope" />
@@ -652,40 +711,44 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
             </p>
             <p className="text-sm text-muted-foreground">
               {debouncedSearch
-                ? "Try a different ticket number or shift."
+                ? "Try a different ticket number or barber."
                 : "Tickets will appear here once sales are recorded."}
             </p>
           </div>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Date
                 </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Ticket
+                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Barber
                 </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Shift
-                </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Payment
+                </TableHead>
+                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Total
                 </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Action
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTickets.map((ticket) => {
-                const shiftLabel =
-                  ticket.shifts?.shift_code || ticket.shifts?.label || "-";
+              {filteredTickets.map((ticket, index) => {
+                const currentDayKey = getDayKey(ticket.created_at);
+                const previousDayKey =
+                  index > 0 ? getDayKey(filteredTickets[index - 1].created_at) : null;
+                const isNewDay = index === 0 || currentDayKey !== previousDayKey;
+                const dayGroupLabel = formatDayGroupLabel(ticket.created_at);
+                const barberLabel = formatBarberName(ticket.barber);
                 const status = ticket.payment_status ?? "unpaid";
                 const isPaid = status === "paid";
                 const paymentMethod = (ticket.payment_method ?? "").toLowerCase();
@@ -732,36 +795,44 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                     };
                   }) ?? [];
                 return (
-                  <TableRow
-                    key={ticket.id}
-                    className="border-border/60 bg-background hover:bg-muted/50"
-                  >
-                    <TableCell className="px-4 py-3 text-muted-foreground">
-                      {formatDateTime(ticket.created_at)}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-foreground">
-                      {ticket.ticket_no ?? ticket.id}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-muted-foreground">
-                      {shiftLabel}
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
-                        <span className={`size-2 rounded-full ${tone.dot}`} />
-                        {toTitleCase(status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-4 py-3 font-semibold text-foreground">
-                      {formatMoney(ticket.total_amount)}
-                    </TableCell>
-                    <TableCell className="px-4 py-3">
-                      <Sheet>
-                        <SheetTrigger asChild>
-                          <Button size="sm" variant="outline">
-                            View
-                          </Button>
-                        </SheetTrigger>
-                        <SheetContent className="p-0">
+                  <Fragment key={ticket.id}>
+                    {isNewDay ? (
+                      <TableRow className="bg-black hover:bg-black">
+                        <TableCell
+                          colSpan={6}
+                          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white"
+                        >
+                          {dayGroupLabel}
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                    <TableRow className="border-border/60 bg-background hover:bg-muted/50">
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {formatDateTime(ticket.created_at)}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {barberLabel}
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
+                          <span className={`size-2 rounded-full ${tone.dot}`} />
+                          {toTitleCase(status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {formatPaymentMethod(ticket.payment_method)}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 font-semibold text-foreground">
+                        {formatMoney(ticket.total_amount)}
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <Sheet>
+                          <SheetTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              View
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent className="p-0">
                           <div className="flex h-full flex-col bg-muted/10">
                             <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
                               <SheetTitle className="text-base font-semibold text-foreground">
@@ -772,7 +843,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                                   variant="outline"
                                   className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
                                 >
-                                  {shiftLabel}
+                                  {barberLabel}
                                 </Badge>
                                 <Badge
                                   variant="outline"
@@ -920,102 +991,99 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                               </div>
                             </div>
                           </div>
-                        </SheetContent>
-                      </Sheet>
-                    </TableCell>
-                  </TableRow>
+                          </SheetContent>
+                        </Sheet>
+                      </TableCell>
+                    </TableRow>
+                  </Fragment>
                 );
               })}
             </TableBody>
           </Table>
         </div>
       )}
-      {isMounted ? (
-        <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete ticket</DialogTitle>
-              <DialogDescription>
-                This will delete the ticket and all related items. This action cannot
-                be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Ticket:{" "}
-                <span className="font-medium text-foreground">
-                  {deleteTarget?.label ?? "-"}
-                </span>
-              </p>
-              {deleteError ? (
-                <p className="text-sm text-red-600">{deleteError}</p>
-              ) : null}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={() => handleDeleteDialogOpenChange(false)}
-                disabled={deleteLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteTicket}
-                disabled={deleteLoading}
-              >
-                {deleteLoading ? "Deleting..." : "Delete ticket"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
-      {isMounted ? (
-        <Dialog open={refundDialogOpen} onOpenChange={handleRefundDialogOpenChange}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Refund ticket</DialogTitle>
-              <DialogDescription>
-                This will mark the ticket as refunded (full amount). This action
-                cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Ticket:{" "}
-                <span className="font-medium text-foreground">
-                  {refundTarget?.label ?? "-"}
-                </span>
-              </p>
-              <p>
-                Refund amount:{" "}
-                <span className="font-medium text-foreground">
-                  {formatMoney(refundTarget?.total ?? null)}
-                </span>
-              </p>
-              {refundError ? (
-                <p className="text-sm text-red-600">{refundError}</p>
-              ) : null}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={() => handleRefundDialogOpenChange(false)}
-                disabled={refundLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleRefundTicket}
-                disabled={refundLoading}
-              >
-                {refundLoading ? "Refunding..." : "Refund ticket"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : null}
+      <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete ticket</DialogTitle>
+            <DialogDescription>
+              This will delete the ticket and all related items. This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              Ticket:{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.label ?? "-"}
+              </span>
+            </p>
+            {deleteError ? (
+              <p className="text-sm text-red-600">{deleteError}</p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => handleDeleteDialogOpenChange(false)}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteTicket}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? "Deleting..." : "Delete ticket"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={refundDialogOpen} onOpenChange={handleRefundDialogOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Refund ticket</DialogTitle>
+            <DialogDescription>
+              This will mark the ticket as refunded (full amount). This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>
+              Ticket:{" "}
+              <span className="font-medium text-foreground">
+                {refundTarget?.label ?? "-"}
+              </span>
+            </p>
+            <p>
+              Refund amount:{" "}
+              <span className="font-medium text-foreground">
+                {formatMoney(refundTarget?.total ?? null)}
+              </span>
+            </p>
+            {refundError ? (
+              <p className="text-sm text-red-600">{refundError}</p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => handleRefundDialogOpenChange(false)}
+              disabled={refundLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRefundTicket}
+              disabled={refundLoading}
+            >
+              {refundLoading ? "Refunding..." : "Refund ticket"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

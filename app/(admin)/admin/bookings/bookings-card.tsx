@@ -461,15 +461,25 @@ export function BookingsCard({
     return () => clearTimeout(handle);
   }, [searchInput]);
 
-  useEffect(() => {
-    if (filters.date !== "month" || filters.month) {
+  const handleDateFilterChange = (value: string) => {
+    if (value === "month") {
+      const now = new Date();
+      const currentMonth = formatMonthValue(now);
+      setFilters((prev) => ({
+        ...prev,
+        date: value,
+        month: prev.month || currentMonth,
+      }));
+      setMonthPickerYear(now.getFullYear());
       return;
     }
-    const now = new Date();
-    const currentMonth = formatMonthValue(now);
-    setFilters((prev) => ({ ...prev, month: currentMonth }));
-    setMonthPickerYear(now.getFullYear());
-  }, [filters.date, filters.month]);
+
+    setFilters((prev) => ({
+      ...prev,
+      date: value,
+      month: value === "month" ? prev.month : "",
+    }));
+  };
 
   const filteredBookings = useMemo(() => {
     const customStart = parseDateInput(filters.dateFrom);
@@ -634,9 +644,7 @@ export function BookingsCard({
           </Select>
           <Select
             value={filters.date}
-            onValueChange={(value) =>
-              setFilters((prev) => ({ ...prev, date: value }))
-            }
+            onValueChange={handleDateFilterChange}
           >
             <SelectTrigger className="h-9 w-[160px]">
               <SelectValue placeholder="Date scope" />

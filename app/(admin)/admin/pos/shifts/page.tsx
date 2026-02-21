@@ -179,7 +179,7 @@ export default async function Page() {
   );
 
   return (
-    <AdminShell title="Shift history" description="Past shifts and totals.">
+    <AdminShell title="Shift history">
       <div className="px-4 lg:px-6">
         <ShiftsTable
           shifts={normalizedShifts}
