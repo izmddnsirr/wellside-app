@@ -69,12 +69,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     params?.error === "missing"
       ? "Email and password are required."
       : params?.error === "invalid"
-      ? "Invalid email or password."
-      : params?.error === "profile"
-      ? "Account profile not found."
-      : params?.error === "unauthorized"
-      ? "This account is not allowed to login here."
-      : null;
+        ? "Invalid email or password."
+        : params?.error === "profile"
+          ? "Account profile not found."
+          : params?.error === "unauthorized"
+            ? "This account is not allowed to login here."
+            : null;
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
@@ -116,11 +116,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                     Forgot your password?
                   </a>
                 </div>
-                <PasswordInput
-                  id="password"
-                  name="password"
-                  required
-                />
+                <PasswordInput id="password" name="password" required />
               </Field>
               {errorMessage ? (
                 <FieldDescription className="text-center text-red-600">

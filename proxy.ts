@@ -4,10 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
-const requireAuthRedirect = (
-  request: NextRequest,
-  targetPathname: string
-) => {
+const requireAuthRedirect = (request: NextRequest, targetPathname: string) => {
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname = targetPathname;
   return NextResponse.redirect(redirectUrl);
@@ -31,13 +28,13 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
+          request.cookies.set(name, value),
         );
         response = NextResponse.next({
           request,
         });
         cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
+          response.cookies.set(name, value, options),
         );
       },
     },
@@ -72,10 +69,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   if (pathname.startsWith("/barber") && profile.role !== "barber") {
     return requireAuthRedirect(request, "/staff");
-  }
-
-  if (pathname.startsWith("/home") && profile.role !== "customer") {
-    return requireAuthRedirect(request, "/login");
   }
 
   return response;

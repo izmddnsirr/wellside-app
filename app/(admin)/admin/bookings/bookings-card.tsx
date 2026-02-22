@@ -154,17 +154,35 @@ const formatStatusLabel = (status: string | null) => {
 const getStatusTone = (status: string | null) => {
   switch (status) {
     case "scheduled":
-      return { badge: "bg-blue-100 text-blue-900 border-blue-200", dot: "bg-blue-500" };
+      return {
+        badge: "bg-blue-100 text-blue-900 border-blue-200",
+        dot: "bg-blue-500",
+      };
     case "in_progress":
-      return { badge: "bg-amber-100 text-amber-900 border-amber-200", dot: "bg-amber-500" };
+      return {
+        badge: "bg-amber-100 text-amber-900 border-amber-200",
+        dot: "bg-amber-500",
+      };
     case "completed":
-      return { badge: "bg-emerald-100 text-emerald-900 border-emerald-200", dot: "bg-emerald-500" };
+      return {
+        badge: "bg-emerald-100 text-emerald-900 border-emerald-200",
+        dot: "bg-emerald-500",
+      };
     case "no_show":
-      return { badge: "bg-purple-100 text-purple-900 border-purple-200", dot: "bg-purple-500" };
+      return {
+        badge: "bg-purple-100 text-purple-900 border-purple-200",
+        dot: "bg-purple-500",
+      };
     case "cancelled":
-      return { badge: "bg-rose-100 text-rose-900 border-rose-200", dot: "bg-rose-500" };
+      return {
+        badge: "bg-rose-100 text-rose-900 border-rose-200",
+        dot: "bg-rose-500",
+      };
     default:
-      return { badge: "bg-muted text-foreground border-border", dot: "bg-muted-foreground" };
+      return {
+        badge: "bg-muted text-foreground border-border",
+        dot: "bg-muted-foreground",
+      };
   }
 };
 
@@ -189,7 +207,15 @@ const startOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const endOfDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
 const parseDateInput = (value: string) => {
   if (!value) {
@@ -277,11 +303,36 @@ const CALENDAR_SLOTS = [
 
 const CALENDAR_BARBERS = [
   { id: "john", name: "John", initials: "JH", tone: "bg-sky-100 text-sky-900" },
-  { id: "maria", name: "Maria", initials: "MR", tone: "bg-amber-100 text-amber-900" },
-  { id: "wendy", name: "Wendy", initials: "WD", tone: "bg-rose-100 text-rose-900" },
-  { id: "amy", name: "Amy", initials: "AM", tone: "bg-emerald-100 text-emerald-900" },
-  { id: "michael", name: "Michael", initials: "ML", tone: "bg-orange-100 text-orange-900" },
-  { id: "sarah", name: "Sarah", initials: "SS", tone: "bg-indigo-100 text-indigo-900" },
+  {
+    id: "maria",
+    name: "Maria",
+    initials: "MR",
+    tone: "bg-amber-100 text-amber-900",
+  },
+  {
+    id: "wendy",
+    name: "Wendy",
+    initials: "WD",
+    tone: "bg-rose-100 text-rose-900",
+  },
+  {
+    id: "amy",
+    name: "Amy",
+    initials: "AM",
+    tone: "bg-emerald-100 text-emerald-900",
+  },
+  {
+    id: "michael",
+    name: "Michael",
+    initials: "ML",
+    tone: "bg-orange-100 text-orange-900",
+  },
+  {
+    id: "sarah",
+    name: "Sarah",
+    initials: "SS",
+    tone: "bg-indigo-100 text-indigo-900",
+  },
 ];
 
 const CALENDAR_EVENTS = [
@@ -432,13 +483,17 @@ export function BookingsCard({
   const [sort, setSort] = useState("created_desc");
   const [range, setRange] = useState<DateRange | undefined>();
   const [monthPickerYear, setMonthPickerYear] = useState(
-    filters.month ? Number(filters.month.split("-")[0]) : new Date().getFullYear()
+    filters.month
+      ? Number(filters.month.split("-")[0])
+      : new Date().getFullYear(),
   );
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
-  const [statusSelections, setStatusSelections] = useState<Record<string, string>>({});
+  const [statusSelections, setStatusSelections] = useState<
+    Record<string, string>
+  >({});
   const statusOptions = useMemo(
     () => allowedStatuses.filter((status) => status !== "cancelled"),
-    [allowedStatuses]
+    [allowedStatuses],
   );
   const statusFilterOptions = useMemo(() => {
     const unique = new Set(allowedStatuses);
@@ -503,11 +558,11 @@ export function BookingsCard({
       }
       const customerName = joinName(
         booking.customer?.first_name ?? null,
-        booking.customer?.last_name ?? null
+        booking.customer?.last_name ?? null,
       );
       const barberName = joinName(
         booking.barber?.first_name ?? null,
-        booking.barber?.last_name ?? null
+        booking.barber?.last_name ?? null,
       );
       const haystack = [
         booking.id,
@@ -556,7 +611,9 @@ export function BookingsCard({
 
     return bookings.filter(
       (booking) =>
-        matchesSearch(booking) && matchesStatus(booking) && matchesDate(booking)
+        matchesSearch(booking) &&
+        matchesStatus(booking) &&
+        matchesDate(booking),
     );
   }, [bookings, debouncedSearch, filters]);
 
@@ -570,11 +627,11 @@ export function BookingsCard({
       const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
       const nameA = joinName(
         a.customer?.first_name ?? null,
-        a.customer?.last_name ?? null
+        a.customer?.last_name ?? null,
       );
       const nameB = joinName(
         b.customer?.first_name ?? null,
-        b.customer?.last_name ?? null
+        b.customer?.last_name ?? null,
       );
 
       if (sort === "date_desc") {
@@ -603,13 +660,13 @@ export function BookingsCard({
     (booking) =>
       booking.status !== "completed" &&
       booking.status !== "cancelled" &&
-      booking.status !== "no_show"
+      booking.status !== "no_show",
   );
   const pastBookings = sortedBookings.filter(
     (booking) =>
       booking.status === "completed" ||
       booking.status === "cancelled" ||
-      booking.status === "no_show"
+      booking.status === "no_show",
   );
   const hasActiveFilters =
     Boolean(searchInput) ||
@@ -631,7 +688,7 @@ export function BookingsCard({
               setFilters((prev) => ({ ...prev, status: value }))
             }
           >
-            <SelectTrigger className="h-9 w-[160px]">
+            <SelectTrigger className="h-9 w-40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -642,11 +699,8 @@ export function BookingsCard({
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={filters.date}
-            onValueChange={handleDateFilterChange}
-          >
-            <SelectTrigger className="h-9 w-[160px]">
+          <Select value={filters.date} onValueChange={handleDateFilterChange}>
+            <SelectTrigger className="h-9 w-40">
               <SelectValue placeholder="Date scope" />
             </SelectTrigger>
             <SelectContent>
@@ -661,12 +715,12 @@ export function BookingsCard({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-[180px] justify-between"
+                    className="h-9 min-w-45 justify-between"
                   >
                     {formatMonthLabel(filters.month)}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[260px] p-3" align="start">
+                <PopoverContent className="w-65 p-3" align="start">
                   <div className="flex items-center justify-between">
                     <Button
                       variant="ghost"
@@ -734,7 +788,7 @@ export function BookingsCard({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-[200px] justify-between text-left"
+                    className="h-9 min-w-50 justify-between text-left"
                   >
                     {range?.from ? formatRangeLabel(range) : "Pick date range"}
                   </Button>
@@ -748,7 +802,9 @@ export function BookingsCard({
                       setRange(value);
                       setFilters((prev) => ({
                         ...prev,
-                        dateFrom: value?.from ? formatDateInput(value.from) : "",
+                        dateFrom: value?.from
+                          ? formatDateInput(value.from)
+                          : "",
                         dateTo: value?.to ? formatDateInput(value.to) : "",
                       }));
                     }}
@@ -778,7 +834,7 @@ export function BookingsCard({
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-9 w-[200px]">
+            <SelectTrigger className="h-9 w-50">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
@@ -879,7 +935,7 @@ export function BookingsCard({
         </div>
       </div>
       <div className="overflow-x-auto">
-        <div className="min-w-[1100px]">
+        <div className="min-w-275">
           <div className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))] border-b border-border/60">
             <div className="px-2 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Time
@@ -928,7 +984,7 @@ export function BookingsCard({
                 </div>
                 <div className="absolute inset-0 grid grid-rows-[repeat(14,36px)] px-3 py-2">
                   {CALENDAR_EVENTS.filter(
-                    (event) => event.barberId === barber.id
+                    (event) => event.barberId === barber.id,
                   ).map((event) => (
                     <div
                       key={event.id}
@@ -957,7 +1013,7 @@ export function BookingsCard({
 
   const activeList =
     upcomingBookings.length === 0 ? (
-      <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+      <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
         <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
           <CalendarClock className="size-8 text-muted-foreground" />
         </div>
@@ -1018,7 +1074,7 @@ export function BookingsCard({
                   <TableCell className="w-[22%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.customer?.first_name ?? null,
-                      booking.customer?.last_name ?? null
+                      booking.customer?.last_name ?? null,
                     )}
                     <div className="text-xs text-muted-foreground">
                       {booking.customer?.phone ||
@@ -1038,7 +1094,7 @@ export function BookingsCard({
                   <TableCell className="w-[14%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.barber?.first_name ?? null,
-                      booking.barber?.last_name ?? null
+                      booking.barber?.last_name ?? null,
                     )}
                   </TableCell>
                   <TableCell className="w-[10%] px-4 py-3">
@@ -1078,7 +1134,7 @@ export function BookingsCard({
                                 <p className="text-lg font-semibold leading-tight">
                                   {joinName(
                                     booking.customer?.first_name ?? null,
-                                    booking.customer?.last_name ?? null
+                                    booking.customer?.last_name ?? null,
                                   )}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
@@ -1101,10 +1157,12 @@ export function BookingsCard({
                             </div>
                             <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                               <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Date</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Date
+                                </p>
                                 <p className="font-medium">
                                   {formatDate(
-                                    booking.booking_date ?? booking.start_at
+                                    booking.booking_date ?? booking.start_at,
                                   )}
                                 </p>
                               </div>
@@ -1117,11 +1175,13 @@ export function BookingsCard({
                                 </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Time</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Time
+                                </p>
                                 <p className="font-medium">
                                   {formatTimeRange(
                                     booking.start_at,
-                                    booking.end_at
+                                    booking.end_at,
                                   )}
                                 </p>
                               </div>
@@ -1136,7 +1196,10 @@ export function BookingsCard({
                                   {booking.service?.duration_minutes
                                     ? `${booking.service.duration_minutes} min`
                                     : "Duration not set"}{" "}
-                                  · {formatMoney(booking.service?.base_price ?? null)}
+                                  ·{" "}
+                                  {formatMoney(
+                                    booking.service?.base_price ?? null,
+                                  )}
                                 </p>
                               </div>
                               <div className="space-y-1">
@@ -1146,7 +1209,7 @@ export function BookingsCard({
                                 <p className="font-medium">
                                   {joinName(
                                     booking.barber?.first_name ?? null,
-                                    booking.barber?.last_name ?? null
+                                    booking.barber?.last_name ?? null,
                                   )}
                                 </p>
                               </div>
@@ -1198,7 +1261,7 @@ export function BookingsCard({
                                     className={`${statusSelectClass(
                                       statusSelections[booking.id] ??
                                         booking.status ??
-                                        "scheduled"
+                                        "scheduled",
                                     )} w-full`}
                                   >
                                     <SelectValue />
@@ -1253,7 +1316,7 @@ export function BookingsCard({
 
   const pastList =
     pastBookings.length === 0 ? (
-      <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+      <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
         <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
           <History className="size-8 text-muted-foreground" />
         </div>
@@ -1314,7 +1377,7 @@ export function BookingsCard({
                   <TableCell className="w-[22%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.customer?.first_name ?? null,
-                      booking.customer?.last_name ?? null
+                      booking.customer?.last_name ?? null,
                     )}
                     <div className="text-xs text-muted-foreground">
                       {booking.customer?.phone ||
@@ -1334,7 +1397,7 @@ export function BookingsCard({
                   <TableCell className="w-[14%] px-4 py-3 text-foreground">
                     {joinName(
                       booking.barber?.first_name ?? null,
-                      booking.barber?.last_name ?? null
+                      booking.barber?.last_name ?? null,
                     )}
                   </TableCell>
                   <TableCell className="w-[10%] px-4 py-3">
@@ -1397,7 +1460,9 @@ export function BookingsCard({
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="past">Past bookings</TabsTrigger>
           </TabsList>
-          {hasActiveFilters ? <Badge variant="secondary">Filtered</Badge> : null}
+          {hasActiveFilters ? (
+            <Badge variant="secondary">Filtered</Badge>
+          ) : null}
         </div>
         <TabsContent value="active" className="space-y-3">
           <p className="text-xs text-muted-foreground">{activeDescription}</p>
