@@ -24,7 +24,7 @@ import {
 import { BookingSummaryCard } from "@/components/customer/booking-summary-card";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { fetchAvailableSlots } from "./actions";
+import { fetchAvailableSlots, fetchClosedDates } from "./actions";
 import type { Slot } from "@/utils/slots";
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
@@ -43,6 +43,14 @@ type SlotState = {
   isLoading: boolean;
   error: string | null;
 };
+
+type ClosedDateMap = Record<
+  string,
+  {
+    reason: string;
+    source: "temporary" | "weekly";
+  }
+>;
 
 type BarberRow = {
   id: string;
@@ -120,7 +128,7 @@ const buildDateOptions = (): DateOption[] => {
   const now = new Date();
   const todayParts = getDateParts(now);
   const todayUTC = new Date(
-    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day)
+    Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day),
   );
 
   return Array.from({ length: MAX_DAYS_AHEAD + 1 }, (_, index) => {
@@ -189,7 +197,7 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
   const dateISO = selectedDate ? formatDateISO(selectedDate.date) : null;
   const barberLabel = barberName ?? "Select barber";
   const barberInitials = buildInitials(
-    barberLabel === "Select barber" ? "Barber" : barberLabel
+    barberLabel === "Select barber" ? "Barber" : barberLabel,
   );
 
   const [slotState, setSlotState] = useState<SlotState>({
@@ -197,12 +205,17 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
     isLoading: false,
     error: null,
   });
+  const [closedDates, setClosedDates] = useState<ClosedDateMap>({});
+  const [closedDatesError, setClosedDatesError] = useState<string | null>(null);
   const slotsCacheRef = useRef(new Map<string, Slot[]>());
   const [isBarberDialogOpen, setIsBarberDialogOpen] = useState(false);
   const slotsKey = barberId && dateISO ? `${barberId}|${dateISO}` : null;
   const effectiveSlotState = slotsKey
     ? slotState
     : { slots: [], isLoading: false, error: null };
+  const selectedDateClosure = selectedDate
+    ? closedDates[selectedDate.id]
+    : undefined;
 
   const updateQuery = useCallback(
     (next: BookingQuery) => {
@@ -235,7 +248,7 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
       barberId,
       selectedStartAt,
       selectedEndAt,
-    ]
+    ],
   );
 
   const handleSelectSlot = useCallback(
@@ -276,8 +289,64 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
       serviceName,
       servicePrice,
       totalPrice,
-    ]
+    ],
   );
+
+  useEffect(() => {
+    let isActive = true;
+    const fromISO = dateOptions[0]?.id;
+    const toISO = dateOptions[dateOptions.length - 1]?.id;
+
+    if (!fromISO || !toISO) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    fetchClosedDates(fromISO, toISO)
+      .then((data) => {
+        if (isActive) {
+          for (const cacheKey of slotsCacheRef.current.keys()) {
+            const [, cacheDateISO = ""] = cacheKey.split("|");
+            if (data[cacheDateISO]) {
+              slotsCacheRef.current.delete(cacheKey);
+            }
+          }
+          setClosedDates(data);
+          setClosedDatesError(null);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setClosedDates({});
+          setClosedDatesError(
+            "Unable to load shop closure rules. Weekly close settings may not be applied.",
+          );
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [dateOptions]);
+
+  useEffect(() => {
+    if (!selectedDate || !closedDates[selectedDate.id]) {
+      return;
+    }
+
+    const firstOpenDate = dateOptions.find((option) => !closedDates[option.id]);
+    if (!firstOpenDate) {
+      return;
+    }
+
+    updateQuery({
+      date: firstOpenDate.fullLabel,
+      time: undefined,
+      startAt: undefined,
+      endAt: undefined,
+    });
+  }, [closedDates, dateOptions, selectedDate, updateQuery]);
 
   useEffect(() => {
     let isActive = true;
@@ -297,7 +366,7 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
           duration: serviceDuration,
           price: servicePrice,
           total: totalPrice ?? servicePrice,
-        })}`
+        })}`,
       );
       return () => {
         isActive = false;
@@ -305,6 +374,18 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
     }
 
     if (!slotsKey) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (selectedDateClosure) {
+      queueMicrotask(() => {
+        if (isActive) {
+          slotsCacheRef.current.delete(slotsKey);
+          setSlotState({ slots: [], isLoading: false, error: null });
+        }
+      });
       return () => {
         isActive = false;
       };
@@ -358,6 +439,7 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
     serviceId,
     serviceName,
     servicePrice,
+    selectedDateClosure,
     slotsKey,
     totalPrice,
   ]);
@@ -380,11 +462,11 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
           level: barber.barber_level?.trim() || null,
         };
       }),
-    [barbers]
+    [barbers],
   );
 
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-[1200px]">
+    <div className="mx-auto w-full max-w-xl lg:max-w-300">
       <div className="pb-12">
         <div className="flex flex-col gap-10 lg:flex lg:flex-row lg:items-start lg:gap-12">
           <div className="flex flex-col gap-6 lg:flex-[1.4] lg:min-w-0">
@@ -454,9 +536,7 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>
-                      Select barber
-                    </DialogTitle>
+                    <DialogTitle>Select barber</DialogTitle>
                     <DialogDescription>
                       Switch to another barber for this slot.
                     </DialogDescription>
@@ -520,13 +600,18 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                 <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {dateOptions.map((option) => {
                     const isSelected = option.id === selectedDate?.id;
+                    const closure = closedDates[option.id];
+                    const isClosed = Boolean(closure);
                     return (
                       <div
                         key={option.id}
                         className="flex flex-col items-center gap-3"
                       >
                         <Button
-                          variant={isSelected ? "default" : "outline"}
+                          variant={
+                            isSelected && !isClosed ? "default" : "outline"
+                          }
+                          disabled={isClosed}
                           onClick={() =>
                             updateQuery({
                               date: option.fullLabel,
@@ -536,15 +621,17 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                             })
                           }
                           className={`h-20 w-20 rounded-full text-lg font-semibold shadow-none ${
-                            isSelected
-                              ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                              : "border-border/60 bg-background/80 text-foreground"
+                            isClosed
+                              ? "cursor-not-allowed border-border/50 bg-muted/60 text-muted-foreground"
+                              : isSelected
+                                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                : "border-border/60 bg-background/80 text-foreground"
                           }`}
                         >
                           {option.label}
                         </Button>
                         <span className="text-sm text-muted-foreground">
-                          {option.detail}
+                          {isClosed ? "Closed" : option.detail}
                         </span>
                       </div>
                     );
@@ -554,6 +641,14 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
             </section>
 
             <section className="space-y-4" style={{ animationDelay: "160ms" }}>
+              {closedDatesError ? (
+                <p className="text-sm text-destructive">{closedDatesError}</p>
+              ) : null}
+              {selectedDateClosure ? (
+                <p className="text-sm text-muted-foreground">
+                  Barbershop closed: {selectedDateClosure.reason}
+                </p>
+              ) : null}
               {!slotsKey ? (
                 <p className="text-sm text-muted-foreground">
                   Select a barber to see available slots.
@@ -597,7 +692,7 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
             </section>
           </div>
 
-          <aside className="hidden lg:block lg:flex-[1] lg:self-start">
+          <aside className="hidden lg:block lg:flex-1 lg:self-start">
             <div className="sticky top-6">
               <BookingSummaryCard
                 ctaHref={`/booking/review${buildQuery({

@@ -1,6 +1,11 @@
 import "server-only";
 
+import { createAdminAuthClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
+import {
+  evaluateShopDateStatus,
+  loadShopOperatingRules,
+} from "@/utils/shop-operations";
 
 type BookingRow = {
   start_at: string;
@@ -61,7 +66,7 @@ function getMyNow() {
 
 export async function getAvailableSlots(
   barberId: string,
-  dateISO: string
+  dateISO: string,
 ): Promise<Slot[]> {
   if (!barberId || !dateISO) {
     return [];
@@ -69,6 +74,16 @@ export async function getAvailableSlots(
 
   const nowMY = getMyNow();
   const supabase = await createClient();
+  const rules = await loadShopOperatingRules(createAdminAuthClient());
+  const status = evaluateShopDateStatus(
+    dateISO,
+    rules.weeklySchedule,
+    rules.temporaryClosures,
+  );
+  if (status.closed) {
+    return [];
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("working_start_time,working_end_time")
@@ -120,7 +135,7 @@ export async function getAvailableSlots(
     }
 
     const clash = bookedRanges.some((br) =>
-      overlaps(slotStart, slotEnd, br.start, br.end)
+      overlaps(slotStart, slotEnd, br.start, br.end),
     );
     if (clash) {
       continue;

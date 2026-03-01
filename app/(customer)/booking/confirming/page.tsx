@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
+import { createAdminAuthClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import {
   buildBookingConfirmationPayload,
   sendBookingConfirmationEmailTo,
 } from "@/utils/email/booking-confirmation";
+import {
+  evaluateShopDateStatus,
+  loadShopOperatingRules,
+} from "@/utils/shop-operations";
 import { ConfirmingBookingClient } from "./confirming-booking-client";
 
 type BookingSearchParams = {
@@ -23,6 +28,66 @@ type BookingSearchParams = {
 
 const readParam = (value?: string | string[]) =>
   Array.isArray(value) ? value[0] : value;
+
+const malaysiaDateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const malaysiaHourMinuteFormatter = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const parseTimeToMinutes = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+  return hour * 60 + minute;
+};
+
+const toMalaysiaDateKey = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return malaysiaDateKeyFormatter.format(date);
+};
+
+const toMinutesInMalaysia = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const parts = malaysiaHourMinuteFormatter.formatToParts(date);
+  const hour = Number(
+    parts.find((part) => part.type === "hour")?.value ?? "NaN",
+  );
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "NaN",
+  );
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return null;
+  }
+  return hour * 60 + minute;
+};
 
 export default async function ConfirmingBookingPage({
   searchParams,
@@ -73,7 +138,7 @@ export default async function ConfirmingBookingPage({
       redirect("/login");
     }
 
-    const redirectWithError = (code: "booking" | "active") => {
+    const redirectWithError = (code: "booking" | "active"): never => {
       const query = new URLSearchParams({
         ...baseParams,
         error: code,
@@ -95,6 +160,80 @@ export default async function ConfirmingBookingPage({
 
     if (existingBooking) {
       redirectWithError("active");
+    }
+
+    const startMs = new Date(startAt).getTime();
+    const endMs = new Date(endAt).getTime();
+    if (
+      !Number.isFinite(startMs) ||
+      !Number.isFinite(endMs) ||
+      endMs <= startMs
+    ) {
+      redirectWithError("booking");
+    }
+
+    const operatingRules = await loadShopOperatingRules(
+      createAdminAuthClient(),
+    );
+    const shopStatus = evaluateShopDateStatus(
+      startAt,
+      operatingRules.weeklySchedule,
+      operatingRules.temporaryClosures,
+    );
+
+    if (shopStatus.closed) {
+      redirectWithError("booking");
+    }
+
+    const { data: barberProfile, error: barberError } = await supabase
+      .from("profiles")
+      .select("working_start_time, working_end_time")
+      .eq("id", barberId)
+      .single();
+
+    if (barberError || !barberProfile) {
+      redirectWithError("booking");
+    }
+
+    const workingStartMinutes = parseTimeToMinutes(
+      barberProfile?.working_start_time ?? null,
+    );
+    const workingEndMinutes = parseTimeToMinutes(
+      barberProfile?.working_end_time ?? null,
+    );
+    const bookingStartMinutes = toMinutesInMalaysia(startAt);
+    const bookingEndMinutes = toMinutesInMalaysia(endAt);
+    const sameMalaysiaDay =
+      toMalaysiaDateKey(startAt) === toMalaysiaDateKey(endAt);
+
+    if (
+      !sameMalaysiaDay ||
+      workingStartMinutes === null ||
+      workingEndMinutes === null ||
+      bookingStartMinutes === null ||
+      bookingEndMinutes === null ||
+      bookingStartMinutes < workingStartMinutes ||
+      bookingEndMinutes > workingEndMinutes
+    ) {
+      redirectWithError("booking");
+    }
+
+    const { data: overlappingBooking, error: overlapError } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("barber_id", barberId)
+      .neq("status", "cancelled")
+      .lt("start_at", endAt)
+      .gt("end_at", startAt)
+      .limit(1)
+      .maybeSingle();
+
+    if (overlapError) {
+      redirectWithError("booking");
+    }
+
+    if (overlappingBooking) {
+      redirectWithError("booking");
     }
 
     const { data, error } = await supabase
@@ -131,7 +270,7 @@ export default async function ConfirmingBookingPage({
             customer:customer_id (first_name, last_name, email, phone),
             barber:barber_id (display_name, first_name, last_name),
             service:service_id (name, base_price)
-          `
+          `,
           )
           .eq("id", bookingId)
           .single();
@@ -162,7 +301,7 @@ export default async function ConfirmingBookingPage({
         const sendOps: Promise<unknown>[] = [];
         if (customerEmail) {
           sendOps.push(
-            sendBookingConfirmationEmailTo(payload, customerEmail, "Customer")
+            sendBookingConfirmationEmailTo(payload, customerEmail, "Customer"),
           );
         } else {
           console.error("Missing customer email for booking confirmation", {
@@ -172,7 +311,7 @@ export default async function ConfirmingBookingPage({
 
         if (adminEmails.length > 0) {
           sendOps.push(
-            sendBookingConfirmationEmailTo(payload, adminEmails, "Admin")
+            sendBookingConfirmationEmailTo(payload, adminEmails, "Admin"),
           );
         } else {
           console.error("Missing admin emails for booking confirmation");

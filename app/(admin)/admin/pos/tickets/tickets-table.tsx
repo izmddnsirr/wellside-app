@@ -81,13 +81,6 @@ const formatMoney = (value: number | null) => {
   }).format(value);
 };
 
-const dateFormatter = new Intl.DateTimeFormat("en-MY", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  timeZone: "Asia/Kuala_Lumpur",
-});
-
 const timeFormatter = new Intl.DateTimeFormat("en-MY", {
   hour: "numeric",
   minute: "2-digit",
@@ -110,14 +103,6 @@ const dayGroupLabelFormatter = new Intl.DateTimeFormat("en-MY", {
   timeZone: "Asia/Kuala_Lumpur",
 });
 
-const formatDate = (value: Date) => {
-  const parts = dateFormatter.formatToParts(value);
-  const day = parts.find((part) => part.type === "day")?.value ?? "";
-  const month = parts.find((part) => part.type === "month")?.value ?? "";
-  const year = parts.find((part) => part.type === "year")?.value ?? "";
-  return [day, month, year].filter(Boolean).join(" ");
-};
-
 const formatTime = (value: Date) => {
   const parts = timeFormatter.formatToParts(value);
   const hour = parts.find((part) => part.type === "hour")?.value ?? "";
@@ -128,7 +113,7 @@ const formatTime = (value: Date) => {
   return `${hour}:${minute}${periodSuffix}`.trim();
 };
 
-const formatDateTime = (value: string | null) => {
+const formatTimeValue = (value: string | null) => {
   if (!value) {
     return "-";
   }
@@ -136,7 +121,7 @@ const formatDateTime = (value: string | null) => {
   if (Number.isNaN(date.getTime())) {
     return "-";
   }
-  return `${formatDate(date)}, ${formatTime(date)}`.trim();
+  return formatTime(date);
 };
 
 const getDayKey = (value: string | null) => {
@@ -212,11 +197,39 @@ const formatBarberName = (barber: TicketRow["barber"]) => {
   );
 };
 
+const getSaleTypeLabel = (items: TicketItem[] | null) => {
+  if (!items?.length) {
+    return "-";
+  }
+
+  const hasService = items.some((item) => Boolean(item.services?.name));
+  const hasProduct = items.some((item) => Boolean(item.products?.name));
+
+  if (hasService && hasProduct) {
+    return "Service & Product";
+  }
+  if (hasService) {
+    return "Service";
+  }
+  if (hasProduct) {
+    return "Product";
+  }
+  return "-";
+};
+
 const startOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const endOfDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+  new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
 const parseDateInput = (value: string) => {
   if (!value) {
@@ -298,7 +311,9 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
   const [sort, setSort] = useState("created_desc");
   const [range, setRange] = useState<DateRange | undefined>();
   const [monthPickerYear, setMonthPickerYear] = useState(
-    filters.month ? Number(filters.month.split("-")[0]) : new Date().getFullYear()
+    filters.month
+      ? Number(filters.month.split("-")[0])
+      : new Date().getFullYear(),
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -398,10 +413,8 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
 
   const hasVoidStatus = useMemo(
     () =>
-      tickets.some(
-        (ticket) => ticket.payment_status?.toLowerCase() === "void"
-      ),
-    [tickets]
+      tickets.some((ticket) => ticket.payment_status?.toLowerCase() === "void"),
+    [tickets],
   );
 
   const filteredTickets = useMemo(() => {
@@ -462,7 +475,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
 
     const filtered = tickets.filter(
       (ticket) =>
-        matchesSearch(ticket) && matchesStatus(ticket) && matchesDate(ticket)
+        matchesSearch(ticket) && matchesStatus(ticket) && matchesDate(ticket),
     );
 
     const sorted = filtered.slice();
@@ -513,7 +526,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
               setFilters((prev) => ({ ...prev, status: value }))
             }
           >
-            <SelectTrigger className="h-9 w-[150px]">
+            <SelectTrigger className="h-9 w-37.5">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -521,14 +534,13 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
               <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="unpaid">Unpaid</SelectItem>
               <SelectItem value="refunded">Refunded</SelectItem>
-              {hasVoidStatus ? <SelectItem value="void">Void</SelectItem> : null}
+              {hasVoidStatus ? (
+                <SelectItem value="void">Void</SelectItem>
+              ) : null}
             </SelectContent>
           </Select>
-          <Select
-            value={filters.date}
-            onValueChange={handleDateFilterChange}
-          >
-            <SelectTrigger className="h-9 w-[160px]">
+          <Select value={filters.date} onValueChange={handleDateFilterChange}>
+            <SelectTrigger className="h-9 w-40">
               <SelectValue placeholder="Date scope" />
             </SelectTrigger>
             <SelectContent>
@@ -543,12 +555,12 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-[120px] justify-between"
+                    className="h-9 min-w-30 justify-between"
                   >
                     {formatMonthLabel(filters.month)}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[260px] p-3" align="start">
+                <PopoverContent className="w-65 p-3" align="start">
                   <div className="flex items-center justify-between">
                     <Button
                       variant="ghost"
@@ -616,7 +628,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-[140px] justify-between text-left"
+                    className="h-9 min-w-35 justify-between text-left"
                   >
                     {range?.from ? formatRangeLabel(range) : "Pick date range"}
                   </Button>
@@ -630,7 +642,9 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                       setRange(value);
                       setFilters((prev) => ({
                         ...prev,
-                        dateFrom: value?.from ? formatDateInput(value.from) : "",
+                        dateFrom: value?.from
+                          ? formatDateInput(value.from)
+                          : "",
                         dateTo: value?.to ? formatDateInput(value.to) : "",
                       }));
                     }}
@@ -660,7 +674,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-9 w-[180px]">
+            <SelectTrigger className="h-9 w-45">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
@@ -670,12 +684,8 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
               <SelectItem value="created_asc">
                 Created date: Oldest → Newest
               </SelectItem>
-              <SelectItem value="total_desc">
-                Total: High → Low
-              </SelectItem>
-              <SelectItem value="total_asc">
-                Total: Low → High
-              </SelectItem>
+              <SelectItem value="total_desc">Total: High → Low</SelectItem>
+              <SelectItem value="total_asc">Total: Low → High</SelectItem>
             </SelectContent>
           </Select>
           <div className="relative w-full sm:w-64">
@@ -699,7 +709,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
         </p>
       ) : null}
       {filteredTickets.length === 0 ? (
-        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
             <Ticket className="size-8 text-muted-foreground" />
           </div>
@@ -721,22 +731,25 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
           <Table className="table-fixed">
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
-                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Date
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Time
                 </TableHead>
-                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Barber
                 </TableHead>
-                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sale type
+                </TableHead>
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
-                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Payment
                 </TableHead>
-                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Total
                 </TableHead>
-                <TableHead className="w-1/6 px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Action
                 </TableHead>
               </TableRow>
@@ -745,13 +758,19 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
               {filteredTickets.map((ticket, index) => {
                 const currentDayKey = getDayKey(ticket.created_at);
                 const previousDayKey =
-                  index > 0 ? getDayKey(filteredTickets[index - 1].created_at) : null;
-                const isNewDay = index === 0 || currentDayKey !== previousDayKey;
+                  index > 0
+                    ? getDayKey(filteredTickets[index - 1].created_at)
+                    : null;
+                const isNewDay =
+                  index === 0 || currentDayKey !== previousDayKey;
                 const dayGroupLabel = formatDayGroupLabel(ticket.created_at);
                 const barberLabel = formatBarberName(ticket.barber);
+                const saleTypeLabel = getSaleTypeLabel(ticket.ticket_items);
                 const status = ticket.payment_status ?? "unpaid";
                 const isPaid = status === "paid";
-                const paymentMethod = (ticket.payment_method ?? "").toLowerCase();
+                const paymentMethod = (
+                  ticket.payment_method ?? ""
+                ).toLowerCase();
                 const isCash = paymentMethod === "cash";
                 const totalAmount =
                   typeof ticket.total_amount === "number"
@@ -762,16 +781,18 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                     ? ticket.cash_received
                     : null;
                 const storedChangeDue =
-                  typeof ticket.change_due === "number" ? ticket.change_due : null;
+                  typeof ticket.change_due === "number"
+                    ? ticket.change_due
+                    : null;
                 const cashReceived =
-                  isPaid && isCash ? storedCashReceived ?? totalAmount : null;
+                  isPaid && isCash ? (storedCashReceived ?? totalAmount) : null;
                 const balanceAmount = isPaid
-                  ? storedChangeDue ??
+                  ? (storedChangeDue ??
                     (isCash && cashReceived !== null && totalAmount !== null
                       ? cashReceived - totalAmount
                       : totalAmount !== null
-                      ? 0
-                      : null)
+                        ? 0
+                        : null))
                   : null;
                 const tone = getStatusTone(status);
                 const itemLines =
@@ -799,7 +820,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                     {isNewDay ? (
                       <TableRow className="bg-black hover:bg-black">
                         <TableCell
-                          colSpan={6}
+                          colSpan={7}
                           className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white"
                         >
                           {dayGroupLabel}
@@ -808,13 +829,19 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                     ) : null}
                     <TableRow className="border-border/60 bg-background hover:bg-muted/50">
                       <TableCell className="px-4 py-3 text-muted-foreground">
-                        {formatDateTime(ticket.created_at)}
+                        {formatTimeValue(ticket.created_at)}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-muted-foreground">
                         {barberLabel}
                       </TableCell>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {saleTypeLabel}
+                      </TableCell>
                       <TableCell className="px-4 py-3">
-                        <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
+                        <Badge
+                          variant="outline"
+                          className={`gap-2 ${tone.badge}`}
+                        >
                           <span className={`size-2 rounded-full ${tone.dot}`} />
                           {toTitleCase(status)}
                         </Badge>
@@ -833,164 +860,168 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                             </Button>
                           </SheetTrigger>
                           <SheetContent className="p-0">
-                          <div className="flex h-full flex-col bg-muted/10">
-                            <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
-                              <SheetTitle className="text-base font-semibold text-foreground">
-                                {ticket.ticket_no ?? ticket.id}
-                              </SheetTitle>
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
-                                >
-                                  {barberLabel}
-                                </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
-                                >
-                                  <span className={`size-2 rounded-full ${tone.dot}`} />
-                                  {toTitleCase(status)}
-                                </Badge>
-                              </div>
-                            </SheetHeader>
-                            <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
-                              <div className="rounded-2xl border border-border bg-background">
-                                <div className="px-4 py-4">
-                                  <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                    <span>Items</span>
-                                    <span>Amount</span>
-                                  </div>
-                                  {itemLines.length > 0 ? (
-                                    <ul className="mt-3 divide-y divide-dashed divide-border">
-                                      {itemLines.map((item) => (
-                                        <li
-                                          key={item.key}
-                                          className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                                        >
-                                          <div className="min-w-0 space-y-1">
-                                            <p className="font-medium text-foreground">
-                                              {item.label}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                              x{item.qty} ·{" "}
-                                              {item.price !== null
-                                                ? formatMoney(item.price)
+                            <div className="flex h-full flex-col bg-muted/10">
+                              <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
+                                <SheetTitle className="text-base font-semibold text-foreground">
+                                  {ticket.ticket_no ?? ticket.id}
+                                </SheetTitle>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <Badge
+                                    variant="outline"
+                                    className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
+                                  >
+                                    {barberLabel}
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
+                                  >
+                                    <span
+                                      className={`size-2 rounded-full ${tone.dot}`}
+                                    />
+                                    {toTitleCase(status)}
+                                  </Badge>
+                                </div>
+                              </SheetHeader>
+                              <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
+                                <div className="rounded-2xl border border-border bg-background">
+                                  <div className="px-4 py-4">
+                                    <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                      <span>Items</span>
+                                      <span>Amount</span>
+                                    </div>
+                                    {itemLines.length > 0 ? (
+                                      <ul className="mt-3 divide-y divide-dashed divide-border">
+                                        {itemLines.map((item) => (
+                                          <li
+                                            key={item.key}
+                                            className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                                          >
+                                            <div className="min-w-0 space-y-1">
+                                              <p className="font-medium text-foreground">
+                                                {item.label}
+                                              </p>
+                                              <p className="text-xs text-muted-foreground">
+                                                x{item.qty} ·{" "}
+                                                {item.price !== null
+                                                  ? formatMoney(item.price)
+                                                  : "-"}
+                                              </p>
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground">
+                                              {item.lineTotal !== null
+                                                ? formatMoney(item.lineTotal)
                                                 : "-"}
                                             </p>
-                                          </div>
-                                          <p className="text-sm font-semibold text-foreground">
-                                            {item.lineTotal !== null
-                                              ? formatMoney(item.lineTotal)
-                                              : "-"}
-                                          </p>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  ) : (
-                                    <p className="mt-3 text-sm font-medium text-foreground">
-                                      -
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="border-t border-dashed border-border px-4 py-4">
-                                  <div className="space-y-2 text-sm">
-                                    <div className="flex items-center justify-between text-muted-foreground">
-                                      <span>Subtotal</span>
-                                      <span>{formatMoney(totalAmount)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-base font-semibold text-foreground">
-                                      <span>Total</span>
-                                      <span>{formatMoney(totalAmount)}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    ) : (
+                                      <p className="mt-3 text-sm font-medium text-foreground">
+                                        -
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="border-t border-dashed border-border px-4 py-4">
+                                    <div className="space-y-2 text-sm">
+                                      <div className="flex items-center justify-between text-muted-foreground">
+                                        <span>Subtotal</span>
+                                        <span>{formatMoney(totalAmount)}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between text-base font-semibold text-foreground">
+                                        <span>Total</span>
+                                        <span>{formatMoney(totalAmount)}</span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                                <div className="border-t border-dashed border-border px-4 py-4">
-                                  <div className="space-y-3 text-sm">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-muted-foreground">
-                                        Method
-                                      </span>
-                                      <span className="font-medium text-foreground">
-                                        {isPaid
-                                          ? toTitleCase(ticket.payment_method)
-                                          : "-"}
-                                      </span>
-                                    </div>
-                                    {isPaid && isCash ? (
+                                  <div className="border-t border-dashed border-border px-4 py-4">
+                                    <div className="space-y-3 text-sm">
                                       <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground">
-                                          Cash received
+                                          Method
                                         </span>
                                         <span className="font-medium text-foreground">
-                                          {formatMoney(cashReceived)}
+                                          {isPaid
+                                            ? toTitleCase(ticket.payment_method)
+                                            : "-"}
                                         </span>
                                       </div>
-                                    ) : null}
-                                    {isPaid ? (
-                                      <div className="flex items-center justify-between font-semibold text-foreground">
-                                        <span>Balance</span>
-                                        <span>{formatMoney(balanceAmount)}</span>
+                                      {isPaid && isCash ? (
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-muted-foreground">
+                                            Cash received
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {formatMoney(cashReceived)}
+                                          </span>
+                                        </div>
+                                      ) : null}
+                                      {isPaid ? (
+                                        <div className="flex items-center justify-between font-semibold text-foreground">
+                                          <span>Balance</span>
+                                          <span>
+                                            {formatMoney(balanceAmount)}
+                                          </span>
+                                        </div>
+                                      ) : null}
+                                      <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground">
+                                          Paid at
+                                        </p>
+                                        <p className="font-medium text-foreground">
+                                          {isPaid
+                                            ? formatTimeValue(ticket.paid_at)
+                                            : "-"}
+                                        </p>
                                       </div>
-                                    ) : null}
-                                    <div className="space-y-1">
-                                      <p className="text-xs text-muted-foreground">
-                                        Paid at
-                                      </p>
-                                      <p className="font-medium text-foreground">
-                                        {isPaid
-                                          ? formatDateTime(ticket.paid_at)
-                                          : "-"}
-                                      </p>
                                     </div>
                                   </div>
+                                  <div className="border-t border-dashed border-border px-4 py-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                      Ticket ID
+                                    </p>
+                                    <p className="mt-1 break-all text-xs font-medium text-foreground">
+                                      {ticket.id}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="border-t border-dashed border-border px-4 py-3">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Ticket ID
-                                  </p>
-                                  <p className="mt-1 break-all text-xs font-medium text-foreground">
-                                    {ticket.id}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                                {isPaid ? (
+                                <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                                  {isPaid ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setRefundTarget({
+                                          id: ticket.id,
+                                          label: ticket.ticket_no ?? ticket.id,
+                                          total: totalAmount,
+                                        });
+                                        setRefundDialogOpen(true);
+                                        setRefundError(null);
+                                      }}
+                                      disabled={refundLoading}
+                                    >
+                                      Refund
+                                    </Button>
+                                  ) : null}
                                   <Button
-                                    variant="outline"
+                                    variant="destructive"
                                     size="sm"
                                     onClick={() => {
-                                      setRefundTarget({
+                                      setDeleteTarget({
                                         id: ticket.id,
                                         label: ticket.ticket_no ?? ticket.id,
-                                        total: totalAmount,
                                       });
-                                      setRefundDialogOpen(true);
-                                      setRefundError(null);
+                                      setDeleteDialogOpen(true);
+                                      setDeleteError(null);
                                     }}
-                                    disabled={refundLoading}
+                                    disabled={deleteLoading}
                                   >
-                                    Refund
+                                    Delete ticket
                                   </Button>
-                                ) : null}
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => {
-                                    setDeleteTarget({
-                                      id: ticket.id,
-                                      label: ticket.ticket_no ?? ticket.id,
-                                    });
-                                    setDeleteDialogOpen(true);
-                                    setDeleteError(null);
-                                  }}
-                                  disabled={deleteLoading}
-                                >
-                                  Delete ticket
-                                </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
                           </SheetContent>
                         </Sheet>
                       </TableCell>
@@ -1002,13 +1033,16 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
           </Table>
         </div>
       )}
-      <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={handleDeleteDialogOpenChange}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete ticket</DialogTitle>
             <DialogDescription>
-              This will delete the ticket and all related items. This action cannot
-              be undone.
+              This will delete the ticket and all related items. This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 text-sm text-muted-foreground">
@@ -1040,7 +1074,10 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={refundDialogOpen} onOpenChange={handleRefundDialogOpenChange}>
+      <Dialog
+        open={refundDialogOpen}
+        onOpenChange={handleRefundDialogOpenChange}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Refund ticket</DialogTitle>

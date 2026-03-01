@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -42,7 +41,6 @@ import {
 } from "@/components/ui/table";
 import { ChevronLeft, ChevronRight, Clock, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { DateRange } from "react-day-picker";
 import { useRouter } from "next/navigation";
 import { deleteShift } from "./actions";
 
@@ -178,39 +176,15 @@ const startOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const endOfDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-
-const parseDateInput = (value: string) => {
-  if (!value) {
-    return null;
-  }
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) {
-    return null;
-  }
-  return new Date(year, month - 1, day);
-};
-
-const formatDateInput = (value: Date) => {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const formatRangeLabel = (range?: DateRange) => {
-  if (!range?.from) {
-    return "Select a date range";
-  }
-  const formatter = new Intl.DateTimeFormat("en-MY", {
-    dateStyle: "medium",
-  });
-  const fromLabel = formatter.format(range.from);
-  if (!range.to) {
-    return `${fromLabel} →`;
-  }
-  return `${fromLabel} → ${formatter.format(range.to)}`;
-};
+  new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
 
 const formatMonthValue = (value: Date) => {
   const year = value.getFullYear();
@@ -232,7 +206,20 @@ const formatMonthLabel = (value: string) => {
   }).format(new Date(year, month - 1, 1));
 };
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export function ShiftsTable({
   shifts,
@@ -247,14 +234,13 @@ export function ShiftsTable({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
     date: "all",
-    dateFrom: "",
-    dateTo: "",
     month: "",
   });
   const [sort, setSort] = useState("opened_desc");
-  const [range, setRange] = useState<DateRange | undefined>();
   const [monthPickerYear, setMonthPickerYear] = useState(
-    filters.month ? Number(filters.month.split("-")[0]) : new Date().getFullYear()
+    filters.month
+      ? Number(filters.month.split("-")[0])
+      : new Date().getFullYear(),
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -319,10 +305,6 @@ export function ShiftsTable({
   };
 
   const filteredShifts = useMemo(() => {
-    const customStart = parseDateInput(filters.dateFrom);
-    const customEnd = parseDateInput(filters.dateTo);
-    const isCustomRangeValid =
-      customStart && customEnd && customStart <= customEnd;
     const monthParts = filters.month.split("-");
     const monthYear = Number(monthParts[0]);
     const monthValue = Number(monthParts[1]);
@@ -341,7 +323,7 @@ export function ShiftsTable({
       const shiftCode = shift.shift_code || shift.label || shift.id;
       const openedBy = joinName(
         shift.profiles?.first_name ?? null,
-        shift.profiles?.last_name ?? null
+        shift.profiles?.last_name ?? null,
       );
       const statusLabel = formatStatusLabel(shift.status, shift.end_at);
       return [shiftCode, openedBy, statusLabel]
@@ -362,17 +344,11 @@ export function ShiftsTable({
       if (filters.date === "month" && monthStart && monthEnd) {
         return openedAt >= monthStart && openedAt <= monthEnd;
       }
-      if (filters.date === "custom" && isCustomRangeValid) {
-        return (
-          openedAt >= startOfDay(customStart) &&
-          openedAt <= endOfDay(customEnd)
-        );
-      }
       return true;
     };
 
     const filtered = shifts.filter(
-      (shift) => matchesSearch(shift) && matchesDate(shift)
+      (shift) => matchesSearch(shift) && matchesDate(shift),
     );
 
     const sorted = filtered.slice();
@@ -402,13 +378,10 @@ export function ShiftsTable({
   const resetFilters = () => {
     setFilters({
       date: "all",
-      dateFrom: "",
-      dateTo: "",
       month: "",
     });
     setSort("opened_desc");
     setSearchInput("");
-    setRange(undefined);
     setMonthPickerYear(new Date().getFullYear());
   };
 
@@ -417,17 +390,13 @@ export function ShiftsTable({
       <div className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={filters.date}
-              onValueChange={handleDateFilterChange}
-            >
-              <SelectTrigger className="h-9 w-[150px]">
+            <Select value={filters.date} onValueChange={handleDateFilterChange}>
+              <SelectTrigger className="h-9 w-37.5">
                 <SelectValue placeholder="Date" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All shifts</SelectItem>
                 <SelectItem value="month">Month</SelectItem>
-                <SelectItem value="custom">Date range</SelectItem>
               </SelectContent>
             </Select>
             {filters.date === "month" ? (
@@ -436,12 +405,12 @@ export function ShiftsTable({
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="h-9 min-w-[140px] justify-between"
+                      className="h-9 min-w-35 justify-between"
                     >
                       {formatMonthLabel(filters.month)}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[260px] p-3" align="start">
+                  <PopoverContent className="w-65 p-3" align="start">
                     <div className="flex items-center justify-between">
                       <Button
                         variant="ghost"
@@ -451,7 +420,9 @@ export function ShiftsTable({
                       >
                         <ChevronLeft className="size-4" />
                       </Button>
-                      <div className="text-sm font-semibold">{monthPickerYear}</div>
+                      <div className="text-sm font-semibold">
+                        {monthPickerYear}
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -501,57 +472,10 @@ export function ShiftsTable({
                 </Button>
               </div>
             ) : null}
-            {filters.date === "custom" ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="h-9 min-w-[220px] justify-between text-left"
-                    >
-                      {range?.from ? formatRangeLabel(range) : "Pick date range"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-2" align="start">
-                    <Calendar
-                      mode="range"
-                      numberOfMonths={2}
-                      selected={range}
-                      onSelect={(value) => {
-                        setRange(value);
-                        setFilters((prev) => ({
-                          ...prev,
-                          dateFrom: value?.from ? formatDateInput(value.from) : "",
-                          dateTo: value?.to ? formatDateInput(value.to) : "",
-                        }));
-                      }}
-                      captionLayout="dropdown"
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="px-0"
-                  onClick={() => {
-                    setRange(undefined);
-                    setFilters((prev) => ({
-                      ...prev,
-                      dateFrom: "",
-                      dateTo: "",
-                    }));
-                  }}
-                  disabled={!range?.from}
-                >
-                  Clear
-                </Button>
-              </div>
-            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-9 w-[180px]">
+              <SelectTrigger className="h-9 w-45">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
@@ -585,10 +509,9 @@ export function ShiftsTable({
             Showing shifts for {formatMonthLabel(filters.month)}
           </p>
         ) : null}
-        {filters.date === "custom" ? null : null}
       </div>
       {filteredShifts.length === 0 ? (
-        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
             <Clock className="size-8 text-muted-foreground" />
           </div>
@@ -641,24 +564,26 @@ export function ShiftsTable({
                 const shiftTitle = shiftCode || shiftLabel || shift.id;
                 const openedBy = joinName(
                   shift.profiles?.first_name ?? null,
-                  shift.profiles?.last_name ?? null
+                  shift.profiles?.last_name ?? null,
                 );
                 const closedAt = isOpenStatus(shift.status, shift.end_at)
                   ? "-"
                   : formatDateTime(shift.end_at);
                 const salesTotal = formatMoney(salesByShift[shift.id] ?? 0);
-                const cashSalesTotal = formatMoney(cashSalesByShift[shift.id] ?? 0);
+                const cashSalesTotal = formatMoney(
+                  cashSalesByShift[shift.id] ?? 0,
+                );
                 const ewalletSalesTotal = formatMoney(
-                  ewalletSalesByShift[shift.id] ?? 0
+                  ewalletSalesByShift[shift.id] ?? 0,
                 );
                 const refundedSalesTotal = formatMoney(
-                  refundedSalesByShift[shift.id] ?? 0
+                  refundedSalesByShift[shift.id] ?? 0,
                 );
                 const totalTickets = ticketsCountByShift[shift.id] ?? 0;
                 const shiftItems = itemsByShift[shift.id] ?? [];
                 const itemsTotal = shiftItems.reduce(
                   (total, item) => total + item.total,
-                  0
+                  0,
                 );
                 return (
                   <TableRow
@@ -679,14 +604,17 @@ export function ShiftsTable({
                     <TableCell className="px-4 py-3 text-foreground">
                       {joinName(
                         shift.profiles?.first_name ?? null,
-                        shift.profiles?.last_name ?? null
+                        shift.profiles?.last_name ?? null,
                       )}
                     </TableCell>
                     <TableCell className="px-4 py-3 font-semibold text-foreground">
                       {formatMoney(salesByShift[shift.id] ?? 0)}
                     </TableCell>
                     <TableCell className="px-4 py-3">
-                      <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
+                      <Badge
+                        variant="outline"
+                        className={`gap-2 ${tone.badge}`}
+                      >
                         <span className={`size-2 rounded-full ${tone.dot}`} />
                         {formatStatusLabel(shift.status, shift.end_at)}
                       </Badge>
@@ -708,13 +636,18 @@ export function ShiftsTable({
                                 Shift ID: {shift.id}
                               </SheetDescription>
                               <div className="mt-2 flex flex-wrap items-center gap-2">
-                              <Badge
-                                variant="outline"
-                                className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
-                              >
-                                <span className={`size-2 rounded-full ${tone.dot}`} />
-                                {formatStatusLabel(shift.status, shift.end_at)}
-                              </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
+                                >
+                                  <span
+                                    className={`size-2 rounded-full ${tone.dot}`}
+                                  />
+                                  {formatStatusLabel(
+                                    shift.status,
+                                    shift.end_at,
+                                  )}
+                                </Badge>
                               </div>
                             </SheetHeader>
                             <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
@@ -732,131 +665,131 @@ export function ShiftsTable({
                                         {shiftCode ?? "-"}
                                       </span>
                                     </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Opened
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {formatDateTime(shift.start_at)}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Closed
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {closedAt}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Opened by
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {openedBy}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Sales
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {salesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Refunded
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {refundedSalesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Cash
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {cashSalesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          E-wallet
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {ewalletSalesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Total tickets
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {totalTickets}
-                                        </span>
-                                      </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Opened
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {formatDateTime(shift.start_at)}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Closed
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {closedAt}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Opened by
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {openedBy}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Sales
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {salesTotal}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Refunded
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {refundedSalesTotal}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Cash
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {cashSalesTotal}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        E-wallet
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {ewalletSalesTotal}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                      <span className="text-muted-foreground">
+                                        Total tickets
+                                      </span>
+                                      <span className="font-medium text-foreground">
+                                        {totalTickets}
+                                      </span>
                                     </div>
                                   </div>
-                                  <div className="space-y-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Items sold
-                                    </p>
-                                    {shiftItems.length > 0 ? (
-                                      <div className="divide-y divide-border/60 text-sm">
-                                        {shiftItems.map((item) => (
-                                          <div
-                                            key={item.key}
-                                            className="flex items-start justify-between gap-4 py-2"
-                                          >
-                                            <div className="min-w-0">
-                                              <p className="font-medium text-foreground">
-                                                {item.label}
-                                              </p>
-                                              <p className="text-xs text-muted-foreground">
-                                                {item.type === "service"
-                                                  ? "Service"
-                                                  : "Product"}{" "}
-                                                - x{item.qty}
-                                              </p>
-                                            </div>
-                                            <span className="font-medium text-foreground">
-                                              {formatMoney(item.total)}
-                                            </span>
+                                </div>
+                                <div className="space-y-2">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Items sold
+                                  </p>
+                                  {shiftItems.length > 0 ? (
+                                    <div className="divide-y divide-border/60 text-sm">
+                                      {shiftItems.map((item) => (
+                                        <div
+                                          key={item.key}
+                                          className="flex items-start justify-between gap-4 py-2"
+                                        >
+                                          <div className="min-w-0">
+                                            <p className="font-medium text-foreground">
+                                              {item.label}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {item.type === "service"
+                                                ? "Service"
+                                                : "Product"}{" "}
+                                              - x{item.qty}
+                                            </p>
                                           </div>
-                                        ))}
-                                        <div className="flex items-center justify-between py-2 font-semibold text-foreground">
-                                          <span>Total</span>
-                                          <span>{formatMoney(itemsTotal)}</span>
+                                          <span className="font-medium text-foreground">
+                                            {formatMoney(item.total)}
+                                          </span>
                                         </div>
+                                      ))}
+                                      <div className="flex items-center justify-between py-2 font-semibold text-foreground">
+                                        <span>Total</span>
+                                        <span>{formatMoney(itemsTotal)}</span>
                                       </div>
-                                    ) : (
-                                      <p className="text-sm text-muted-foreground">
-                                        No items recorded for this shift.
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="pt-2">
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => {
-                                        setDeleteTarget({
-                                          id: shift.id,
-                                          title: shiftTitle,
-                                        });
-                                        setDeleteDialogOpen(true);
-                                        setDeleteError(null);
-                                      }}
-                                    >
-                                      Delete shift
-                                    </Button>
-                                  </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                      No items recorded for this shift.
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="pt-2">
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      setDeleteTarget({
+                                        id: shift.id,
+                                        title: shiftTitle,
+                                      });
+                                      setDeleteDialogOpen(true);
+                                      setDeleteError(null);
+                                    }}
+                                  >
+                                    Delete shift
+                                  </Button>
                                 </div>
                               </div>
                             </div>
-                          </SheetContent>
-                        </Sheet>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
                     </TableCell>
                   </TableRow>
                 );
@@ -865,13 +798,16 @@ export function ShiftsTable({
           </Table>
         </div>
       )}
-      <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={handleDeleteDialogOpenChange}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete shift</DialogTitle>
             <DialogDescription>
-              This will delete the shift and all related tickets and items.
-              This action cannot be undone.
+              This will delete the shift and all related tickets and items. This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 text-sm text-muted-foreground">

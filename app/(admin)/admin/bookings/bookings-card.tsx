@@ -72,6 +72,17 @@ export type BookingRow = {
   } | null;
 };
 
+export type BookingFormOption = {
+  id: string;
+  name: string;
+  working_start_time?: string | null;
+  working_end_time?: string | null;
+};
+
+export type ServiceFormOption = BookingFormOption & {
+  durationMinutes: number | null;
+};
+
 type BookingsCardProps = {
   bookings: BookingRow[];
   errorMessage?: string | null;
@@ -79,6 +90,10 @@ type BookingsCardProps = {
   updateBookingStatus: (formData: FormData) => Promise<void>;
   cancelBooking?: (formData: FormData) => Promise<void>;
   deleteBooking?: (formData: FormData) => Promise<void>;
+  createBooking?: (formData: FormData) => Promise<void>;
+  customerOptions?: BookingFormOption[];
+  barberOptions?: BookingFormOption[];
+  serviceOptions?: ServiceFormOption[];
   allowCancel?: boolean;
   allowDelete?: boolean;
   showActions?: boolean;
@@ -217,6 +232,14 @@ const endOfDay = (date: Date) =>
     999,
   );
 
+const startOfWeek = (date: Date) => {
+  const day = date.getDay();
+  const diffToMonday = (day + 6) % 7;
+  const next = new Date(date);
+  next.setDate(date.getDate() - diffToMonday);
+  return startOfDay(next);
+};
+
 const parseDateInput = (value: string) => {
   if (!value) {
     return null;
@@ -284,179 +307,156 @@ const MONTH_LABELS = [
   "Dec",
 ];
 
-const CALENDAR_SLOTS = [
-  { label: "8:00 AM", show: true },
-  { label: "8:30 AM", show: false },
-  { label: "9:00 AM", show: true },
-  { label: "9:30 AM", show: false },
-  { label: "10:00 AM", show: true },
-  { label: "10:30 AM", show: false },
-  { label: "11:00 AM", show: true },
-  { label: "11:30 AM", show: false },
-  { label: "12:00 PM", show: true },
-  { label: "12:30 PM", show: false },
-  { label: "1:00 PM", show: true },
-  { label: "1:30 PM", show: false },
-  { label: "2:00 PM", show: true },
-  { label: "2:30 PM", show: false },
+const CALENDAR_START_MINUTES = 12 * 60;
+const CALENDAR_END_MINUTES = 22 * 60;
+const CALENDAR_SLOT_MINUTES = 60;
+const CALENDAR_ROW_HEIGHT = 72;
+const CALENDAR_TIME_COLUMN_WIDTH = 88;
+
+const CALENDAR_AVATAR_TONES = [
+  "bg-sky-100 text-sky-900",
+  "bg-amber-100 text-amber-900",
+  "bg-rose-100 text-rose-900",
+  "bg-emerald-100 text-emerald-900",
+  "bg-orange-100 text-orange-900",
+  "bg-indigo-100 text-indigo-900",
 ];
 
-const CALENDAR_BARBERS = [
-  { id: "john", name: "John", initials: "JH", tone: "bg-sky-100 text-sky-900" },
-  {
-    id: "maria",
-    name: "Maria",
-    initials: "MR",
-    tone: "bg-amber-100 text-amber-900",
-  },
-  {
-    id: "wendy",
-    name: "Wendy",
-    initials: "WD",
-    tone: "bg-rose-100 text-rose-900",
-  },
-  {
-    id: "amy",
-    name: "Amy",
-    initials: "AM",
-    tone: "bg-emerald-100 text-emerald-900",
-  },
-  {
-    id: "michael",
-    name: "Michael",
-    initials: "ML",
-    tone: "bg-orange-100 text-orange-900",
-  },
-  {
-    id: "sarah",
-    name: "Sarah",
-    initials: "SS",
-    tone: "bg-indigo-100 text-indigo-900",
-  },
-];
+const malaysiaDateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Kuala_Lumpur",
+});
 
-const CALENDAR_EVENTS = [
-  {
-    id: "evt-1",
-    barberId: "john",
-    start: 1,
-    end: 3,
-    time: "8:00 - 9:00",
-    client: "Brenda Massey",
-    service: "Blow dry",
-    tone: "bg-sky-100 text-sky-900 border-sky-200",
-  },
-  {
-    id: "evt-2",
-    barberId: "john",
-    start: 11,
-    end: 14,
-    time: "1:00 - 2:30",
-    client: "Mary Lee Fisher",
-    service: "Hair coloring",
-    tone: "bg-sky-100 text-sky-900 border-sky-200",
-  },
-  {
-    id: "evt-3",
-    barberId: "maria",
-    start: 1,
-    end: 3,
-    time: "8:00 - 9:00",
-    client: "Alena Geidt",
-    service: "Classic cut",
-    tone: "bg-amber-100 text-amber-900 border-amber-200",
-  },
-  {
-    id: "evt-4",
-    barberId: "maria",
-    start: 5,
-    end: 7,
-    time: "10:00 - 10:45",
-    client: "Marilyn Carder",
-    service: "Hair + beard",
-    tone: "bg-emerald-100 text-emerald-900 border-emerald-200",
-  },
-  {
-    id: "evt-5",
-    barberId: "wendy",
-    start: 3,
-    end: 6,
-    time: "9:00 - 10:15",
-    client: "Phillip Dorwart",
-    service: "Beard grooming",
-    tone: "bg-rose-100 text-rose-900 border-rose-200",
-  },
-  {
-    id: "evt-6",
-    barberId: "amy",
-    start: 2,
-    end: 5,
-    time: "8:30 - 9:45",
-    client: "James Herwitz",
-    service: "Haircut",
-    tone: "bg-emerald-100 text-emerald-900 border-emerald-200",
-  },
-  {
-    id: "evt-7",
-    barberId: "amy",
-    start: 5,
-    end: 8,
-    time: "9:45 - 11:15",
-    client: "Amy Jones",
-    service: "Haircut + color",
-    tone: "bg-sky-100 text-sky-900 border-sky-200",
-  },
-  {
-    id: "evt-8",
-    barberId: "michael",
-    start: 3,
-    end: 6,
-    time: "9:00 - 10:15",
-    client: "Megan White",
-    service: "Fade cut",
-    tone: "bg-amber-100 text-amber-900 border-amber-200",
-  },
-  {
-    id: "evt-9",
-    barberId: "michael",
-    start: 8,
-    end: 10,
-    time: "11:15 - 12:30",
-    client: "Randy Press",
-    service: "Scalp treatment",
-    tone: "bg-rose-100 text-rose-900 border-rose-200",
-  },
-  {
-    id: "evt-10",
-    barberId: "sarah",
-    start: 2,
-    end: 5,
-    time: "8:30 - 9:45",
-    client: "Tony Danza",
-    service: "Balayage",
-    tone: "bg-emerald-100 text-emerald-900 border-emerald-200",
-  },
-  {
-    id: "evt-11",
-    barberId: "sarah",
-    start: 5,
-    end: 8,
-    time: "9:45 - 11:15",
-    client: "Laura Marsden",
-    service: "Haircut + color",
-    tone: "bg-sky-100 text-sky-900 border-sky-200",
-  },
-  {
-    id: "evt-12",
-    barberId: "sarah",
-    start: 9,
-    end: 11,
-    time: "12:15 - 1:30",
-    client: "Dori Doreau",
-    service: "Haircut + color",
-    tone: "bg-amber-100 text-amber-900 border-amber-200",
-  },
-];
+const malaysiaDateLabelFormatter = new Intl.DateTimeFormat("en-MY", {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const malaysiaWeekdayFormatter = new Intl.DateTimeFormat("en-MY", {
+  weekday: "short",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const malaysiaDayFormatter = new Intl.DateTimeFormat("en-MY", {
+  day: "2-digit",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const malaysiaHourMinuteFormatter = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const toCalendarDateKey = (value: string | Date | null) => {
+  if (!value) {
+    return "";
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return malaysiaDateKeyFormatter.format(date);
+};
+
+const formatCalendarDateLabel = (value: Date) =>
+  malaysiaDateLabelFormatter.format(value);
+
+const toMinutesInMalaysia = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const parts = malaysiaHourMinuteFormatter.formatToParts(date);
+  const hour = Number(
+    parts.find((part) => part.type === "hour")?.value ?? "NaN",
+  );
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "NaN",
+  );
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return null;
+  }
+  return hour * 60 + minute;
+};
+
+const toInitials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "NA";
+
+const toCalendarBarberId = (name: string) =>
+  name.toLowerCase().replace(/\s+/g, "-") || "unassigned";
+
+const normalizeName = (value: string) =>
+  value.trim().toLowerCase().replace(/\s+/g, " ");
+
+const parseTimeToMinutes = (value: string | null | undefined) => {
+  if (!value) {
+    return null;
+  }
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+  return hour * 60 + minute;
+};
+
+const formatMinutesToTimeLabel = (minutes: number) => {
+  const hour24 = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const hour12 = ((hour24 + 11) % 12) + 1;
+  const suffix = hour24 >= 12 ? "PM" : "AM";
+  const minuteLabel = String(minute).padStart(2, "0");
+  return `${hour12}:${minuteLabel} ${suffix}`;
+};
+
+const formatWorkingHoursLabel = (
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+) => {
+  const startMinutes = parseTimeToMinutes(startTime);
+  const endMinutes = parseTimeToMinutes(endTime);
+  if (startMinutes === null || endMinutes === null) {
+    return "Working hour not set";
+  }
+  return `${formatMinutesToTimeLabel(startMinutes)} - ${formatMinutesToTimeLabel(endMinutes)}`;
+};
+
+const toIsoFromCalendarSlot = (calendarDateKey: string, minutes: number) => {
+  const [yearRaw, monthRaw, dayRaw] = calendarDateKey.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  if (!year || !month || !day) {
+    return null;
+  }
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const utcMillis = Date.UTC(year, month - 1, day, hour - 8, minute, 0, 0);
+  return new Date(utcMillis).toISOString();
+};
 
 export function BookingsCard({
   bookings,
@@ -465,6 +465,10 @@ export function BookingsCard({
   updateBookingStatus,
   cancelBooking,
   deleteBooking,
+  createBooking,
+  customerOptions = [],
+  barberOptions = [],
+  serviceOptions = [],
   allowCancel = true,
   allowDelete = true,
   showActions = true,
@@ -487,10 +491,23 @@ export function BookingsCard({
       ? Number(filters.month.split("-")[0])
       : new Date().getFullYear(),
   );
+  const [calendarDate, setCalendarDate] = useState(() =>
+    startOfDay(new Date()),
+  );
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
   const [statusSelections, setStatusSelections] = useState<
     Record<string, string>
   >({});
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createBookingDraft, setCreateBookingDraft] = useState<{
+    customerId: string;
+    barberId: string;
+    serviceId: string;
+    startAt: string;
+    endAt: string;
+    dateLabel: string;
+    timeLabel: string;
+  } | null>(null);
   const statusOptions = useMemo(
     () => allowedStatuses.filter((status) => status !== "cancelled"),
     [allowedStatuses],
@@ -668,6 +685,271 @@ export function BookingsCard({
       booking.status === "cancelled" ||
       booking.status === "no_show",
   );
+
+  const calendarDateKey = useMemo(
+    () => toCalendarDateKey(calendarDate),
+    [calendarDate],
+  );
+
+  const calendarWeekDays = useMemo(() => {
+    const weekStart = startOfWeek(calendarDate);
+    return Array.from({ length: 7 }, (_, index) => {
+      const value = new Date(weekStart);
+      value.setDate(weekStart.getDate() + index);
+      return startOfDay(value);
+    });
+  }, [calendarDate]);
+
+  const calendarWeekLabel = useMemo(() => {
+    const start = calendarWeekDays[0];
+    const end = calendarWeekDays[calendarWeekDays.length - 1];
+    if (!start || !end) {
+      return "";
+    }
+    return `${formatCalendarDateLabel(start)} - ${formatCalendarDateLabel(end)}`;
+  }, [calendarWeekDays]);
+
+  const calendarWeekRange = useMemo(() => {
+    const start = calendarWeekDays[0];
+    const end = calendarWeekDays[calendarWeekDays.length - 1];
+    if (!start || !end) {
+      return null;
+    }
+    return {
+      from: startOfDay(start),
+      to: endOfDay(end),
+    };
+  }, [calendarWeekDays]);
+
+  const calendarWeekBookings = useMemo(() => {
+    if (!calendarWeekRange) {
+      return [];
+    }
+    return filteredBookings.filter((booking) => {
+      const dateValue = booking.booking_date ?? booking.start_at;
+      if (!dateValue) {
+        return false;
+      }
+      const bookingDate = new Date(dateValue);
+      return (
+        bookingDate >= calendarWeekRange.from &&
+        bookingDate <= calendarWeekRange.to
+      );
+    });
+  }, [calendarWeekRange, filteredBookings]);
+
+  const calendarBarbers = useMemo(() => {
+    if (barberOptions.length > 0) {
+      return barberOptions.map((barberOption, index) => ({
+        id: barberOption.id,
+        name: barberOption.name,
+        initials: toInitials(barberOption.name),
+        workingHoursLabel: formatWorkingHoursLabel(
+          barberOption.working_start_time,
+          barberOption.working_end_time,
+        ),
+        tone: CALENDAR_AVATAR_TONES[index % CALENDAR_AVATAR_TONES.length],
+      }));
+    }
+
+    const source =
+      calendarWeekBookings.length > 0
+        ? calendarWeekBookings
+        : filteredBookings.length > 0
+          ? filteredBookings
+          : bookings;
+    const seen = new Set<string>();
+    const output: Array<{
+      id: string;
+      name: string;
+      initials: string;
+      workingHoursLabel: string;
+      tone: string;
+    }> = [];
+
+    source.forEach((booking, index) => {
+      const name = joinName(
+        booking.barber?.first_name ?? null,
+        booking.barber?.last_name ?? null,
+      );
+      if (seen.has(name)) {
+        return;
+      }
+      seen.add(name);
+      output.push({
+        id: toCalendarBarberId(name),
+        name,
+        initials: toInitials(name),
+        workingHoursLabel: "Working hour not set",
+        tone: CALENDAR_AVATAR_TONES[index % CALENDAR_AVATAR_TONES.length],
+      });
+    });
+
+    return output;
+  }, [barberOptions, bookings, calendarWeekBookings, filteredBookings]);
+
+  const calendarSlots = useMemo(() => {
+    const slotCount =
+      (CALENDAR_END_MINUTES - CALENDAR_START_MINUTES) / CALENDAR_SLOT_MINUTES;
+    return Array.from({ length: slotCount }, (_, index) => {
+      const minutes = CALENDAR_START_MINUTES + index * CALENDAR_SLOT_MINUTES;
+      const hour24 = Math.floor(minutes / 60);
+      const minute = minutes % 60;
+      const hour12 = ((hour24 + 11) % 12) + 1;
+      const suffix = hour24 >= 12 ? "PM" : "AM";
+      const minuteLabel = String(minute).padStart(2, "0");
+      return {
+        label: `${hour12}:${minuteLabel} ${suffix}`,
+        show: true,
+      };
+    });
+  }, []);
+
+  const calendarEvents = useMemo(() => {
+    const barberIdByName = new Map(
+      calendarBarbers.map((barber) => [normalizeName(barber.name), barber.id]),
+    );
+
+    return calendarWeekBookings
+      .filter((booking) => {
+        const dateValue = booking.start_at ?? booking.booking_date;
+        return toCalendarDateKey(dateValue) === calendarDateKey;
+      })
+      .map((booking) => {
+        const barberName = joinName(
+          booking.barber?.first_name ?? null,
+          booking.barber?.last_name ?? null,
+        );
+        const barberId =
+          barberIdByName.get(normalizeName(barberName)) ??
+          toCalendarBarberId(barberName);
+
+        const startMinutes = toMinutesInMalaysia(booking.start_at);
+        const endMinutes = toMinutesInMalaysia(
+          booking.end_at ?? booking.start_at,
+        );
+
+        const safeStart =
+          startMinutes === null ? CALENDAR_START_MINUTES : startMinutes;
+        const safeEnd =
+          endMinutes === null
+            ? safeStart + CALENDAR_SLOT_MINUTES
+            : Math.max(endMinutes, safeStart + CALENDAR_SLOT_MINUTES);
+
+        const clampedStart = Math.max(CALENDAR_START_MINUTES, safeStart);
+        const clampedEnd = Math.min(CALENDAR_END_MINUTES, safeEnd);
+
+        const startRow =
+          Math.floor(
+            (clampedStart - CALENDAR_START_MINUTES) / CALENDAR_SLOT_MINUTES,
+          ) + 1;
+        const endRow = Math.max(
+          startRow + 1,
+          Math.ceil(
+            (clampedEnd - CALENDAR_START_MINUTES) / CALENDAR_SLOT_MINUTES,
+          ) + 1,
+        );
+
+        const tone = getStatusTone(booking.status ?? null);
+
+        return {
+          id: booking.id,
+          barberId,
+          startRow,
+          endRow,
+          time: formatTimeRange(booking.start_at, booking.end_at),
+          client: joinName(
+            booking.customer?.first_name ?? null,
+            booking.customer?.last_name ?? null,
+          ),
+          service: booking.service?.name ?? "-",
+          tone: tone.badge,
+        };
+      });
+  }, [calendarBarbers, calendarDateKey, calendarWeekBookings]);
+
+  const hasCalendarBookings = calendarEvents.length > 0;
+  const canCreateFromCalendar =
+    Boolean(createBooking) &&
+    customerOptions.length > 0 &&
+    barberOptions.length > 0 &&
+    serviceOptions.length > 0;
+
+  const workingHoursByBarberId = useMemo(() => {
+    return new Map(
+      barberOptions.map((barberOption) => {
+        const start = parseTimeToMinutes(barberOption.working_start_time);
+        const end = parseTimeToMinutes(barberOption.working_end_time);
+        return [barberOption.id, { start, end }] as const;
+      }),
+    );
+  }, [barberOptions]);
+
+  const canCreateInSlot = (barberId: string, slotIndex: number) => {
+    if (!canCreateFromCalendar) {
+      return false;
+    }
+    const workingHours = workingHoursByBarberId.get(barberId);
+    if (
+      !workingHours ||
+      workingHours.start === null ||
+      workingHours.end === null
+    ) {
+      return false;
+    }
+
+    const slotStart =
+      CALENDAR_START_MINUTES + slotIndex * CALENDAR_SLOT_MINUTES;
+    const slotEnd = slotStart + CALENDAR_SLOT_MINUTES;
+    return slotStart >= workingHours.start && slotEnd <= workingHours.end;
+  };
+
+  const openCreateBookingDialog = (
+    barberId: string,
+    barberName: string,
+    slotIndex: number,
+  ) => {
+    if (!canCreateFromCalendar) {
+      return;
+    }
+    if (!canCreateInSlot(barberId, slotIndex)) {
+      return;
+    }
+    const dateKey = toCalendarDateKey(calendarDate);
+    if (!dateKey) {
+      return;
+    }
+
+    const startMinutes =
+      CALENDAR_START_MINUTES + slotIndex * CALENDAR_SLOT_MINUTES;
+    const endMinutes = startMinutes + CALENDAR_SLOT_MINUTES;
+    const startAt = toIsoFromCalendarSlot(dateKey, startMinutes);
+    const endAt = toIsoFromCalendarSlot(dateKey, endMinutes);
+
+    if (!startAt || !endAt) {
+      return;
+    }
+
+    const preferredBarber =
+      barberOptions.find((barberOption) => barberOption.id === barberId) ??
+      barberOptions.find(
+        (barberOption) =>
+          normalizeName(barberOption.name) === normalizeName(barberName),
+      ) ??
+      barberOptions[0];
+
+    setCreateBookingDraft({
+      customerId: customerOptions[0]?.id ?? "",
+      barberId: preferredBarber?.id ?? barberOptions[0]?.id ?? "",
+      serviceId: serviceOptions[0]?.id ?? "",
+      startAt,
+      endAt,
+      dateLabel: formatCalendarDateLabel(calendarDate),
+      timeLabel: formatTimeRange(startAt, endAt),
+    });
+    setCreateDialogOpen(true);
+  };
+
   const hasActiveFilters =
     Boolean(searchInput) ||
     filters.status !== "all" ||
@@ -833,20 +1115,22 @@ export function BookingsCard({
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
-          <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-9 w-50">
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date_asc">Date: Oldest → Newest</SelectItem>
-              <SelectItem value="date_desc">Date: Newest → Oldest</SelectItem>
-              <SelectItem value="customer_asc">Customer: A → Z</SelectItem>
-              <SelectItem value="customer_desc">Customer: Z → A</SelectItem>
-              <SelectItem value="created_desc">
-                Created: Newest → Oldest
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          {view !== "calendar" ? (
+            <Select value={sort} onValueChange={setSort}>
+              <SelectTrigger className="h-9 w-50">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_asc">Date: Oldest → Newest</SelectItem>
+                <SelectItem value="date_desc">Date: Newest → Oldest</SelectItem>
+                <SelectItem value="customer_asc">Customer: A → Z</SelectItem>
+                <SelectItem value="customer_desc">Customer: Z → A</SelectItem>
+                <SelectItem value="created_desc">
+                  Created: Newest → Oldest
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
           <div className="relative w-full sm:w-64">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -910,104 +1194,356 @@ export function BookingsCard({
     ? "Try a different name, service, or status."
     : "Completed bookings will show up here.";
 
+  const calendarWeekSelector = (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const previousWeek = new Date(calendarDate);
+            previousWeek.setDate(previousWeek.getDate() - 7);
+            setCalendarDate(startOfDay(previousWeek));
+          }}
+        >
+          Prev week
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {calendarWeekLabel}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const nextWeek = new Date(calendarDate);
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            setCalendarDate(startOfDay(nextWeek));
+          }}
+        >
+          Next week
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-3 py-1">
+        {calendarWeekDays.map((day) => {
+          const isActive = toCalendarDateKey(day) === calendarDateKey;
+          return (
+            <Button
+              key={toCalendarDateKey(day)}
+              variant={isActive ? "default" : "outline"}
+              className="h-14 w-14 rounded-full p-0"
+              onClick={() => setCalendarDate(startOfDay(day))}
+            >
+              <span className="flex flex-col items-center leading-tight">
+                <span className="text-[10px] uppercase tracking-wide">
+                  {malaysiaWeekdayFormatter.format(day)}
+                </span>
+                <span className="text-xs font-semibold">
+                  {malaysiaDayFormatter.format(day)}
+                </span>
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const createBookingDialog =
+    canCreateFromCalendar && createBooking && createBookingDraft ? (
+      <Dialog
+        open={createDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) {
+            setCreateBookingDraft(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create booking</DialogTitle>
+            <DialogDescription>
+              Create a booking for {createBookingDraft.dateLabel} at{" "}
+              {createBookingDraft.timeLabel}.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            action={createBooking}
+            className="space-y-4"
+            onSubmit={() => setCreateDialogOpen(false)}
+          >
+            <input
+              type="hidden"
+              name="start_at"
+              value={createBookingDraft.startAt}
+            />
+            <input
+              type="hidden"
+              name="end_at"
+              value={createBookingDraft.endAt}
+            />
+            <input
+              type="hidden"
+              name="customer_id"
+              value={createBookingDraft.customerId}
+            />
+            <input
+              type="hidden"
+              name="barber_id"
+              value={createBookingDraft.barberId}
+            />
+            <input
+              type="hidden"
+              name="service_id"
+              value={createBookingDraft.serviceId}
+            />
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Customer</p>
+              <Select
+                value={createBookingDraft.customerId}
+                onValueChange={(value) =>
+                  setCreateBookingDraft((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          customerId: value,
+                        }
+                      : prev,
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerOptions.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Barber</p>
+              <Select
+                value={createBookingDraft.barberId}
+                onValueChange={(value) =>
+                  setCreateBookingDraft((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          barberId: value,
+                        }
+                      : prev,
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select barber" />
+                </SelectTrigger>
+                <SelectContent>
+                  {barberOptions.map((barberOption) => (
+                    <SelectItem key={barberOption.id} value={barberOption.id}>
+                      {barberOption.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Service</p>
+              <Select
+                value={createBookingDraft.serviceId}
+                onValueChange={(value) =>
+                  setCreateBookingDraft((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          serviceId: value,
+                        }
+                      : prev,
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceOptions.map((serviceOption) => (
+                    <SelectItem key={serviceOption.id} value={serviceOption.id}>
+                      {serviceOption.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCreateDialogOpen(false);
+                  setCreateBookingDraft(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Create booking</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    ) : null;
+
   const calendarView = (
     <div className="rounded-2xl border border-border/60 bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold">Calendar view</p>
-          <p className="text-xs text-muted-foreground">
-            Visual schedule preview for staff bookings.
-          </p>
+      {calendarBarbers.length === 0 ? (
+        <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+          No barber data available for calendar view.
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-sky-400" />
-            Haircut
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-amber-400" />
-            Fade
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full bg-rose-400" />
-            Treatment
-          </span>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <div className="min-w-275">
-          <div className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))] border-b border-border/60">
-            <div className="px-2 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Time
-            </div>
-            {CALENDAR_BARBERS.map((barber) => (
-              <div
-                key={barber.id}
-                className="flex items-center justify-center gap-2 px-3 py-3"
-              >
-                <Avatar className="size-8 ring-2 ring-background">
-                  <AvatarFallback
-                    className={`text-[11px] font-semibold ${barber.tone}`}
-                  >
-                    {barber.initials}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-semibold">{barber.name}</span>
+      ) : (
+        <div className="overflow-x-auto">
+          <div className="min-w-275">
+            <div
+              className="grid border-b border-border/60 bg-muted/40"
+              style={{
+                gridTemplateColumns: `${CALENDAR_TIME_COLUMN_WIDTH}px repeat(${calendarBarbers.length}, minmax(0, 1fr))`,
+              }}
+            >
+              <div className="flex items-center justify-center border-r border-border/60 px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Time
               </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))]">
-            <div className="border-r border-border/60">
-              <div className="grid grid-rows-[repeat(14,36px)]">
-                {CALENDAR_SLOTS.map((slot, index) => (
-                  <div
-                    key={`${slot.label}-${index}`}
-                    className="border-b border-border/60 px-2 text-[11px] text-muted-foreground"
-                  >
-                    {slot.show ? slot.label : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-            {CALENDAR_BARBERS.map((barber) => (
-              <div
-                key={barber.id}
-                className="relative border-r border-border/60 last:border-r-0"
-              >
-                <div className="grid grid-rows-[repeat(14,36px)]">
-                  {CALENDAR_SLOTS.map((slot, index) => (
-                    <div
-                      key={`${barber.id}-${index}`}
-                      className="border-b border-border/60"
-                    />
-                  ))}
-                </div>
-                <div className="absolute inset-0 grid grid-rows-[repeat(14,36px)] px-3 py-2">
-                  {CALENDAR_EVENTS.filter(
-                    (event) => event.barberId === barber.id,
-                  ).map((event) => (
-                    <div
-                      key={event.id}
-                      style={{ gridRow: `${event.start} / ${event.end}` }}
-                      className={`flex flex-col justify-between rounded-xl border px-3 py-2 text-xs ${event.tone}`}
+              {calendarBarbers.map((barber) => (
+                <div
+                  key={barber.id}
+                  className="flex h-18 items-center justify-center gap-2 border-r border-border/60 px-3 py-3 last:border-r-0"
+                >
+                  <Avatar className="size-8 ring-2 ring-background">
+                    <AvatarFallback
+                      className={`text-[11px] font-semibold ${barber.tone}`}
                     >
-                      <span className="text-[11px] font-semibold">
-                        {event.time}
-                      </span>
-                      <span className="text-sm font-semibold">
-                        {event.client}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {event.service}
-                      </span>
+                      {barber.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {barber.name}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {barber.workingHoursLabel}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `${CALENDAR_TIME_COLUMN_WIDTH}px repeat(${calendarBarbers.length}, minmax(0, 1fr))`,
+              }}
+            >
+              <div className="border-r border-border/60">
+                <div
+                  className="grid"
+                  style={{
+                    gridTemplateRows: `repeat(${calendarSlots.length}, ${CALENDAR_ROW_HEIGHT}px)`,
+                  }}
+                >
+                  {calendarSlots.map((slot, index) => (
+                    <div
+                      key={`${slot.label}-${index}`}
+                      className="flex items-center justify-center border-b border-border/60 px-2 text-center text-[11px] text-muted-foreground"
+                    >
+                      {slot.show ? slot.label : null}
                     </div>
                   ))}
                 </div>
               </div>
-            ))}
+              {calendarBarbers.map((barber) => (
+                <div
+                  key={barber.id}
+                  className="relative border-r border-border/60 last:border-r-0"
+                >
+                  <div
+                    className="grid"
+                    style={{
+                      gridTemplateRows: `repeat(${calendarSlots.length}, ${CALENDAR_ROW_HEIGHT}px)`,
+                    }}
+                  >
+                    {calendarSlots.map((slot, index) => {
+                      const isSlotSelectable = canCreateInSlot(
+                        barber.id,
+                        index,
+                      );
+                      return (
+                        <div
+                          key={`${barber.id}-${index}`}
+                          className={`group relative border-b border-border/60 transition-colors ${
+                            isSlotSelectable
+                              ? "cursor-pointer hover:bg-primary/20"
+                              : "cursor-default"
+                          }`}
+                          onClick={() =>
+                            openCreateBookingDialog(
+                              barber.id,
+                              barber.name,
+                              index,
+                            )
+                          }
+                        >
+                          {isSlotSelectable ? (
+                            <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-2xl font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                              +
+                            </span>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div
+                    className="pointer-events-none absolute inset-0 grid"
+                    style={{
+                      gridTemplateRows: `repeat(${calendarSlots.length}, ${CALENDAR_ROW_HEIGHT}px)`,
+                    }}
+                  >
+                    {calendarEvents
+                      .filter((event) => event.barberId === barber.id)
+                      .map((event) => (
+                        <div
+                          key={event.id}
+                          style={{
+                            gridRow: `${event.startRow} / ${event.endRow}`,
+                          }}
+                          className={`pointer-events-auto flex min-h-full flex-col gap-2 overflow-hidden rounded-lg border px-3 py-2 text-[11px] leading-tight ${event.tone}`}
+                        >
+                          <span className="truncate font-semibold">
+                            {event.time}
+                          </span>
+                          <span className="truncate text-xs font-semibold">
+                            {event.client}
+                          </span>
+                          <span className="truncate text-[10px] text-muted-foreground">
+                            {event.service}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      {!hasCalendarBookings ? (
+        <div className="border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
+          No bookings for {formatCalendarDateLabel(calendarDate)}.
+        </div>
+      ) : null}
     </div>
   );
 
@@ -1431,10 +1967,8 @@ export function BookingsCard({
     if (view === "calendar") {
       return (
         <div className="space-y-4">
-          {toolbar}
-          <p className="text-xs text-muted-foreground">
-            Schedule overview by staff.
-          </p>
+          {calendarWeekSelector}
+          {createBookingDialog}
           {calendarView}
         </div>
       );
@@ -1472,6 +2006,8 @@ export function BookingsCard({
           <p className="text-xs text-muted-foreground">
             Schedule overview by staff.
           </p>
+          {calendarWeekSelector}
+          {createBookingDialog}
           {calendarView}
         </TabsContent>
         <TabsContent value="past" className="space-y-3">

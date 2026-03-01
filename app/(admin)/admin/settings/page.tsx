@@ -1,16 +1,26 @@
 import { redirect } from "next/navigation";
 import { AdminShell } from "../components/admin-shell";
+import { createAdminAuthClient } from "@/utils/supabase/admin";
 import { createAdminClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { WorkingHoursPanel } from "./working-hours-panel";
+import { loadShopOperatingRules } from "@/utils/shop-operations";
+import { OperationsSettingsPanel } from "./operations-settings-panel";
 
 export default async function SettingsPage() {
   const supabase = await createAdminClient();
+  const adminSupabase = createAdminAuthClient();
+  const operatingRules = await loadShopOperatingRules(adminSupabase);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -18,7 +28,6 @@ export default async function SettingsPage() {
   if (!user) {
     redirect("/staff");
   }
-
   return (
     <AdminShell title="Settings">
       <div className="px-4 lg:px-6">
@@ -33,12 +42,17 @@ export default async function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Notifications</CardTitle>
-                <CardDescription>Control how updates reach you.</CardDescription>
+                <CardDescription>
+                  Control how updates reach you.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="flex items-start gap-3">
                   <Checkbox id="notify-bookings" defaultChecked />
-                  <Label htmlFor="notify-bookings" className="space-y-1 leading-5">
+                  <Label
+                    htmlFor="notify-bookings"
+                    className="space-y-1 leading-5"
+                  >
                     <span className="font-medium">Booking updates</span>
                     <span className="block text-xs text-muted-foreground">
                       Receive alerts when bookings are created or updated.
@@ -56,7 +70,10 @@ export default async function SettingsPage() {
                 </div>
                 <div className="flex items-start gap-3">
                   <Checkbox id="notify-reports" />
-                  <Label htmlFor="notify-reports" className="space-y-1 leading-5">
+                  <Label
+                    htmlFor="notify-reports"
+                    className="space-y-1 leading-5"
+                  >
                     <span className="font-medium">Weekly reports</span>
                     <span className="block text-xs text-muted-foreground">
                       Summary of revenue and performance.
@@ -77,14 +94,19 @@ export default async function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="operations" className="space-y-4">
-            <WorkingHoursPanel />
+            <OperationsSettingsPanel
+              weeklySchedule={operatingRules.weeklySchedule}
+              temporaryClosures={operatingRules.temporaryClosures}
+            />
           </TabsContent>
 
           <TabsContent value="system" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>System</CardTitle>
-                <CardDescription>Admin environment preferences.</CardDescription>
+                <CardDescription>
+                  Admin environment preferences.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>Audit logs, exports, and integrations will appear here.</p>

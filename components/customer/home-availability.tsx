@@ -164,7 +164,7 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
             {effectiveSlotState.error}
           </div>
         ) : effectiveSlotState.slots.length ? (
-          <div className="grid max-h-[260px] gap-3 overflow-y-auto pr-1">
+          <div className="grid max-h-65 gap-3 overflow-y-auto pr-1">
             {effectiveSlotState.slots.map((slot) => (
               <button
                 key={slot.start_at}

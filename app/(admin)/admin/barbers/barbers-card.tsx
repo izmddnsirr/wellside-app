@@ -160,7 +160,7 @@ export function BarbersCard({
   }, [barbers]);
   const hasUnassignedLevel = useMemo(
     () => barbers.some((barber) => !barber.barber_level),
-    [barbers]
+    [barbers],
   );
 
   const filteredBarbers = useMemo(() => {
@@ -199,7 +199,7 @@ export function BarbersCard({
 
     return barbers.filter(
       (barber) =>
-        matchesSearch(barber) && matchesStatus(barber) && matchesLevel(barber)
+        matchesSearch(barber) && matchesStatus(barber) && matchesLevel(barber),
     );
   }, [barbers, debouncedSearch, filters.level, filters.status]);
 
@@ -250,7 +250,9 @@ export function BarbersCard({
     return text.length > 0 ? text : null;
   };
 
-  const handleUpdateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
     setUpdateError(null);
 
@@ -265,12 +267,14 @@ export function BarbersCard({
     const displayNameInput = normalizeValue(formData.get("display_name"));
     const fallbackDisplayName = [firstName, lastName].filter(Boolean).join(" ");
     const displayName =
-      displayNameInput || fallbackDisplayName ? (
-        displayNameInput ?? fallbackDisplayName
-      ) : null;
+      displayNameInput || fallbackDisplayName
+        ? (displayNameInput ?? fallbackDisplayName)
+        : null;
 
     const phoneInput = normalizeValue(formData.get("phone"));
-    const normalizedPhone = phoneInput ? normalizePhone(phoneInput, "MY") : null;
+    const normalizedPhone = phoneInput
+      ? normalizePhone(phoneInput, "MY")
+      : null;
     if (normalizedPhone && !isValidE164(normalizedPhone)) {
       setUpdateError("Phone number must be a valid E.164 value.");
       return;
@@ -320,7 +324,7 @@ export function BarbersCard({
                 setFilters((prev) => ({ ...prev, status: value }))
               }
             >
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="h-9 w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -335,7 +339,7 @@ export function BarbersCard({
                 setFilters((prev) => ({ ...prev, level: value }))
               }
             >
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="h-9 w-40">
                 <SelectValue placeholder="Level" />
               </SelectTrigger>
               <SelectContent>
@@ -353,7 +357,7 @@ export function BarbersCard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-9 w-[200px]">
+              <SelectTrigger className="h-9 w-50">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
@@ -544,14 +548,14 @@ export function BarbersCard({
         open={isUpdateOpen}
         onOpenChange={(open) => (open ? null : closeUpdateDialog())}
       >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Update barber</DialogTitle>
-              <DialogDescription>
-                Update barber profile details and working hours.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="space-y-4" onSubmit={handleUpdateSubmit}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update barber</DialogTitle>
+            <DialogDescription>
+              Update barber profile details and working hours.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleUpdateSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="update-barber-first-name">First name</Label>
@@ -663,19 +667,19 @@ export function BarbersCard({
             {updateError ? (
               <p className="text-sm text-red-600">{updateError}</p>
             ) : null}
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeUpdateDialog}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Update barber</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeUpdateDialog}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Update barber</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
@@ -717,7 +721,10 @@ export function BarbersCard({
               {sortedBarbers.map((barber) => {
                 const tone = getStatusTone(barber.is_active);
                 return (
-                  <TableRow key={barber.id} className="bg-background hover:bg-muted/50">
+                  <TableRow
+                    key={barber.id}
+                    className="bg-background hover:bg-muted/50"
+                  >
                     <TableCell className="w-[18%] px-4 py-3 font-semibold text-foreground">
                       {[barber.first_name, barber.last_name]
                         .filter(Boolean)
@@ -739,7 +746,10 @@ export function BarbersCard({
                       {barber.barber_level || "-"}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3">
-                      <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
+                      <Badge
+                        variant="outline"
+                        className={`gap-2 ${tone.badge}`}
+                      >
                         <span className={`size-2 rounded-full ${tone.dot}`} />
                         {barber.is_active ? "Active" : "Inactive"}
                       </Badge>
@@ -764,7 +774,7 @@ export function BarbersCard({
           </Table>
         </div>
       ) : (
-        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background">
             <UserX className="size-8 text-muted-foreground" />
           </div>

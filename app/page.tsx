@@ -5,8 +5,8 @@ import { HomeAvailability } from "@/components/customer/home-availability";
 import { createClient } from "@/utils/supabase/server";
 
 const fontVars = {
-  "--font-display": "\"Space Grotesk\", ui-sans-serif, system-ui, sans-serif",
-  "--font-body": "\"Instrument Sans\", ui-sans-serif, system-ui, sans-serif",
+  "--font-display": '"Space Grotesk", ui-sans-serif, system-ui, sans-serif',
+  "--font-body": '"Instrument Sans", ui-sans-serif, system-ui, sans-serif',
 } as React.CSSProperties;
 
 const featuredBarbers = [
@@ -125,8 +125,8 @@ export default async function CustomerHome() {
       </header>
 
       <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-primary/20 opacity-70 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-0 h-[360px] w-[360px] translate-x-1/3 -translate-y-1/4 rounded-full bg-secondary/30 opacity-80 blur-3xl" />
+        <div className="pointer-events-none absolute left-0 top-0 h-105 w-105 -translate-x-1/3 -translate-y-1/3 rounded-full bg-primary/20 opacity-70 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-0 h-90 w-90 translate-x-1/3 -translate-y-1/4 rounded-full bg-secondary/30 opacity-80 blur-3xl" />
 
         <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-6 pb-16 pt-12 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="flex flex-col gap-6">
