@@ -434,7 +434,7 @@ export function BookingsChartCard({
           <ChartContainer
             id="bookings-sales-chart"
             config={chartConfig}
-            className="aspect-auto h-62.5 w-full"
+            className="aspect-auto h-62.5 w-full [&_.recharts-surface]:overflow-visible"
           >
             <BarChart data={chartData}>
               <CartesianGrid vertical={false} />
