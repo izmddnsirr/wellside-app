@@ -47,7 +47,7 @@ const getMalaysiaDateParts = () => {
   const parts = formatter.formatToParts(new Date());
   const year = Number(parts.find((part) => part.type === "year")?.value ?? "0");
   const month = Number(
-    parts.find((part) => part.type === "month")?.value ?? "0"
+    parts.find((part) => part.type === "month")?.value ?? "0",
   );
   return { year, month };
 };
@@ -80,6 +80,7 @@ type TicketRow = {
 type SalesSummaryRow = {
   total_amount: number | null;
   paid_at: string | null;
+  payment_method: string | null;
 };
 
 type RecentTicketRow = {
@@ -144,7 +145,7 @@ export default async function Page() {
   const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
   const lastDay = new Date(year, month, 0).getDate();
   const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(
-    lastDay
+    lastDay,
   ).padStart(2, "0")}`;
   const monthStartTimestamp = `${monthStart}T00:00:00+08:00`;
   const monthEndTimestamp = `${monthEnd}T23:59:59.999+08:00`;
@@ -153,15 +154,12 @@ export default async function Page() {
   const rangeStartTimestamp = `${rangeStartMonth}-01T00:00:00+08:00`;
   const weekStartDate = new Date(`${todayDate}T00:00:00+08:00`);
   weekStartDate.setDate(weekStartDate.getDate() - 6);
-  const weekStartDateString = getMalaysiaDateString(weekStartDate);
-  const weekStartTimestamp = `${weekStartDateString}T00:00:00+08:00`;
 
   const [
     { count: bookingsCount },
     { count: ticketsTodayCount },
     { data: salesRangeData },
     { data: salesMonthData },
-    { data: salesWeekData },
     { data: recentTicketsData },
   ] = await Promise.all([
     supabase
@@ -175,7 +173,7 @@ export default async function Page() {
       .lte("created_at", todayEndTimestamp),
     supabase
       .from("tickets")
-      .select("total_amount, paid_at")
+      .select("total_amount, paid_at, payment_method")
       .eq("payment_status", "paid")
       .gte("paid_at", rangeStartTimestamp)
       .lte("paid_at", monthEndTimestamp),
@@ -191,22 +189,11 @@ export default async function Page() {
           unit_price,
           services:service_id (name, base_price)
         )
-      `
+      `,
       )
       .eq("payment_status", "paid")
       .gte("paid_at", monthStartTimestamp)
       .lte("paid_at", monthEndTimestamp),
-    supabase
-      .from("tickets")
-      .select(
-        `
-        total_amount,
-        paid_at
-      `
-      )
-      .eq("payment_status", "paid")
-      .gte("paid_at", weekStartTimestamp)
-      .lte("paid_at", todayEndTimestamp),
     supabase
       .from("tickets")
       .select(
@@ -217,7 +204,7 @@ export default async function Page() {
         payment_status,
         created_at,
         barber:barber_id (first_name, last_name)
-      `
+      `,
       )
       .gte("created_at", todayStartTimestamp)
       .lte("created_at", todayEndTimestamp)
@@ -230,12 +217,11 @@ export default async function Page() {
 
   const salesTickets = (salesMonthData ?? []) as unknown as TicketRow[];
   const rangeTickets = (salesRangeData ?? []) as unknown as SalesSummaryRow[];
-  const weekTickets = (salesWeekData ?? []) as unknown as SalesSummaryRow[];
   const recentTickets = (recentTicketsData ?? []).map((ticket) => ({
     ...ticket,
     barber: Array.isArray(ticket.barber)
-      ? ticket.barber[0] ?? null
-      : ticket.barber ?? null,
+      ? (ticket.barber[0] ?? null)
+      : (ticket.barber ?? null),
   })) as RecentTicketRow[];
   const totalSalesToday = salesTickets.reduce((total, ticket) => {
     if (!ticket.paid_at) {
@@ -249,22 +235,49 @@ export default async function Page() {
   }, 0);
   const totalSalesThisMonth = salesTickets.reduce(
     (total, ticket) => total + (ticket.total_amount ?? 0),
-    0
+    0,
   );
 
-  const rangeSalesMap = new Map<string, number>();
+  const normalizePaymentMethod = (value: string | null) =>
+    (value ?? "").toLowerCase().replace(/[^a-z]/g, "");
+
+  const rangeSummaryMap = new Map<
+    string,
+    {
+      sales: number;
+      totalTicket: number;
+      totalCash: number;
+      totalEwallet: number;
+    }
+  >();
   rangeTickets.forEach((ticket) => {
     if (!ticket.paid_at) {
       return;
     }
     const dateKey = getMalaysiaDateString(new Date(ticket.paid_at));
-    rangeSalesMap.set(
-      dateKey,
-      (rangeSalesMap.get(dateKey) ?? 0) + (ticket.total_amount ?? 0)
-    );
+    const current = rangeSummaryMap.get(dateKey) ?? {
+      sales: 0,
+      totalTicket: 0,
+      totalCash: 0,
+      totalEwallet: 0,
+    };
+    const amount = ticket.total_amount ?? 0;
+    const method = normalizePaymentMethod(ticket.payment_method);
+
+    current.sales += amount;
+    current.totalTicket += 1;
+    if (method === "cash") {
+      current.totalCash += amount;
+    }
+    if (method === "ewallet") {
+      current.totalEwallet += amount;
+    }
+
+    rangeSummaryMap.set(dateKey, current);
   });
-  const currentYearMonths = Array.from({ length: 12 }, (_, index) =>
-    `${year}-${pad2(index + 1)}`
+  const currentYearMonths = Array.from(
+    { length: 12 },
+    (_, index) => `${year}-${pad2(index + 1)}`,
   );
   const dataMonths = Array.from(
     new Set(
@@ -277,11 +290,11 @@ export default async function Page() {
           }
           return `${paidDate.getFullYear()}-${pad2(paidDate.getMonth() + 1)}`;
         })
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   ).sort();
   const dataYears = Array.from(
-    new Set(dataMonths.map((value) => Number(value.split("-")[0])))
+    new Set(dataMonths.map((value) => Number(value.split("-")[0]))),
   ).filter(Boolean);
   const monthOptions = Array.from(new Set([...currentYearMonths])).sort();
   const defaultMonthOption = defaultMonth;
@@ -295,39 +308,56 @@ export default async function Page() {
       const series = Array.from({ length: daysInMonth }, (_, index) => {
         const day = index + 1;
         const dateKey = getMalaysiaDateString(
-          new Date(Date.UTC(monthYear, monthNumber - 1, day))
+          new Date(Date.UTC(monthYear, monthNumber - 1, day)),
         );
+        const summary = rangeSummaryMap.get(dateKey) ?? {
+          sales: 0,
+          totalTicket: 0,
+          totalCash: 0,
+          totalEwallet: 0,
+        };
         return {
           date: dateKey,
-          sales: rangeSalesMap.get(dateKey) ?? 0,
+          sales: summary.sales,
+          totalTicket: summary.totalTicket,
+          totalCash: summary.totalCash,
+          totalEwallet: summary.totalEwallet,
         };
       });
       return [monthValue, series];
-    })
+    }),
   );
-
-  const weekSalesMap = new Map<string, number>();
-  weekTickets.forEach((ticket) => {
-    if (!ticket.paid_at) {
-      return;
-    }
-    const dateKey = getMalaysiaDateString(new Date(ticket.paid_at));
-    weekSalesMap.set(
-      dateKey,
-      (weekSalesMap.get(dateKey) ?? 0) + (ticket.total_amount ?? 0)
-    );
-  });
   const weekSalesData = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStartDate);
     date.setDate(weekStartDate.getDate() + index);
     const dateKey = getMalaysiaDateString(date);
+    const summary = rangeSummaryMap.get(dateKey) ?? {
+      sales: 0,
+      totalTicket: 0,
+      totalCash: 0,
+      totalEwallet: 0,
+    };
     return {
       date: dateKey,
-      sales: weekSalesMap.get(dateKey) ?? 0,
+      sales: summary.sales,
+      totalTicket: summary.totalTicket,
+      totalCash: summary.totalCash,
+      totalEwallet: summary.totalEwallet,
     };
   });
 
-  const yearSalesMap = new Map<number, Map<string, number>>();
+  const yearSalesMap = new Map<
+    number,
+    Map<
+      string,
+      {
+        sales: number;
+        totalTicket: number;
+        totalCash: number;
+        totalEwallet: number;
+      }
+    >
+  >();
   rangeTickets.forEach((ticket) => {
     if (!ticket.paid_at) {
       return;
@@ -338,36 +368,83 @@ export default async function Page() {
     }
     const paidYear = paidDate.getFullYear();
     const monthKey = `${paidYear}-${pad2(paidDate.getMonth() + 1)}`;
-    const yearBucket = yearSalesMap.get(paidYear) ?? new Map<string, number>();
-    yearBucket.set(
-      monthKey,
-      (yearBucket.get(monthKey) ?? 0) + (ticket.total_amount ?? 0)
-    );
+    const yearBucket =
+      yearSalesMap.get(paidYear) ??
+      new Map<
+        string,
+        {
+          sales: number;
+          totalTicket: number;
+          totalCash: number;
+          totalEwallet: number;
+        }
+      >();
+    const current = yearBucket.get(monthKey) ?? {
+      sales: 0,
+      totalTicket: 0,
+      totalCash: 0,
+      totalEwallet: 0,
+    };
+    const amount = ticket.total_amount ?? 0;
+    const method = normalizePaymentMethod(ticket.payment_method);
+
+    current.sales += amount;
+    current.totalTicket += 1;
+    if (method === "cash") {
+      current.totalCash += amount;
+    }
+    if (method === "ewallet") {
+      current.totalEwallet += amount;
+    }
+
+    yearBucket.set(monthKey, current);
     yearSalesMap.set(paidYear, yearBucket);
   });
   const availableYears = Array.from(
-    new Set(monthOptions.map((value) => Number(value.split("-")[0])))
+    new Set(monthOptions.map((value) => Number(value.split("-")[0]))),
   ).filter(Boolean);
   const yearSeries = Object.fromEntries(
     availableYears.map((yearValue) => {
-      const bucket = yearSalesMap.get(yearValue) ?? new Map<string, number>();
+      const bucket =
+        yearSalesMap.get(yearValue) ??
+        new Map<
+          string,
+          {
+            sales: number;
+            totalTicket: number;
+            totalCash: number;
+            totalEwallet: number;
+          }
+        >();
       const series = Array.from({ length: 12 }, (_, index) => {
         const monthKey = `${yearValue}-${pad2(index + 1)}`;
+        const summary = bucket.get(monthKey) ?? {
+          sales: 0,
+          totalTicket: 0,
+          totalCash: 0,
+          totalEwallet: 0,
+        };
         return {
           date: monthKey,
-          sales: bucket.get(monthKey) ?? 0,
+          sales: summary.sales,
+          totalTicket: summary.totalTicket,
+          totalCash: summary.totalCash,
+          totalEwallet: summary.totalEwallet,
         };
       });
       return [String(yearValue), series];
-    })
+    }),
   );
 
-  const serviceMap = new Map<string, { ticketIds: Set<string>; revenue: number }>();
+  const serviceMap = new Map<
+    string,
+    { ticketIds: Set<string>; revenue: number }
+  >();
   salesTickets.forEach((ticket) => {
     ticket.ticket_items?.forEach((item) => {
       const service = Array.isArray(item.services)
-        ? item.services[0] ?? null
-        : item.services ?? null;
+        ? (item.services[0] ?? null)
+        : (item.services ?? null);
       const name = service?.name?.trim();
       if (!name) {
         return;
@@ -396,9 +473,7 @@ export default async function Page() {
     .slice(0, 5);
 
   return (
-    <AdminShell
-      title="Dashboard"
-    >
+    <AdminShell title="Dashboard">
       <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-border/60 bg-card">
           <CardHeader>

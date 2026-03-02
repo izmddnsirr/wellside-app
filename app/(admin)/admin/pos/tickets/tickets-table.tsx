@@ -818,10 +818,10 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 return (
                   <Fragment key={ticket.id}>
                     {isNewDay ? (
-                      <TableRow className="bg-black hover:bg-black">
+                      <TableRow className="bg-black hover:bg-black dark:bg-white dark:hover:bg-white">
                         <TableCell
                           colSpan={7}
-                          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white"
+                          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white dark:text-black"
                         >
                           {dayGroupLabel}
                         </TableCell>

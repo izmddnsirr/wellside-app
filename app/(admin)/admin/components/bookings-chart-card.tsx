@@ -1,6 +1,7 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts";
+import type { TooltipProps } from "recharts";
 import { useMemo, useState } from "react";
 import {
   Card,
@@ -15,7 +16,6 @@ import {
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
@@ -42,6 +42,9 @@ const chartConfig = {
 type SalesChartPoint = {
   date: string;
   sales: number;
+  totalTicket: number;
+  totalCash: number;
+  totalEwallet: number;
 };
 
 type SalesPeriod = "week" | "month" | "year";
@@ -133,6 +136,25 @@ const formatChartLabel = (value: string, period: SalesPeriod) => {
   return formatChartDate(value, period);
 };
 
+const formatDayAndDate = (value: string, period: SalesPeriod) => {
+  if (period === "year") {
+    return formatChartLabel(value, period);
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString("en-MY", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kuala_Lumpur",
+  });
+};
+
 export function BookingsChartCard({
   data,
   monthSeries,
@@ -164,23 +186,23 @@ export function BookingsChartCard({
           month: index + 1,
         };
       }),
-    [monthPickerYear]
+    [monthPickerYear],
   );
   const dataMonthsSet = useMemo(() => new Set(dataMonths), [dataMonths]);
   const dataYearsSet = useMemo(() => new Set(dataYears), [dataYears]);
   const yearsSorted = useMemo(
     () => [...availableYears].sort((a, b) => a - b),
-    [availableYears]
+    [availableYears],
   );
   const yearsPerPage = 12;
   const maxYearPage = Math.max(
     0,
-    Math.ceil(yearsSorted.length / yearsPerPage) - 1
+    Math.ceil(yearsSorted.length / yearsPerPage) - 1,
   );
   const yearPageStart = yearPickerIndex * yearsPerPage;
   const yearsPage = yearsSorted.slice(
     yearPageStart,
-    yearPageStart + yearsPerPage
+    yearPageStart + yearsPerPage,
   );
   const chartData = useMemo(() => {
     if (period === "month") {
@@ -193,14 +215,60 @@ export function BookingsChartCard({
   }, [data, monthSeries, period, selectedMonth, selectedYear, yearSeries]);
   const hasSales = useMemo(
     () => chartData.some((point) => point.sales > 0),
-    [chartData]
+    [chartData],
   );
   const description =
     period === "week"
       ? "Showing paid ticket sales for the last 7 days."
       : period === "month"
-      ? `Showing paid ticket sales for ${formatMonthLabel(selectedMonth)}.`
-      : `Showing paid ticket sales for ${selectedYear}.`;
+        ? `Showing paid ticket sales for ${formatMonthLabel(selectedMonth)}.`
+        : `Showing paid ticket sales for ${selectedYear}.`;
+
+  const renderTooltipContent = ({
+    active,
+    payload,
+  }: TooltipProps<number, string>) => {
+    if (!active || !payload?.length) {
+      return null;
+    }
+
+    const point = payload[0]?.payload as SalesChartPoint | undefined;
+    if (!point) {
+      return null;
+    }
+
+    return (
+      <div className="grid min-w-48 gap-1.5 rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
+        <div className="font-medium text-foreground">
+          {formatDayAndDate(point.date, period)}
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">Total Tickets</span>
+          <span className="font-medium text-foreground tabular-nums">
+            {point.totalTicket}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">Total Cash Sales</span>
+          <span className="font-medium text-foreground tabular-nums">
+            {formatCurrency(point.totalCash)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">Total E-Wallet Sales</span>
+          <span className="font-medium text-foreground tabular-nums">
+            {formatCurrency(point.totalEwallet)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">Total Sales</span>
+          <span className="font-medium text-foreground tabular-nums">
+            {formatCurrency(point.sales)}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card className="border-border/60 bg-card pt-0">
@@ -217,14 +285,14 @@ export function BookingsChartCard({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 min-w-[180px] justify-between bg-background"
+                  className="h-9 min-w-45 justify-between rounded-lg bg-background"
                 >
                   {formatMonthLabel(selectedMonth)}
                 </Button>
               </PopoverTrigger>
               <PopoverContent
                 id="bookings-month-popover"
-                className="w-[260px] p-3"
+                className="w-65 p-3"
                 align="end"
               >
                 <div className="flex items-center justify-between">
@@ -273,14 +341,14 @@ export function BookingsChartCard({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 min-w-[120px] justify-between bg-background"
+                  className="h-9 min-w-30 justify-between bg-background"
                 >
                   {selectedYear}
                 </Button>
               </PopoverTrigger>
               <PopoverContent
                 id="bookings-year-popover"
-                className="w-[260px] p-3"
+                className="w-65 p-3"
                 align="end"
               >
                 <div className="flex items-center justify-between">
@@ -303,7 +371,7 @@ export function BookingsChartCard({
                     size="icon"
                     onClick={() =>
                       setYearPickerIndex((prev) =>
-                        Math.min(maxYearPage, prev + 1)
+                        Math.min(maxYearPage, prev + 1),
                       )
                     }
                     disabled={yearPickerIndex >= maxYearPage}
@@ -338,7 +406,7 @@ export function BookingsChartCard({
             onValueChange={(value) => setPeriod(value as SalesPeriod)}
           >
             <SelectTrigger
-              className="w-[160px] rounded-lg bg-background"
+              className="w-40 rounded-lg bg-background"
               aria-label="Select period"
             >
               <SelectValue placeholder="Select period" />
@@ -359,14 +427,14 @@ export function BookingsChartCard({
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         {chartData.length === 0 || !hasSales ? (
-          <div className="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-62.5 items-center justify-center text-sm text-muted-foreground">
             No sales data yet for this period.
           </div>
         ) : (
           <ChartContainer
             id="bookings-sales-chart"
             config={chartConfig}
-            className="aspect-auto h-[250px] w-full"
+            className="aspect-auto h-62.5 w-full"
           >
             <BarChart data={chartData}>
               <CartesianGrid vertical={false} />
@@ -380,28 +448,24 @@ export function BookingsChartCard({
                   formatChartDate(String(value), period)
                 }
               />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    indicator="dot"
-                    labelFormatter={(value) =>
-                      formatChartLabel(String(value), period)
-                    }
-                    formatter={(value) => (
-                      <span className="font-medium text-foreground">
-                        {formatCurrency(Number(value))}
-                      </span>
-                    )}
-                  />
-                }
-              />
+              <ChartTooltip cursor={false} content={renderTooltipContent} />
               <ChartLegend content={<ChartLegendContent />} />
               <Bar
                 dataKey="sales"
                 fill="var(--color-sales)"
                 radius={[5, 5, 5, 5]}
-              />
+              >
+                <LabelList
+                  dataKey="sales"
+                  position="top"
+                  className="fill-muted-foreground text-[11px]"
+                  formatter={(value: number) =>
+                    Number(value) > 0
+                      ? Number(value).toLocaleString("en-MY")
+                      : ""
+                  }
+                />
+              </Bar>
             </BarChart>
           </ChartContainer>
         )}

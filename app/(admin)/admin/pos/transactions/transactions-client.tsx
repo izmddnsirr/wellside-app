@@ -701,8 +701,44 @@ export function TransactionsClient() {
     setCheckoutDialogOpen(true);
   };
 
-  const cashReceivedValue = Number(cashReceived || 0);
+  const cashReceivedValue = parseInt(cashReceived || "0", 10) / 100;
   const changeDue = cashReceivedValue - subtotal;
+  const cashPresets = [50, 100];
+  const isCashPayment = paymentMethod === "cash";
+  const hasCashInput = cashReceivedValue > 0;
+  const hasEnoughCash = !isCashPayment || (hasCashInput && changeDue >= 0);
+  const chargeButtonLabel = !isCashPayment
+    ? `Charge ${formatMoney(subtotal)}`
+    : !hasCashInput || changeDue < 0
+      ? "Insufficient Cash"
+      : changeDue > 0
+        ? `Return Change ${formatMoney(changeDue)}`
+        : `Charge ${formatMoney(subtotal)}`;
+
+  const applyCashPreset = (value: number) => {
+    const digits = String(Math.round(value * 100));
+    setCashReceived(digits === "0" ? "" : digits);
+    setTicketError(null);
+  };
+
+  const clearCashReceived = () => {
+    setCashReceived("");
+    setTicketError(null);
+  };
+
+  const appendCashInput = (token: string) => {
+    setCashReceived((prev) => {
+      const next = (prev + token).replace(/^0+/, "");
+      if (next.length > 9) return prev;
+      return next;
+    });
+    setTicketError(null);
+  };
+
+  const backspaceCashInput = () => {
+    setCashReceived((prev) => prev.slice(0, -1));
+    setTicketError(null);
+  };
 
   const handleCharge = async () => {
     if (!activeShift?.id) {
@@ -887,7 +923,7 @@ export function TransactionsClient() {
                   <Button variant="outline" size="icon" className="sm:hidden">
                     <Search className="size-4" />
                   </Button>
-                  <div className="relative hidden sm:block sm:w-[280px]">
+                  <div className="relative hidden sm:block sm:w-70">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Search Service or Product"
@@ -917,7 +953,7 @@ export function TransactionsClient() {
                               {servicesError}
                             </p>
                           ) : filteredServices.length === 0 ? (
-                            <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
+                            <div className="flex min-h-45 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
                               <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background">
                                 <Scissors className="size-6 text-muted-foreground" />
                               </div>
@@ -976,7 +1012,7 @@ export function TransactionsClient() {
                               {productsError}
                             </p>
                           ) : filteredProducts.length === 0 ? (
-                            <div className="flex min-h-[180px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
+                            <div className="flex min-h-45 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-4 text-center">
                               <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-background">
                                 <Package className="size-6 text-muted-foreground" />
                               </div>
@@ -1097,7 +1133,7 @@ export function TransactionsClient() {
                               >
                                 -
                               </Button>
-                              <span className="min-w-[20px] text-center text-sm font-medium text-foreground">
+                              <span className="min-w-5 text-center text-sm font-medium text-foreground">
                                 {entry.qty}
                               </span>
                               <Button
@@ -1220,112 +1256,243 @@ export function TransactionsClient() {
                             {ticketLoading ? "Processing..." : "Checkout"}
                           </Button>
                           <DialogContent
+                            className={`gap-0 overflow-hidden p-0 ${paymentMethod === "cash" ? "sm:max-w-5xl" : "sm:max-w-md"}`}
                             onInteractOutside={(event) =>
                               event.preventDefault()
                             }
                             onEscapeKeyDown={(event) => event.preventDefault()}
                           >
-                            <DialogHeader>
+                            <DialogHeader className="border-b border-border/60 px-6 pb-4 pt-5">
                               <DialogTitle>Charge customer</DialogTitle>
                               <DialogDescription>
                                 Select payment method and confirm charge.
                               </DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-4">
-                              <div className="rounded-2xl bg-muted/30 px-4 py-6 text-center">
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Total
-                                </p>
-                                <p className="mt-2 text-3xl font-semibold">
-                                  {formatMoney(subtotal)}
-                                </p>
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-xs">
-                                  Payment method
-                                </Label>
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      paymentMethod === "cash"
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    className="h-11 w-full"
-                                    onClick={() => setPaymentMethod("cash")}
-                                  >
-                                    Cash
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      paymentMethod === "ewallet"
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    className="h-11 w-full"
-                                    onClick={() => setPaymentMethod("ewallet")}
-                                  >
-                                    E-wallet
-                                  </Button>
+                            <div className="space-y-4 px-6 py-5">
+                              <div
+                                className={
+                                  paymentMethod === "cash"
+                                    ? "grid gap-4 sm:grid-cols-2"
+                                    : "w-full"
+                                }
+                              >
+                                <div className="flex min-h-26 flex-col items-center justify-center rounded-2xl border border-border/60 bg-muted/20 px-5 py-4 text-center">
+                                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                    Total
+                                  </p>
+                                  <p className="mt-1 text-3xl font-semibold leading-none">
+                                    {formatMoney(subtotal)}
+                                  </p>
                                 </div>
-                              </div>
-                              {paymentMethod === "cash" ? (
-                                <div className="space-y-2">
-                                  <Label
-                                    htmlFor="cash-received"
-                                    className="text-xs"
-                                  >
-                                    Cash received
-                                  </Label>
-                                  <div className="rounded-2xl border border-border bg-background px-4 py-3 text-center">
-                                    <Input
-                                      id="cash-received"
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      placeholder="0.00"
-                                      value={cashReceived}
-                                      onChange={(event) =>
-                                        setCashReceived(event.target.value)
-                                      }
-                                      className="h-12 border-0 p-0 text-center text-2xl font-semibold shadow-none focus-visible:ring-0"
-                                    />
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                      Enter amount given by customer
-                                    </p>
-                                  </div>
-                                  <div className="rounded-2xl bg-muted/30 px-4 py-5 text-center">
-                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                {paymentMethod === "cash" ? (
+                                  <div className="flex min-h-26 flex-col items-center justify-center rounded-2xl border border-border/60 bg-muted/20 px-5 py-4 text-center">
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                                       Balance
                                     </p>
-                                    <p className="mt-2 text-2xl font-semibold">
+                                    <p
+                                      className={`mt-1 text-3xl font-semibold leading-none ${
+                                        changeDue < 0
+                                          ? "text-red-400"
+                                          : changeDue > 0
+                                            ? "text-emerald-400"
+                                            : "text-foreground"
+                                      }`}
+                                    >
                                       {changeDue >= 0
                                         ? formatMoney(changeDue)
                                         : `-${formatMoney(Math.abs(changeDue))}`}
                                     </p>
                                   </div>
-                                </div>
-                              ) : null}
+                                ) : null}
+                              </div>
+
+                              <div className="space-y-4 p-0">
+                                {paymentMethod === "ewallet" ? (
+                                  <div className="grid w-full grid-cols-2 gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className="h-11 w-full text-sm font-semibold"
+                                      onClick={() => setPaymentMethod("cash")}
+                                    >
+                                      Cash
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="default"
+                                      className="h-11 w-full text-sm font-semibold"
+                                      onClick={() =>
+                                        setPaymentMethod("ewallet")
+                                      }
+                                    >
+                                      E-wallet
+                                    </Button>
+                                  </div>
+                                ) : null}
+
+                                {paymentMethod === "cash" ? (
+                                  <>
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="default"
+                                          className="h-11 w-full text-sm font-semibold"
+                                          onClick={() =>
+                                            setPaymentMethod("cash")
+                                          }
+                                        >
+                                          Cash
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          className="h-11 w-full text-sm font-semibold"
+                                          onClick={() =>
+                                            setPaymentMethod("ewallet")
+                                          }
+                                        >
+                                          E-wallet
+                                        </Button>
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-2">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant={
+                                            cashReceived.trim() !== "" &&
+                                            Math.abs(
+                                              cashReceivedValue - subtotal,
+                                            ) < 0.001
+                                              ? "default"
+                                              : "outline"
+                                          }
+                                          className="h-11 w-full text-sm font-semibold"
+                                          onClick={() =>
+                                            applyCashPreset(subtotal)
+                                          }
+                                        >
+                                          Exact
+                                        </Button>
+                                        {cashPresets.map((preset) => (
+                                          <Button
+                                            key={preset}
+                                            type="button"
+                                            size="sm"
+                                            variant={
+                                              cashReceived.trim() !== "" &&
+                                              Math.abs(
+                                                cashReceivedValue - preset,
+                                              ) < 0.001
+                                                ? "default"
+                                                : "outline"
+                                            }
+                                            className="h-11 w-full text-sm font-semibold"
+                                            onClick={() =>
+                                              applyCashPreset(preset)
+                                            }
+                                          >
+                                            RM {preset}
+                                          </Button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+                                      <div
+                                        id="cash-received"
+                                        className="flex min-h-63 items-center justify-center rounded-2xl border border-border/60 bg-muted/30 px-6 text-center"
+                                      >
+                                        <p className="text-4xl font-semibold leading-none">
+                                          RM{" "}
+                                          {(
+                                            parseInt(cashReceived || "0", 10) /
+                                            100
+                                          ).toFixed(2)}
+                                        </p>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <div className="grid grid-cols-3 gap-2">
+                                          {[
+                                            "1",
+                                            "2",
+                                            "3",
+                                            "4",
+                                            "5",
+                                            "6",
+                                            "7",
+                                            "8",
+                                            "9",
+                                          ].map((key) => (
+                                            <Button
+                                              key={key}
+                                              type="button"
+                                              variant="outline"
+                                              className="h-11 w-full text-sm font-semibold"
+                                              onClick={() =>
+                                                appendCashInput(key)
+                                              }
+                                            >
+                                              {key}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                          {["0", "00"].map((key) => (
+                                            <Button
+                                              key={key}
+                                              type="button"
+                                              variant="outline"
+                                              className="h-11 w-full text-sm font-semibold"
+                                              onClick={() =>
+                                                appendCashInput(key)
+                                              }
+                                            >
+                                              {key}
+                                            </Button>
+                                          ))}
+                                          <Button
+                                            type="button"
+                                            variant="default"
+                                            className="h-11 w-full text-sm font-semibold"
+                                            onClick={backspaceCashInput}
+                                          >
+                                            ⌫
+                                          </Button>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-11 w-full text-sm font-semibold"
+                                            onClick={clearCashReceived}
+                                          >
+                                            Clear
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </>
+                                ) : null}
+                              </div>
+
                               {ticketError ? (
                                 <p className="text-xs text-red-500">
                                   {ticketError}
                                 </p>
                               ) : null}
                             </div>
-                            <DialogFooter>
+                            <DialogFooter className="border-t border-border/60 px-6 py-4">
                               <Button
-                                className="w-full"
+                                className="h-11 w-full"
                                 onClick={handleCharge}
                                 disabled={
                                   ticketLoading ||
-                                  (paymentMethod === "cash" &&
-                                    (cashReceived.trim() === "" ||
-                                      changeDue < 0))
+                                  (paymentMethod === "cash" && !hasEnoughCash)
                                 }
                               >
-                                {ticketLoading ? "Charging..." : "Charge"}
+                                {ticketLoading
+                                  ? "Charging..."
+                                  : chargeButtonLabel}
                               </Button>
                             </DialogFooter>
                           </DialogContent>
@@ -1350,7 +1517,7 @@ export function TransactionsClient() {
                 Open a shift to start a new transaction.
               </p>
             </div>
-            <div className="flex min-h-[240px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+            <div className="flex min-h-60 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
               <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
                 <Clock className="size-8 text-muted-foreground" />
               </div>
