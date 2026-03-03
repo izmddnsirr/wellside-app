@@ -116,22 +116,25 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
     : "No slots";
 
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <p className="text-xs tracking-[0.2em] text-muted-foreground">
-          Today
-        </p>
-        <span className="rounded-full border border-border px-3 py-1 text-xs">
-          {slotsLabel}
-        </span>
-      </div>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-(--font-display) text-2xl">Your barber</h2>
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div className="space-y-1">
+          <h2 className="font-(--font-display) text-2xl leading-tight sm:text-[1.75rem]">
+            Today&apos;s slots
+          </h2>
+          <p className="text-sm text-foreground/70">
+            Choose a barber and book the next available slot.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <span className="rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-center text-xs font-semibold text-foreground/90 backdrop-blur-md sm:text-left dark:border-white/20 dark:bg-black/30">
+            {slotsLabel}
+          </span>
           {barbers.length ? (
             <Select value={resolvedSelectedId} onValueChange={setSelectedId}>
               <SelectTrigger
-                className="h-9 w-40 rounded-full text-xs"
+                className="h-10 w-full rounded-full border-border/60 bg-background/70 text-sm text-foreground/95 backdrop-blur-md sm:min-w-44 sm:w-auto dark:border-white/20 dark:bg-black/30"
                 size="sm"
                 aria-label="Select barber"
               >
@@ -142,7 +145,7 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
                   <SelectItem
                     key={barber.id}
                     value={barber.id}
-                    className="rounded-lg text-xs"
+                    className="rounded-lg text-sm"
                   >
                     {barber.name}
                   </SelectItem>
@@ -155,32 +158,35 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
             </span>
           )}
         </div>
-        {effectiveSlotState.isLoading ? (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-            Loading slots...
-          </div>
-        ) : effectiveSlotState.error ? (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-            {effectiveSlotState.error}
-          </div>
-        ) : effectiveSlotState.slots.length ? (
-          <div className="grid max-h-65 gap-3 overflow-y-auto pr-1">
-            {effectiveSlotState.slots.map((slot) => (
-              <button
-                key={slot.start_at}
-                className="flex items-center justify-between rounded-2xl border border-border bg-muted/60 px-4 py-3 text-sm"
-              >
-                <span>{slot.label}</span>
-                <span className="text-muted-foreground">Book now</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-            No available slots yet.
-          </div>
-        )}
       </div>
-    </>
+
+      {effectiveSlotState.isLoading ? (
+        <div className="rounded-xl border border-dashed border-border/60 bg-background/65 px-4 py-7 text-center text-sm text-foreground/70 dark:border-white/20 dark:bg-black/25">
+          Loading slots...
+        </div>
+      ) : effectiveSlotState.error ? (
+        <div className="rounded-xl border border-dashed border-border/60 bg-background/65 px-4 py-7 text-center text-sm text-foreground/70 dark:border-white/20 dark:bg-black/25">
+          {effectiveSlotState.error}
+        </div>
+      ) : effectiveSlotState.slots.length ? (
+        <div className="grid max-h-72 gap-3 overflow-y-auto pr-1">
+          {effectiveSlotState.slots.map((slot) => (
+            <button
+              key={slot.start_at}
+              className="group flex items-center justify-between rounded-xl border border-border/60 bg-background/65 px-4 py-3.5 text-left transition-colors hover:border-border hover:bg-muted/80 dark:border-white/15 dark:bg-black/25 dark:hover:border-white/25 dark:hover:bg-black/40"
+            >
+              <span className="text-lg font-semibold leading-none">{slot.label}</span>
+              <span className="text-sm font-semibold text-foreground/65 transition-colors group-hover:text-foreground/95">
+                Book now
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border/60 bg-background/65 px-4 py-7 text-center text-sm text-foreground/70 dark:border-white/20 dark:bg-black/25">
+          No available slots yet.
+        </div>
+      )}
+    </div>
   );
 }
