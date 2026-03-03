@@ -13,8 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   type ChartConfig,
 } from "@/components/ui/chart";
@@ -155,6 +153,69 @@ const formatDayAndDate = (value: string, period: SalesPeriod) => {
   });
 };
 
+const renderSalesValuePill = ({
+  x,
+  y,
+  width,
+  value,
+}: {
+  x?: number | string;
+  y?: number | string;
+  width?: number | string;
+  value?: number | string;
+}) => {
+  const xNumber = Number(x);
+  const yNumber = Number(y);
+  const widthNumber = Number(width);
+  const numericValue = Number(value);
+
+  if (
+    !Number.isFinite(numericValue) ||
+    numericValue <= 0 ||
+    !Number.isFinite(xNumber) ||
+    !Number.isFinite(yNumber) ||
+    !Number.isFinite(widthNumber)
+  ) {
+    return null;
+  }
+
+  const text = numericValue.toLocaleString("en-MY");
+  const charWidth = 7;
+  const horizontalPadding = 8;
+  const pillHeight = 20;
+  const pillRadius = 10;
+  const gapFromBar = 8;
+  const pillWidth = text.length * charWidth + horizontalPadding * 2;
+  const pillX = xNumber + widthNumber / 2 - pillWidth / 2;
+  const pillY = yNumber - pillHeight - gapFromBar;
+
+  return (
+    <g>
+      <rect
+        x={pillX}
+        y={pillY}
+        width={pillWidth}
+        height={pillHeight}
+        rx={pillRadius}
+        ry={pillRadius}
+        fill="var(--background)"
+        stroke="var(--border)"
+      />
+      <text
+        x={xNumber + widthNumber / 2}
+        y={pillY + pillHeight / 2}
+        fill="var(--foreground)"
+        fontSize={11}
+        fontWeight={600}
+        dominantBaseline="central"
+        textAnchor="middle"
+      >
+        {text}
+      </text>
+    </g>
+  );
+};
+
 export function BookingsChartCard({
   data,
   monthSeries,
@@ -249,19 +310,19 @@ export function BookingsChartCard({
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Total Cash Sales</span>
+          <span className="text-muted-foreground">Total Cash</span>
           <span className="font-medium text-foreground tabular-nums">
             {formatCurrency(point.totalCash)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Total E-Wallet Sales</span>
+          <span className="text-muted-foreground">Total E-Wallet</span>
           <span className="font-medium text-foreground tabular-nums">
             {formatCurrency(point.totalEwallet)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground">Total Sales</span>
+          <span className="text-muted-foreground">Total</span>
           <span className="font-medium text-foreground tabular-nums">
             {formatCurrency(point.sales)}
           </span>
@@ -449,22 +510,12 @@ export function BookingsChartCard({
                 }
               />
               <ChartTooltip cursor={false} content={renderTooltipContent} />
-              <ChartLegend content={<ChartLegendContent />} />
               <Bar
                 dataKey="sales"
                 fill="var(--color-sales)"
                 radius={[5, 5, 5, 5]}
               >
-                <LabelList
-                  dataKey="sales"
-                  position="top"
-                  className="fill-muted-foreground text-[11px]"
-                  formatter={(value: number) =>
-                    Number(value) > 0
-                      ? Number(value).toLocaleString("en-MY")
-                      : ""
-                  }
-                />
+                <LabelList dataKey="sales" content={renderSalesValuePill} />
               </Bar>
             </BarChart>
           </ChartContainer>

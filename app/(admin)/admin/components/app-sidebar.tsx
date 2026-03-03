@@ -18,17 +18,17 @@ export async function AppSidebar(props: SidebarProps) {
     data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  const { count: scheduledCount } = await supabase
+  const { count: activeBookingsCount } = await supabase
     .from("bookings")
     .select("id", { count: "exact", head: true })
-    .eq("status", "scheduled");
+    .in("status", ["scheduled", "in_progress"]);
 
   if (!authUser) {
     return (
       <AppSidebarClient
         {...props}
         user={fallbackUser}
-        scheduledCount={scheduledCount ?? 0}
+        activeBookingsCount={activeBookingsCount ?? 0}
       />
     );
   }
@@ -51,7 +51,7 @@ export async function AppSidebar(props: SidebarProps) {
         email: authUser.email ?? fallbackUser.email,
         avatar: fallbackUser.avatar,
       }}
-      scheduledCount={scheduledCount ?? 0}
+      activeBookingsCount={activeBookingsCount ?? 0}
     />
   );
 }

@@ -218,6 +218,20 @@ const statusSelectClass = (status: string | null) => {
   }
 };
 
+const bookingTableHeadClass =
+  "px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
+const bookingTableCellClass = "px-4 py-3";
+const bookingColumnClass = {
+  date: "w-[12%]",
+  time: "w-[14%]",
+  customer: "w-[22%]",
+  service: "w-[18%]",
+  barber: "w-[14%]",
+  status: "w-[10%]",
+  actions: "w-[10%]",
+};
+const bookingActionButtonClass = "w-28 justify-center";
+
 const startOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -1565,26 +1579,26 @@ export function BookingsCard({
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow className="border-border/60">
-              <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.date} ${bookingTableHeadClass}`}>
                 Date
               </TableHead>
-              <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.time} ${bookingTableHeadClass}`}>
                 Time
               </TableHead>
-              <TableHead className="w-[22%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.customer} ${bookingTableHeadClass}`}>
                 Customer
               </TableHead>
-              <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.service} ${bookingTableHeadClass}`}>
                 Service
               </TableHead>
-              <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.barber} ${bookingTableHeadClass}`}>
                 Barber
               </TableHead>
-              <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.status} ${bookingTableHeadClass}`}>
                 Status
               </TableHead>
               {showActions ? (
-                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className={`${bookingColumnClass.actions} ${bookingTableHeadClass}`}>
                   Actions
                 </TableHead>
               ) : null}
@@ -1598,16 +1612,13 @@ export function BookingsCard({
                   key={booking.id}
                   className="bg-background hover:bg-muted/50"
                 >
-                  <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
+                  <TableCell className={`${bookingColumnClass.date} ${bookingTableCellClass} text-muted-foreground`}>
                     {formatDate(booking.booking_date ?? booking.start_at)}
-                    <div className="text-xs text-muted-foreground">
-                      Ref {booking.booking_ref}
-                    </div>
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 font-semibold text-foreground">
-                    {formatTimeRange(booking.start_at, booking.end_at)}
+                  <TableCell className={`${bookingColumnClass.time} ${bookingTableCellClass} font-semibold text-foreground`}>
+                    {formatTime(booking.start_at)}
                   </TableCell>
-                  <TableCell className="w-[22%] px-4 py-3 text-foreground">
+                  <TableCell className={`${bookingColumnClass.customer} ${bookingTableCellClass} text-foreground`}>
                     {joinName(
                       booking.customer?.first_name ?? null,
                       booking.customer?.last_name ?? null,
@@ -1618,7 +1629,7 @@ export function BookingsCard({
                         "-"}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[18%] px-4 py-3 text-foreground">
+                  <TableCell className={`${bookingColumnClass.service} ${bookingTableCellClass} text-foreground`}>
                     {booking.service?.name ?? "-"}
                     <div className="text-xs text-muted-foreground">
                       {booking.service?.duration_minutes
@@ -1627,20 +1638,20 @@ export function BookingsCard({
                       · {formatMoney(booking.service?.base_price ?? null)}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 text-foreground">
+                  <TableCell className={`${bookingColumnClass.barber} ${bookingTableCellClass} text-foreground`}>
                     {joinName(
                       booking.barber?.first_name ?? null,
                       booking.barber?.last_name ?? null,
                     )}
                   </TableCell>
-                  <TableCell className="w-[10%] px-4 py-3">
+                  <TableCell className={`${bookingColumnClass.status} ${bookingTableCellClass}`}>
                     <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
                       <span className={`size-2 rounded-full ${tone.dot}`} />
                       {formatStatusLabel(booking.status ?? null)}
                     </Badge>
                   </TableCell>
                   {showActions ? (
-                    <TableCell className="w-[10%] px-4 py-3">
+                    <TableCell className={`${bookingColumnClass.actions} ${bookingTableCellClass}`}>
                       <Dialog
                         open={openDialogId === booking.id}
                         onOpenChange={(open) =>
@@ -1651,6 +1662,7 @@ export function BookingsCard({
                           <Button
                             variant="outline"
                             size="sm"
+                            className={bookingActionButtonClass}
                             onClick={() => setOpenDialogId(booking.id)}
                           >
                             <Pencil />
@@ -1704,21 +1716,10 @@ export function BookingsCard({
                               </div>
                               <div className="space-y-1">
                                 <p className="text-xs text-muted-foreground">
-                                  Reference
-                                </p>
-                                <p className="font-medium">
-                                  {booking.booking_ref}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">
                                   Time
                                 </p>
                                 <p className="font-medium">
-                                  {formatTimeRange(
-                                    booking.start_at,
-                                    booking.end_at,
-                                  )}
+                                  {formatTime(booking.start_at)}
                                 </p>
                               </div>
                               <div className="space-y-1">
@@ -1868,26 +1869,26 @@ export function BookingsCard({
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow className="border-border/60">
-              <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.date} ${bookingTableHeadClass}`}>
                 Date
               </TableHead>
-              <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.time} ${bookingTableHeadClass}`}>
                 Time
               </TableHead>
-              <TableHead className="w-[22%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.customer} ${bookingTableHeadClass}`}>
                 Customer
               </TableHead>
-              <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.service} ${bookingTableHeadClass}`}>
                 Service
               </TableHead>
-              <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.barber} ${bookingTableHeadClass}`}>
                 Barber
               </TableHead>
-              <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <TableHead className={`${bookingColumnClass.status} ${bookingTableHeadClass}`}>
                 Status
               </TableHead>
               {showActions ? (
-                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className={`${bookingColumnClass.actions} ${bookingTableHeadClass}`}>
                   Actions
                 </TableHead>
               ) : null}
@@ -1901,16 +1902,13 @@ export function BookingsCard({
                   key={booking.id}
                   className="bg-background hover:bg-muted/50"
                 >
-                  <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
+                  <TableCell className={`${bookingColumnClass.date} ${bookingTableCellClass} text-muted-foreground`}>
                     {formatDate(booking.booking_date ?? booking.start_at)}
-                    <div className="text-xs text-muted-foreground">
-                      Ref {booking.booking_ref}
-                    </div>
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 font-semibold text-foreground">
-                    {formatTimeRange(booking.start_at, booking.end_at)}
+                  <TableCell className={`${bookingColumnClass.time} ${bookingTableCellClass} font-semibold text-foreground`}>
+                    {formatTime(booking.start_at)}
                   </TableCell>
-                  <TableCell className="w-[22%] px-4 py-3 text-foreground">
+                  <TableCell className={`${bookingColumnClass.customer} ${bookingTableCellClass} text-foreground`}>
                     {joinName(
                       booking.customer?.first_name ?? null,
                       booking.customer?.last_name ?? null,
@@ -1921,7 +1919,7 @@ export function BookingsCard({
                         "-"}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[18%] px-4 py-3 text-foreground">
+                  <TableCell className={`${bookingColumnClass.service} ${bookingTableCellClass} text-foreground`}>
                     {booking.service?.name ?? "-"}
                     <div className="text-xs text-muted-foreground">
                       {booking.service?.duration_minutes
@@ -1930,24 +1928,29 @@ export function BookingsCard({
                       · {formatMoney(booking.service?.base_price ?? null)}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[14%] px-4 py-3 text-foreground">
+                  <TableCell className={`${bookingColumnClass.barber} ${bookingTableCellClass} text-foreground`}>
                     {joinName(
                       booking.barber?.first_name ?? null,
                       booking.barber?.last_name ?? null,
                     )}
                   </TableCell>
-                  <TableCell className="w-[10%] px-4 py-3">
+                  <TableCell className={`${bookingColumnClass.status} ${bookingTableCellClass}`}>
                     <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
                       <span className={`size-2 rounded-full ${tone.dot}`} />
                       {formatStatusLabel(booking.status ?? null)}
                     </Badge>
                   </TableCell>
                   {showActions ? (
-                    <TableCell className="w-[10%] px-4 py-3">
+                    <TableCell className={`${bookingColumnClass.actions} ${bookingTableCellClass}`}>
                       {allowDelete && deleteBooking ? (
                         <form action={deleteBooking}>
                           <input type="hidden" name="id" value={booking.id} />
-                          <Button variant="destructive" size="sm" type="submit">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            type="submit"
+                            className={bookingActionButtonClass}
+                          >
                             <Trash2 />
                             Delete
                           </Button>

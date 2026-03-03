@@ -23,6 +23,7 @@ type NavItem = {
   icon?: LucideIcon;
   items?: NavItem[];
   notification?: boolean;
+  notificationCount?: number;
 };
 
 type NavGroup = {
@@ -33,6 +34,7 @@ type NavGroup = {
 export function NavMain({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
   const [openItems, setOpenItems] = React.useState<Record<string, boolean>>({});
+  const toNotificationLabel = (count: number) => (count > 99 ? "99+" : String(count));
 
   return (
     <>
@@ -78,11 +80,17 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                           >
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
-                            {item.notification ? (
-                              <span
-                                className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
-                                aria-hidden="true"
-                              />
+                            {item.notification && !isOpen ? (
+                              item.notificationCount && item.notificationCount > 0 ? (
+                                <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                                  {toNotificationLabel(item.notificationCount)}
+                                </span>
+                              ) : (
+                                <span
+                                  className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
+                                  aria-hidden="true"
+                                />
+                              )
                             ) : null}
                             <ChevronDown
                               className={cn(
@@ -107,6 +115,18 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                                     <Link href={child.url ?? "#"}>
                                       {child.icon ? <child.icon /> : null}
                                       <span>{child.title}</span>
+                                      {child.notification ? (
+                                        child.notificationCount && child.notificationCount > 0 ? (
+                                <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                                  {toNotificationLabel(child.notificationCount)}
+                                </span>
+                                        ) : (
+                                          <span
+                                            className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
+                                            aria-hidden="true"
+                                          />
+                                        )
+                                      ) : null}
                                     </Link>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
@@ -127,10 +147,16 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
                             {item.notification ? (
-                              <span
-                                className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
-                                aria-hidden="true"
-                              />
+                              item.notificationCount && item.notificationCount > 0 ? (
+                                <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                                  {toNotificationLabel(item.notificationCount)}
+                                </span>
+                              ) : (
+                                <span
+                                  className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
+                                  aria-hidden="true"
+                                />
+                              )
                             ) : null}
                           </Link>
                         </SidebarMenuButton>

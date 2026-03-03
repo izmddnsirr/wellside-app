@@ -6,19 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { createAdminClient } from "@/utils/supabase/server";
 import { Metadata } from "next";
 import { BookingsChartCard } from "./components/bookings-chart-card";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Wellside+",
@@ -61,20 +51,9 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-type TicketItemRow = {
-  qty: number | null;
-  unit_price?: number | null;
-  services:
-    | { name: string | null; base_price: number | null }
-    | { name: string | null; base_price: number | null }[]
-    | null;
-};
-
 type TicketRow = {
-  id: string;
   total_amount: number | null;
   paid_at: string | null;
-  ticket_items: TicketItemRow[] | null;
 };
 
 type SalesSummaryRow = {
@@ -83,57 +62,19 @@ type SalesSummaryRow = {
   payment_method: string | null;
 };
 
-type RecentTicketRow = {
-  id: string;
-  ticket_no: string | null;
+type TodayPaymentRow = {
   total_amount: number | null;
-  payment_status: string | null;
-  created_at: string | null;
-  barber: { first_name: string | null; last_name: string | null } | null;
+  payment_method: string | null;
 };
 
-const timeFormatter = new Intl.DateTimeFormat("en-MY", {
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-  timeZone: "Asia/Kuala_Lumpur",
-});
-
-const formatTime = (value: string | null) => {
-  if (!value) {
-    return "-";
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-  return timeFormatter.format(date);
+type TodayBarberBookingRow = {
+  barber_id: string | null;
 };
 
-const formatShortTicketId = (ticketNo: string | null, id: string) =>
-  ticketNo || id.slice(-6);
-
-const getStatusTone = (status: string | null) => {
-  const normalized = (status ?? "unpaid").toLowerCase();
-  if (normalized === "paid") {
-    return {
-      badge: "bg-emerald-100 text-emerald-900 border-emerald-200",
-      dot: "bg-emerald-500",
-      label: "Paid",
-    };
-  }
-  if (normalized === "refunded") {
-    return {
-      badge: "bg-rose-100 text-rose-900 border-rose-200",
-      dot: "bg-rose-500",
-      label: "Refunded",
-    };
-  }
-  return {
-    badge: "bg-amber-100 text-amber-900 border-amber-200",
-    dot: "bg-amber-500",
-    label: "Unpaid",
-  };
+type LowStockRow = {
+  id: string;
+  name: string | null;
+  stock_qty: number | null;
 };
 
 export default async function Page() {
@@ -160,7 +101,12 @@ export default async function Page() {
     { count: ticketsTodayCount },
     { data: salesRangeData },
     { data: salesMonthData },
-    { data: recentTicketsData },
+    { count: cancelledTodayCount },
+    { count: noShowTodayCount },
+    { data: todayBarberBookingsData },
+    { count: activeBarbersCount },
+    { data: todayPaymentsData },
+    { data: lowStockProductsData },
   ] = await Promise.all([
     supabase
       .from("bookings")
@@ -181,35 +127,46 @@ export default async function Page() {
       .from("tickets")
       .select(
         `
-        id,
         total_amount,
-        paid_at,
-        ticket_items (
-          qty,
-          unit_price,
-          services:service_id (name, base_price)
-        )
+        paid_at
       `,
       )
       .eq("payment_status", "paid")
       .gte("paid_at", monthStartTimestamp)
       .lte("paid_at", monthEndTimestamp),
     supabase
+      .from("bookings")
+      .select("*", { count: "exact", head: true })
+      .eq("booking_date", todayDate)
+      .eq("status", "cancelled"),
+    supabase
+      .from("bookings")
+      .select("*", { count: "exact", head: true })
+      .eq("booking_date", todayDate)
+      .eq("status", "no_show"),
+    supabase
+      .from("bookings")
+      .select("barber_id")
+      .eq("booking_date", todayDate)
+      .in("status", ["scheduled", "in_progress", "completed"]),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "barber")
+      .eq("is_active", true),
+    supabase
       .from("tickets")
-      .select(
-        `
-        id,
-        ticket_no,
-        total_amount,
-        payment_status,
-        created_at,
-        barber:barber_id (first_name, last_name)
-      `,
-      )
-      .gte("created_at", todayStartTimestamp)
-      .lte("created_at", todayEndTimestamp)
-      .order("created_at", { ascending: false })
-      .limit(10),
+      .select("total_amount, payment_method")
+      .eq("payment_status", "paid")
+      .gte("paid_at", todayStartTimestamp)
+      .lte("paid_at", todayEndTimestamp),
+    supabase
+      .from("products")
+      .select("id, name, stock_qty")
+      .eq("is_active", true)
+      .lte("stock_qty", 5)
+      .order("stock_qty", { ascending: true })
+      .limit(5),
   ]);
 
   const totalBookingsToday = bookingsCount ?? 0;
@@ -217,12 +174,9 @@ export default async function Page() {
 
   const salesTickets = (salesMonthData ?? []) as unknown as TicketRow[];
   const rangeTickets = (salesRangeData ?? []) as unknown as SalesSummaryRow[];
-  const recentTickets = (recentTicketsData ?? []).map((ticket) => ({
-    ...ticket,
-    barber: Array.isArray(ticket.barber)
-      ? (ticket.barber[0] ?? null)
-      : (ticket.barber ?? null),
-  })) as RecentTicketRow[];
+  const todayPayments = (todayPaymentsData ?? []) as TodayPaymentRow[];
+  const todayBarberBookings = (todayBarberBookingsData ?? []) as TodayBarberBookingRow[];
+  const lowStockProducts = (lowStockProductsData ?? []) as LowStockRow[];
   const totalSalesToday = salesTickets.reduce((total, ticket) => {
     if (!ticket.paid_at) {
       return total;
@@ -237,9 +191,24 @@ export default async function Page() {
     (total, ticket) => total + (ticket.total_amount ?? 0),
     0,
   );
-
   const normalizePaymentMethod = (value: string | null) =>
     (value ?? "").toLowerCase().replace(/[^a-z]/g, "");
+  const cancelledToday = cancelledTodayCount ?? 0;
+  const noShowToday = noShowTodayCount ?? 0;
+  const activeBarbers = activeBarbersCount ?? 0;
+  const bookedBarbersToday = new Set(
+    todayBarberBookings.map((row) => row.barber_id).filter(Boolean),
+  ).size;
+  const barberUtilization = activeBarbers
+    ? Math.round((bookedBarbersToday / activeBarbers) * 100)
+    : 0;
+
+  const todayCashSales = todayPayments
+    .filter((ticket) => normalizePaymentMethod(ticket.payment_method) === "cash")
+    .reduce((sum, ticket) => sum + (ticket.total_amount ?? 0), 0);
+  const todayEwalletSales = todayPayments
+    .filter((ticket) => normalizePaymentMethod(ticket.payment_method) === "ewallet")
+    .reduce((sum, ticket) => sum + (ticket.total_amount ?? 0), 0);
 
   const rangeSummaryMap = new Map<
     string,
@@ -436,42 +405,6 @@ export default async function Page() {
     }),
   );
 
-  const serviceMap = new Map<
-    string,
-    { ticketIds: Set<string>; revenue: number }
-  >();
-  salesTickets.forEach((ticket) => {
-    ticket.ticket_items?.forEach((item) => {
-      const service = Array.isArray(item.services)
-        ? (item.services[0] ?? null)
-        : (item.services ?? null);
-      const name = service?.name?.trim();
-      if (!name) {
-        return;
-      }
-      const qty = item.qty ?? 0;
-      const price =
-        typeof item.unit_price === "number"
-          ? item.unit_price
-          : Number(service?.base_price ?? 0);
-      const current = serviceMap.get(name) ?? {
-        ticketIds: new Set<string>(),
-        revenue: 0,
-      };
-      current.ticketIds.add(ticket.id);
-      current.revenue += qty * price;
-      serviceMap.set(name, current);
-    });
-  });
-  const topServices = Array.from(serviceMap.entries())
-    .map(([name, values]) => ({
-      name,
-      ticketCount: values.ticketIds.size,
-      revenue: values.revenue,
-    }))
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
-
   return (
     <AdminShell title="Dashboard">
       <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
@@ -541,129 +474,69 @@ export default async function Page() {
           dataYears={dataYears}
         />
       </div>
-      <div className="px-4 lg:px-6">
+      <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-border/60 bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Top services</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Best selling services this month.
+              Booking outcomes today
             </CardDescription>
+            <CardTitle className="text-2xl text-foreground">
+              {cancelledToday + noShowToday}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {topServices.length === 0 ? (
-              <p className="text-muted-foreground">No services data yet.</p>
-            ) : (
-              topServices.map((service) => (
-                <div
-                  key={service.name}
-                  className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/50 px-3 py-2"
-                >
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {service.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {service.ticketCount} tickets
-                    </p>
-                  </div>
-                  <span className="text-muted-foreground">
-                    {formatCurrency(service.revenue)}
-                  </span>
-                </div>
-              ))
-            )}
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            <p>Cancelled: {cancelledToday}</p>
+            <p>No-show: {noShowToday}</p>
           </CardContent>
         </Card>
-      </div>
-      <div className="px-4 lg:px-6">
+
         <Card className="border-border/60 bg-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Recent tickets</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Last 10 tickets created today.
+              Barber utilization today
             </CardDescription>
+            <CardTitle className="text-2xl text-foreground">
+              {barberUtilization}%
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
-            {recentTickets.length === 0 ? (
-              <div className="px-6 pb-6 text-sm text-muted-foreground">
-                No tickets yet for today.
-              </div>
+          <CardContent className="text-sm text-muted-foreground">
+            {bookedBarbersToday}/{activeBarbers} active barbers had bookings.
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card">
+          <CardHeader>
+            <CardDescription className="text-muted-foreground">
+              Payment split today
+            </CardDescription>
+            <CardTitle className="text-2xl text-foreground">
+              {formatCurrency(totalSalesToday)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            <p>Cash: {formatCurrency(todayCashSales)}</p>
+            <p>E-wallet: {formatCurrency(todayEwalletSales)}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card">
+          <CardHeader>
+            <CardDescription className="text-muted-foreground">
+              Low stock alert
+            </CardDescription>
+            <CardTitle className="text-2xl text-foreground">
+              {lowStockProducts.length}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            {lowStockProducts.length > 0 ? (
+              lowStockProducts.slice(0, 2).map((product) => (
+                <p key={product.id}>
+                  {product.name ?? "Product"} (stock {product.stock_qty ?? 0})
+                </p>
+              ))
             ) : (
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
-                <Table>
-                  <TableHeader className="bg-muted/40">
-                    <TableRow className="border-border/60">
-                      <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Time
-                      </TableHead>
-                      <TableHead className="w-[20%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Ticket
-                      </TableHead>
-                      <TableHead className="w-[28%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Barber
-                      </TableHead>
-                      <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Total
-                      </TableHead>
-                      <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Status
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentTickets.map((ticket) => {
-                      const barberName =
-                        [ticket.barber?.first_name, ticket.barber?.last_name]
-                          .filter(Boolean)
-                          .join(" ") || "-";
-                      const statusTone = getStatusTone(ticket.payment_status);
-                      const href = `/tickets/${ticket.id}`;
-                      return (
-                        <TableRow
-                          key={ticket.id}
-                          className="bg-background hover:bg-muted/50"
-                        >
-                          <TableCell className="px-4 py-3 text-muted-foreground">
-                            <Link href={href} className="block w-full">
-                              {formatTime(ticket.created_at)}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 font-semibold text-foreground">
-                            <Link href={href} className="block w-full">
-                              {formatShortTicketId(ticket.ticket_no, ticket.id)}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-foreground">
-                            <Link href={href} className="block w-full">
-                              {barberName}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-foreground">
-                            <Link href={href} className="block w-full">
-                              {ticket.total_amount === null
-                                ? "-"
-                                : formatCurrency(ticket.total_amount)}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
-                            <Link href={href} className="block w-full">
-                              <Badge
-                                variant="outline"
-                                className={`gap-2 ${statusTone.badge}`}
-                              >
-                                <span
-                                  className={`size-2 rounded-full ${statusTone.dot}`}
-                                />
-                                {statusTone.label}
-                              </Badge>
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+              <p>No low stock items.</p>
             )}
           </CardContent>
         </Card>

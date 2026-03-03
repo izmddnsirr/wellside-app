@@ -130,15 +130,15 @@ type SidebarUser = {
 
 type AppSidebarClientProps = React.ComponentProps<typeof Sidebar> & {
   user: SidebarUser;
-  scheduledCount?: number;
+  activeBookingsCount?: number;
 };
 
 export function AppSidebarClient({
   user,
-  scheduledCount = 0,
+  activeBookingsCount = 0,
   ...props
 }: AppSidebarClientProps) {
-  const hasScheduled = scheduledCount > 0;
+  const hasActiveBookings = activeBookingsCount > 0;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -179,7 +179,20 @@ export function AppSidebarClient({
               ...data.navMain[0],
               items: data.navMain[0].items.map((item) =>
                 item.title === "Bookings"
-                  ? { ...item, notification: hasScheduled }
+                  ? {
+                      ...item,
+                      notification: hasActiveBookings,
+                      notificationCount: activeBookingsCount,
+                      items: item.items?.map((child) =>
+                        child.title === "Active"
+                          ? {
+                              ...child,
+                              notification: hasActiveBookings,
+                              notificationCount: activeBookingsCount,
+                            }
+                          : child,
+                      ),
+                    }
                   : item
               ),
             },
