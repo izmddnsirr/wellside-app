@@ -576,7 +576,7 @@ export default async function Page({ searchParams }: ReportPageProps) {
           </section>
 
           <Tabs defaultValue="daily" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 sm:w-[360px]">
+          <TabsList className="grid w-full grid-cols-3 sm:w-90">
             <TabsTrigger value="daily">Daily</TabsTrigger>
             <TabsTrigger value="weekly">Weekly</TabsTrigger>
             <TabsTrigger value="monthly">Monthly</TabsTrigger>
