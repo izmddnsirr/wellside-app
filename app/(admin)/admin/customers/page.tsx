@@ -33,17 +33,16 @@ export default async function Page() {
   const supabase = await createAdminClient();
   const { data: customers, error } = await supabase
     .from("profiles")
-    .select("id, first_name, last_name, email, phone, is_active, created_at")
-    .eq("role", "customer")
+    .select(
+      "id, first_name, last_name, email, phone, is_active, created_at, role",
+    )
     .order("created_at", { ascending: false });
   const errorMessage = error
     ? "Failed to load customers. Please try again."
     : null;
 
   return (
-    <AdminShell
-      title="Customers"
-    >
+    <AdminShell title="Customers">
       <div className="px-4 lg:px-6">
         <CustomersCard
           customers={customers ?? []}

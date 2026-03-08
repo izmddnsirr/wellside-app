@@ -40,6 +40,7 @@ type Customer = {
   phone: string | null;
   is_active: boolean | null;
   created_at: string | null;
+  role: string | null;
 };
 
 type CustomersCardProps = {
@@ -62,11 +63,13 @@ const formatDate = (value: string | null) => {
 const getStatusTone = (isActive: boolean | null) =>
   isActive
     ? {
-        badge: "bg-emerald-100 text-emerald-900 border-emerald-200",
+        badge:
+          "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
         dot: "bg-emerald-500",
       }
     : {
-        badge: "bg-rose-100 text-rose-900 border-rose-200",
+        badge:
+          "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
         dot: "bg-rose-500",
       };
 
@@ -78,7 +81,7 @@ export function CustomersCard({
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all" });
-  const [sort, setSort] = useState("name_asc");
+  const [sort, setSort] = useState("joined_desc");
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -112,7 +115,7 @@ export function CustomersCard({
     };
 
     const filtered = customers.filter(
-      (customer) => matchesSearch(customer) && matchesStatus(customer)
+      (customer) => matchesSearch(customer) && matchesStatus(customer),
     );
 
     const sorted = filtered.slice();
@@ -217,10 +220,13 @@ export function CustomersCard({
                 <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Role
+                </TableHead>
                 <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Joined
                 </TableHead>
-                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[10%] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Actions
                 </TableHead>
               </TableRow>
@@ -234,7 +240,10 @@ export function CustomersCard({
                     .join(" ") || "-";
                 const statusValue = customer.is_active ? "active" : "inactive";
                 return (
-                  <TableRow key={customer.id} className="bg-background hover:bg-muted/50">
+                  <TableRow
+                    key={customer.id}
+                    className="bg-background hover:bg-muted/50"
+                  >
                     <TableCell className="w-[20%] px-4 py-3 font-semibold text-foreground">
                       {customerName}
                     </TableCell>
@@ -245,102 +254,119 @@ export function CustomersCard({
                       {customer.phone || "-"}
                     </TableCell>
                     <TableCell className="w-[12%] px-4 py-3">
-                      <Badge variant="outline" className={`gap-2 ${tone.badge}`}>
-                        <span className={`size-2 rounded-full ${tone.dot}`} />
+                      <Badge variant="outline" className={tone.badge}>
                         {customer.is_active ? "Active" : "Inactive"}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="w-[10%] px-4 py-3 capitalize text-muted-foreground">
+                      {customer.role || "-"}
                     </TableCell>
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {formatDate(customer.created_at)}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Pencil />
-                            Manage
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Manage customer</DialogTitle>
-                            <DialogDescription>
-                              Review customer profile and status.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 text-sm text-foreground">
-                            <div className="rounded-xl border border-border bg-muted/30 p-4">
-                              <p className="text-base font-semibold text-foreground">
-                                {customerName}
-                              </p>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {customer.email || "-"}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {customer.phone || "-"}
-                              </p>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="flex justify-end">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <Pencil />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Manage customer</DialogTitle>
+                              <DialogDescription>
+                                Review customer profile and status.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 text-sm text-foreground">
+                              <div className="rounded-xl border border-border bg-muted/30 p-4">
+                                <p className="text-base font-semibold text-foreground">
+                                  {customerName}
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                  {customer.email || "-"}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {customer.phone || "-"}
+                                </p>
+                              </div>
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Status
+                                  </p>
+                                  <Badge
+                                    variant="outline"
+                                    className={tone.badge}
+                                  >
+                                    {customer.is_active ? "Active" : "Inactive"}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">
+                                    Joined
+                                  </p>
+                                  <p className="font-medium text-foreground">
+                                    {formatDate(customer.created_at)}
+                                  </p>
+                                </div>
+                              </div>
                               <div className="space-y-1">
                                 <p className="text-xs text-muted-foreground">
-                                  Status
+                                  Customer ID
                                 </p>
-                                <Badge
-                                  variant="outline"
-                                  className={`gap-2 ${tone.badge}`}
+                                <p className="break-all text-xs font-medium text-foreground">
+                                  {customer.id}
+                                </p>
+                              </div>
+                            </div>
+                            <form
+                              action={updateCustomerStatus}
+                              className="space-y-4"
+                            >
+                              <input
+                                type="hidden"
+                                name="id"
+                                value={customer.id}
+                              />
+                              <div className="space-y-2">
+                                <Label
+                                  htmlFor={`customer-status-${customer.id}`}
                                 >
-                                  <span className={`size-2 rounded-full ${tone.dot}`} />
-                                  {customer.is_active ? "Active" : "Inactive"}
-                                </Badge>
+                                  Status
+                                </Label>
+                                <Select
+                                  name="is_active"
+                                  defaultValue={statusValue}
+                                >
+                                  <SelectTrigger
+                                    id={`customer-status-${customer.id}`}
+                                  >
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="active">
+                                      Active
+                                    </SelectItem>
+                                    <SelectItem value="inactive">
+                                      Inactive
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">
-                                  Joined
-                                </p>
-                                <p className="font-medium text-foreground">
-                                  {formatDate(customer.created_at)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">
-                                Customer ID
-                              </p>
-                              <p className="break-all text-xs font-medium text-foreground">
-                                {customer.id}
-                              </p>
-                            </div>
-                          </div>
-                          <form action={updateCustomerStatus} className="space-y-4">
-                            <input type="hidden" name="id" value={customer.id} />
-                            <div className="space-y-2">
-                              <Label htmlFor={`customer-status-${customer.id}`}>
-                                Status
-                              </Label>
-                              <Select
-                                name="is_active"
-                                defaultValue={statusValue}
-                              >
-                                <SelectTrigger id={`customer-status-${customer.id}`}>
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="active">Active</SelectItem>
-                                  <SelectItem value="inactive">Inactive</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <DialogFooter>
-                              <DialogClose asChild>
-                                <Button variant="ghost" type="button">
-                                  Cancel
-                                </Button>
-                              </DialogClose>
-                              <Button type="submit">Update status</Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                  <Button variant="ghost" type="button">
+                                    Cancel
+                                  </Button>
+                                </DialogClose>
+                                <Button type="submit">Update status</Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

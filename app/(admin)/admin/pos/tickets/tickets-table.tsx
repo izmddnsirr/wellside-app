@@ -39,7 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Search, Ticket } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Search, Ticket } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useRouter } from "next/navigation";
@@ -149,18 +149,21 @@ const formatDayGroupLabel = (value: string | null) => {
 const getStatusTone = (status: string) => {
   if (status === "paid") {
     return {
-      badge: "bg-emerald-100 text-emerald-900 border-emerald-200",
+      badge:
+        "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
       dot: "bg-emerald-500",
     };
   }
   if (status === "refunded") {
     return {
-      badge: "bg-rose-100 text-rose-900 border-rose-200",
+      badge:
+        "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
       dot: "bg-rose-500",
     };
   }
   return {
-    badge: "bg-amber-100 text-amber-900 border-amber-200",
+    badge:
+      "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
     dot: "bg-amber-500",
   };
 };
@@ -749,8 +752,8 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Total
                 </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Action
+                <TableHead className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -838,11 +841,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                         {saleTypeLabel}
                       </TableCell>
                       <TableCell className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={`gap-2 ${tone.badge}`}
-                        >
-                          <span className={`size-2 rounded-full ${tone.dot}`} />
+                        <Badge variant="outline" className={tone.badge}>
                           {toTitleCase(status)}
                         </Badge>
                       </TableCell>
@@ -853,177 +852,183 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                         {formatMoney(ticket.total_amount)}
                       </TableCell>
                       <TableCell className="px-4 py-3">
-                        <Sheet>
-                          <SheetTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              View
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent className="p-0">
-                            <div className="flex h-full flex-col bg-muted/10">
-                              <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
-                                <SheetTitle className="text-base font-semibold text-foreground">
-                                  {ticket.ticket_no ?? ticket.id}
-                                </SheetTitle>
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                  <Badge
-                                    variant="outline"
-                                    className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
-                                  >
-                                    {barberLabel}
-                                  </Badge>
-                                  <Badge
-                                    variant="outline"
-                                    className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
-                                  >
-                                    <span
-                                      className={`size-2 rounded-full ${tone.dot}`}
-                                    />
-                                    {toTitleCase(status)}
-                                  </Badge>
-                                </div>
-                              </SheetHeader>
-                              <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
-                                <div className="rounded-2xl border border-border bg-background">
-                                  <div className="px-4 py-4">
-                                    <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      <span>Items</span>
-                                      <span>Amount</span>
-                                    </div>
-                                    {itemLines.length > 0 ? (
-                                      <ul className="mt-3 divide-y divide-dashed divide-border">
-                                        {itemLines.map((item) => (
-                                          <li
-                                            key={item.key}
-                                            className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                                          >
-                                            <div className="min-w-0 space-y-1">
-                                              <p className="font-medium text-foreground">
-                                                {item.label}
-                                              </p>
-                                              <p className="text-xs text-muted-foreground">
-                                                x{item.qty} ·{" "}
-                                                {item.price !== null
-                                                  ? formatMoney(item.price)
+                        <div className="flex justify-end">
+                          <Sheet>
+                            <SheetTrigger asChild>
+                              <Button size="icon" variant="outline">
+                                <Eye />
+                              </Button>
+                            </SheetTrigger>
+                            <SheetContent className="p-0">
+                              <div className="flex h-full flex-col bg-muted/10">
+                                <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
+                                  <SheetTitle className="text-base font-semibold text-foreground">
+                                    {ticket.ticket_no ?? ticket.id}
+                                  </SheetTitle>
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    <Badge
+                                      variant="outline"
+                                      className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
+                                    >
+                                      {barberLabel}
+                                    </Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className={`h-6 px-2 text-[11px] ${tone.badge}`}
+                                    >
+                                      {toTitleCase(status)}
+                                    </Badge>
+                                  </div>
+                                </SheetHeader>
+                                <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
+                                  <div className="rounded-2xl border border-border bg-background">
+                                    <div className="px-4 py-4">
+                                      <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <span>Items</span>
+                                        <span>Amount</span>
+                                      </div>
+                                      {itemLines.length > 0 ? (
+                                        <ul className="mt-3 divide-y divide-dashed divide-border">
+                                          {itemLines.map((item) => (
+                                            <li
+                                              key={item.key}
+                                              className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                                            >
+                                              <div className="min-w-0 space-y-1">
+                                                <p className="font-medium text-foreground">
+                                                  {item.label}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  x{item.qty} ·{" "}
+                                                  {item.price !== null
+                                                    ? formatMoney(item.price)
+                                                    : "-"}
+                                                </p>
+                                              </div>
+                                              <p className="text-sm font-semibold text-foreground">
+                                                {item.lineTotal !== null
+                                                  ? formatMoney(item.lineTotal)
                                                   : "-"}
                                               </p>
-                                            </div>
-                                            <p className="text-sm font-semibold text-foreground">
-                                              {item.lineTotal !== null
-                                                ? formatMoney(item.lineTotal)
-                                                : "-"}
-                                            </p>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    ) : (
-                                      <p className="mt-3 text-sm font-medium text-foreground">
-                                        -
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="border-t border-dashed border-border px-4 py-4">
-                                    <div className="space-y-2 text-sm">
-                                      <div className="flex items-center justify-between text-muted-foreground">
-                                        <span>Subtotal</span>
-                                        <span>{formatMoney(totalAmount)}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between text-base font-semibold text-foreground">
-                                        <span>Total</span>
-                                        <span>{formatMoney(totalAmount)}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      ) : (
+                                        <p className="mt-3 text-sm font-medium text-foreground">
+                                          -
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="border-t border-dashed border-border px-4 py-4">
+                                      <div className="space-y-2 text-sm">
+                                        <div className="flex items-center justify-between text-muted-foreground">
+                                          <span>Subtotal</span>
+                                          <span>
+                                            {formatMoney(totalAmount)}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-base font-semibold text-foreground">
+                                          <span>Total</span>
+                                          <span>
+                                            {formatMoney(totalAmount)}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                  <div className="border-t border-dashed border-border px-4 py-4">
-                                    <div className="space-y-3 text-sm">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">
-                                          Method
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {isPaid
-                                            ? toTitleCase(ticket.payment_method)
-                                            : "-"}
-                                        </span>
-                                      </div>
-                                      {isPaid && isCash ? (
+                                    <div className="border-t border-dashed border-border px-4 py-4">
+                                      <div className="space-y-3 text-sm">
                                         <div className="flex items-center justify-between">
                                           <span className="text-muted-foreground">
-                                            Cash received
+                                            Method
                                           </span>
                                           <span className="font-medium text-foreground">
-                                            {formatMoney(cashReceived)}
+                                            {isPaid
+                                              ? toTitleCase(
+                                                  ticket.payment_method,
+                                                )
+                                              : "-"}
                                           </span>
                                         </div>
-                                      ) : null}
-                                      {isPaid ? (
-                                        <div className="flex items-center justify-between font-semibold text-foreground">
-                                          <span>Balance</span>
-                                          <span>
-                                            {formatMoney(balanceAmount)}
-                                          </span>
+                                        {isPaid && isCash ? (
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">
+                                              Cash received
+                                            </span>
+                                            <span className="font-medium text-foreground">
+                                              {formatMoney(cashReceived)}
+                                            </span>
+                                          </div>
+                                        ) : null}
+                                        {isPaid ? (
+                                          <div className="flex items-center justify-between font-semibold text-foreground">
+                                            <span>Balance</span>
+                                            <span>
+                                              {formatMoney(balanceAmount)}
+                                            </span>
+                                          </div>
+                                        ) : null}
+                                        <div className="space-y-1">
+                                          <p className="text-xs text-muted-foreground">
+                                            Paid at
+                                          </p>
+                                          <p className="font-medium text-foreground">
+                                            {isPaid
+                                              ? formatTimeValue(ticket.paid_at)
+                                              : "-"}
+                                          </p>
                                         </div>
-                                      ) : null}
-                                      <div className="space-y-1">
-                                        <p className="text-xs text-muted-foreground">
-                                          Paid at
-                                        </p>
-                                        <p className="font-medium text-foreground">
-                                          {isPaid
-                                            ? formatTimeValue(ticket.paid_at)
-                                            : "-"}
-                                        </p>
                                       </div>
                                     </div>
+                                    <div className="border-t border-dashed border-border px-4 py-3">
+                                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        Ticket ID
+                                      </p>
+                                      <p className="mt-1 break-all text-xs font-medium text-foreground">
+                                        {ticket.id}
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div className="border-t border-dashed border-border px-4 py-3">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Ticket ID
-                                    </p>
-                                    <p className="mt-1 break-all text-xs font-medium text-foreground">
-                                      {ticket.id}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                                  {isPaid ? (
+                                  <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                                    {isPaid ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setRefundTarget({
+                                            id: ticket.id,
+                                            label:
+                                              ticket.ticket_no ?? ticket.id,
+                                            total: totalAmount,
+                                          });
+                                          setRefundDialogOpen(true);
+                                          setRefundError(null);
+                                        }}
+                                        disabled={refundLoading}
+                                      >
+                                        Refund
+                                      </Button>
+                                    ) : null}
                                     <Button
-                                      variant="outline"
+                                      variant="destructive"
                                       size="sm"
                                       onClick={() => {
-                                        setRefundTarget({
+                                        setDeleteTarget({
                                           id: ticket.id,
                                           label: ticket.ticket_no ?? ticket.id,
-                                          total: totalAmount,
                                         });
-                                        setRefundDialogOpen(true);
-                                        setRefundError(null);
+                                        setDeleteDialogOpen(true);
+                                        setDeleteError(null);
                                       }}
-                                      disabled={refundLoading}
+                                      disabled={deleteLoading}
                                     >
-                                      Refund
+                                      Delete ticket
                                     </Button>
-                                  ) : null}
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => {
-                                      setDeleteTarget({
-                                        id: ticket.id,
-                                        label: ticket.ticket_no ?? ticket.id,
-                                      });
-                                      setDeleteDialogOpen(true);
-                                      setDeleteError(null);
-                                    }}
-                                    disabled={deleteLoading}
-                                  >
-                                    Delete ticket
-                                  </Button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </SheetContent>
-                        </Sheet>
+                            </SheetContent>
+                          </Sheet>
+                        </div>
                       </TableCell>
                     </TableRow>
                   </Fragment>

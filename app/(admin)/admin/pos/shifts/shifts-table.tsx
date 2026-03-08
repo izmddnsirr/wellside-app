@@ -39,7 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronLeft, ChevronRight, Clock, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Pencil, Search } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteShift } from "./actions";
@@ -143,18 +143,21 @@ const isClosedStatus = (status: string | null, endAt: string | null) => {
 const getStatusTone = (status: string | null, endAt: string | null) => {
   if (isOpenStatus(status, endAt)) {
     return {
-      badge: "bg-emerald-100 text-emerald-900 border-emerald-200",
+      badge:
+        "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
       dot: "bg-emerald-500",
     };
   }
   if (isClosedStatus(status, endAt)) {
     return {
-      badge: "bg-rose-100 text-rose-900 border-rose-200",
+      badge:
+        "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
       dot: "bg-rose-500",
     };
   }
   return {
-    badge: "bg-amber-100 text-amber-900 border-amber-200",
+    badge:
+      "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
     dot: "bg-amber-500",
   };
 };
@@ -579,8 +582,8 @@ export function ShiftsTable({
                 <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Action
+                <TableHead className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -655,185 +658,182 @@ export function ShiftsTable({
                         {formatMoney(salesByShift[shift.id] ?? 0)}
                       </TableCell>
                       <TableCell className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={`gap-2 ${tone.badge}`}
-                        >
-                          <span className={`size-2 rounded-full ${tone.dot}`} />
+                        <Badge variant="outline" className={tone.badge}>
                           {formatStatusLabel(shift.status, shift.end_at)}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-4 py-3">
-                        <Sheet>
-                          <SheetTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              Manage
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent className="p-0">
-                            <div className="flex h-full flex-col bg-muted/10">
-                              <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
-                                <SheetTitle className="text-base font-semibold text-foreground">
-                                  {shiftTitle}
-                                </SheetTitle>
-                                <SheetDescription className="text-xs text-muted-foreground">
-                                  Shift ID: {shift.id}
-                                </SheetDescription>
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                  <Badge
-                                    variant="outline"
-                                    className={`h-6 gap-2 px-2 text-[11px] ${tone.badge}`}
-                                  >
-                                    <span
-                                      className={`size-2 rounded-full ${tone.dot}`}
-                                    />
-                                    {formatStatusLabel(
-                                      shift.status,
-                                      shift.end_at,
-                                    )}
-                                  </Badge>
-                                </div>
-                              </SheetHeader>
-                              <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
-                                <div className="space-y-6">
-                                  <div className="space-y-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Shift details
-                                    </p>
-                                    <div className="divide-y divide-border/60 text-sm">
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Shift code
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {shiftCode ?? "-"}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Opened
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {formatDateTime(shift.start_at)}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Closed
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {closedAt}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Opened by
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {openedBy}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Sales
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {salesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Refunded
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {refundedSalesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Cash
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {cashSalesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          E-wallet
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {ewalletSalesTotal}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between py-2">
-                                        <span className="text-muted-foreground">
-                                          Total tickets
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {totalTickets}
-                                        </span>
-                                      </div>
-                                    </div>
+                        <div className="flex justify-end">
+                          <Sheet>
+                            <SheetTrigger asChild>
+                              <Button size="icon" variant="outline">
+                                <Pencil />
+                              </Button>
+                            </SheetTrigger>
+                            <SheetContent className="p-0">
+                              <div className="flex h-full flex-col bg-muted/10">
+                                <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
+                                  <SheetTitle className="text-base font-semibold text-foreground">
+                                    {shiftTitle}
+                                  </SheetTitle>
+                                  <SheetDescription className="text-xs text-muted-foreground">
+                                    Shift ID: {shift.id}
+                                  </SheetDescription>
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    <Badge
+                                      variant="outline"
+                                      className={`h-6 px-2 text-[11px] ${tone.badge}`}
+                                    >
+                                      {formatStatusLabel(
+                                        shift.status,
+                                        shift.end_at,
+                                      )}
+                                    </Badge>
                                   </div>
-                                  <div className="space-y-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      Items sold
-                                    </p>
-                                    {shiftItems.length > 0 ? (
+                                </SheetHeader>
+                                <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
+                                  <div className="space-y-6">
+                                    <div className="space-y-2">
+                                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        Shift details
+                                      </p>
                                       <div className="divide-y divide-border/60 text-sm">
-                                        {shiftItems.map((item) => (
-                                          <div
-                                            key={item.key}
-                                            className="flex items-start justify-between gap-4 py-2"
-                                          >
-                                            <div className="min-w-0">
-                                              <p className="font-medium text-foreground">
-                                                {item.label}
-                                              </p>
-                                              <p className="text-xs text-muted-foreground">
-                                                {item.type === "service"
-                                                  ? "Service"
-                                                  : "Product"}{" "}
-                                                - x{item.qty}
-                                              </p>
-                                            </div>
-                                            <span className="font-medium text-foreground">
-                                              {formatMoney(item.total)}
-                                            </span>
-                                          </div>
-                                        ))}
-                                        <div className="flex items-center justify-between py-2 font-semibold text-foreground">
-                                          <span>Total</span>
-                                          <span>{formatMoney(itemsTotal)}</span>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Shift code
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {shiftCode ?? "-"}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Opened
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {formatDateTime(shift.start_at)}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Closed
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {closedAt}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Opened by
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {openedBy}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Sales
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {salesTotal}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Refunded
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {refundedSalesTotal}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Cash
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {cashSalesTotal}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            E-wallet
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {ewalletSalesTotal}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-2">
+                                          <span className="text-muted-foreground">
+                                            Total tickets
+                                          </span>
+                                          <span className="font-medium text-foreground">
+                                            {totalTickets}
+                                          </span>
                                         </div>
                                       </div>
-                                    ) : (
-                                      <p className="text-sm text-muted-foreground">
-                                        No items recorded for this shift.
+                                    </div>
+                                    <div className="space-y-2">
+                                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        Items sold
                                       </p>
-                                    )}
-                                  </div>
-                                  <div className="pt-2">
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => {
-                                        setDeleteTarget({
-                                          id: shift.id,
-                                          title: shiftTitle,
-                                        });
-                                        setDeleteDialogOpen(true);
-                                        setDeleteError(null);
-                                      }}
-                                    >
-                                      Delete shift
-                                    </Button>
+                                      {shiftItems.length > 0 ? (
+                                        <div className="divide-y divide-border/60 text-sm">
+                                          {shiftItems.map((item) => (
+                                            <div
+                                              key={item.key}
+                                              className="flex items-start justify-between gap-4 py-2"
+                                            >
+                                              <div className="min-w-0">
+                                                <p className="font-medium text-foreground">
+                                                  {item.label}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {item.type === "service"
+                                                    ? "Service"
+                                                    : "Product"}{" "}
+                                                  - x{item.qty}
+                                                </p>
+                                              </div>
+                                              <span className="font-medium text-foreground">
+                                                {formatMoney(item.total)}
+                                              </span>
+                                            </div>
+                                          ))}
+                                          <div className="flex items-center justify-between py-2 font-semibold text-foreground">
+                                            <span>Total</span>
+                                            <span>
+                                              {formatMoney(itemsTotal)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                          No items recorded for this shift.
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="pt-2">
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => {
+                                          setDeleteTarget({
+                                            id: shift.id,
+                                            title: shiftTitle,
+                                          });
+                                          setDeleteDialogOpen(true);
+                                          setDeleteError(null);
+                                        }}
+                                      >
+                                        Delete shift
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          </SheetContent>
-                        </Sheet>
+                            </SheetContent>
+                          </Sheet>
+                        </div>
                       </TableCell>
                     </TableRow>
                   </Fragment>

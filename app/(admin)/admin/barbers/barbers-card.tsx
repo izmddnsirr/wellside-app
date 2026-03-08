@@ -86,11 +86,13 @@ const formatWorkingTime = (value: string | null) => {
 const getStatusTone = (isActive: boolean | null) =>
   isActive
     ? {
-        badge: "bg-emerald-100 text-emerald-900 border-emerald-200",
+        badge:
+          "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
         dot: "bg-emerald-500",
       }
     : {
-        badge: "bg-rose-100 text-rose-900 border-rose-200",
+        badge:
+          "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
         dot: "bg-rose-500",
       };
 
@@ -712,7 +714,7 @@ export function BarbersCard({
                 <TableHead className="w-[8%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Joined
                 </TableHead>
-                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[10%] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Actions
                 </TableHead>
               </TableRow>
@@ -746,11 +748,7 @@ export function BarbersCard({
                       {barber.barber_level || "-"}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3">
-                      <Badge
-                        variant="outline"
-                        className={`gap-2 ${tone.badge}`}
-                      >
-                        <span className={`size-2 rounded-full ${tone.dot}`} />
+                      <Badge variant="outline" className={tone.badge}>
                         {barber.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
@@ -758,14 +756,15 @@ export function BarbersCard({
                       {formatDate(barber.created_at)}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openUpdateDialog(barber)}
-                      >
-                        <Pencil />
-                        Manage
-                      </Button>
+                      <div className="flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => openUpdateDialog(barber)}
+                        >
+                          <Pencil />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

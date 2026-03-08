@@ -86,34 +86,39 @@ const getStockStatus = (stockQty: number | null, isActive: boolean) => {
   if (!isActive) {
     return {
       label: "Deactivated",
-      className: "bg-slate-100 text-slate-900 border-slate-200",
+      className:
+        "bg-slate-100 text-slate-900 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
       dot: "bg-slate-500",
     };
   }
   if (stockQty === null || Number.isNaN(stockQty)) {
     return {
       label: "Active",
-      className: "bg-blue-100 text-blue-900 border-blue-200",
+      className:
+        "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
       dot: "bg-blue-500",
     };
   }
   if (stockQty <= 0) {
     return {
       label: "Out of stock",
-      className: "bg-rose-100 text-rose-900 border-rose-200",
+      className:
+        "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
       dot: "bg-rose-500",
     };
   }
   if (stockQty <= 5) {
     return {
       label: "Low stock",
-      className: "bg-amber-100 text-amber-900 border-amber-200",
+      className:
+        "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
       dot: "bg-amber-500",
     };
   }
   return {
     label: "In stock",
-    className: "bg-emerald-100 text-emerald-900 border-emerald-200",
+    className:
+      "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
     dot: "bg-emerald-500",
   };
 };
@@ -258,7 +263,7 @@ export function ProductsCard({
     };
 
     const filtered = products.filter(
-      (product) => matchesSearch(product) && matchesStatus(product)
+      (product) => matchesSearch(product) && matchesStatus(product),
     );
 
     const sorted = filtered.slice();
@@ -319,7 +324,7 @@ export function ProductsCard({
                 setFilters((prev) => ({ ...prev, status: value }))
               }
             >
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="h-9 w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -333,7 +338,7 @@ export function ProductsCard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-9 w-[200px]">
+              <SelectTrigger className="h-9 w-50">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
@@ -341,10 +346,18 @@ export function ProductsCard({
                 <SelectItem value="sku_desc">SKU: Z {"->"} A</SelectItem>
                 <SelectItem value="name_asc">Name: A {"->"} Z</SelectItem>
                 <SelectItem value="name_desc">Name: Z {"->"} A</SelectItem>
-                <SelectItem value="price_desc">Price: High {"->"} Low</SelectItem>
-                <SelectItem value="price_asc">Price: Low {"->"} High</SelectItem>
-                <SelectItem value="stock_desc">Stock: High {"->"} Low</SelectItem>
-                <SelectItem value="stock_asc">Stock: Low {"->"} High</SelectItem>
+                <SelectItem value="price_desc">
+                  Price: High {"->"} Low
+                </SelectItem>
+                <SelectItem value="price_asc">
+                  Price: Low {"->"} High
+                </SelectItem>
+                <SelectItem value="stock_desc">
+                  Stock: High {"->"} Low
+                </SelectItem>
+                <SelectItem value="stock_asc">
+                  Stock: Low {"->"} High
+                </SelectItem>
               </SelectContent>
             </Select>
             <div className="relative w-full sm:w-64">
@@ -370,7 +383,9 @@ export function ProductsCard({
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Add product</DialogTitle>
-                  <DialogDescription>Create a new product entry.</DialogDescription>
+                  <DialogDescription>
+                    Create a new product entry.
+                  </DialogDescription>
                 </DialogHeader>
                 <form action={createProduct} className="space-y-4">
                   <input type="hidden" name="is_active" value="on" />
@@ -389,9 +404,15 @@ export function ProductsCard({
               size="icon"
               onClick={() => setShowInactive((prev) => !prev)}
               aria-label={
-                showInactive ? "Show active products" : "Show deactivated products"
+                showInactive
+                  ? "Show active products"
+                  : "Show deactivated products"
               }
-              title={showInactive ? "Show active products" : "Show deactivated products"}
+              title={
+                showInactive
+                  ? "Show active products"
+                  : "Show deactivated products"
+              }
             >
               {showInactive ? <Eye /> : <EyeOff />}
             </Button>
@@ -420,7 +441,7 @@ export function ProductsCard({
                 <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[16%] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Actions
                 </TableHead>
               </TableRow>
@@ -429,11 +450,14 @@ export function ProductsCard({
               {filteredProducts.map((product) => {
                 const status = getStockStatus(
                   product.stock_qty,
-                  product.is_active
+                  product.is_active,
                 );
                 const isActive = product.is_active;
                 return (
-                  <TableRow key={product.id} className="bg-background hover:bg-muted/50">
+                  <TableRow
+                    key={product.id}
+                    className="bg-background hover:bg-muted/50"
+                  >
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {product.sku || "-"}
                     </TableCell>
@@ -447,104 +471,125 @@ export function ProductsCard({
                       {formatStock(product.stock_qty)}
                     </TableCell>
                     <TableCell className="w-[16%] px-4 py-3">
-                      <Badge variant="outline" className={`gap-2 ${status.className}`}>
-                        <span className={`size-2 rounded-full ${status.dot}`} />
+                      <Badge variant="outline" className={status.className}>
                         {status.label}
                       </Badge>
                     </TableCell>
                     <TableCell className="w-[20%] px-4 py-3">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Pencil />
-                            Manage
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Manage product</DialogTitle>
-                            <DialogDescription>
-                              {isActive
-                                ? "Update details or deactivate this product."
-                                : "Update details or reactivate this product."}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form
-                            id={`product-update-${product.id}`}
-                            action={updateProduct}
-                            className="space-y-4"
-                          >
-                            <input type="hidden" name="id" value={product.id} />
-                            <input
-                              type="hidden"
-                              name="is_active"
-                              value={product.is_active ? "on" : "off"}
-                            />
-                            <ProductFormFields product={product} />
-                          </form>
-                          <DialogFooter className="flex-row justify-end">
-                            {isActive ? (
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="destructive" type="button">
-                                    <Trash2 />
-                                    Deactivate
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Deactivate product</DialogTitle>
-                                    <DialogDescription>
-                                      This will hide the product from the POS catalog but
-                                      keep existing tickets intact.
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="text-sm text-foreground">
-                                    <p>
-                                      Product:{" "}
-                                      <span className="font-medium text-foreground">
-                                        {product.name}
-                                      </span>
-                                    </p>
-                                  </div>
-                                  <form action={archiveProduct}>
-                                    <input type="hidden" name="id" value={product.id} />
-                                    <DialogFooter>
-                                      <DialogClose asChild>
-                                        <Button variant="ghost" type="button">
-                                          Cancel
-                                      </Button>
-                                    </DialogClose>
-                                      <Button variant="destructive" type="submit">
-                                        <Trash2 />
-                                        Deactivate
-                                      </Button>
-                                  </DialogFooter>
-                                </form>
-                              </DialogContent>
-                              </Dialog>
-                            ) : (
-                              <form
-                                action={reactivateProduct}
-                                className="inline-flex"
-                              >
-                                <input type="hidden" name="id" value={product.id} />
-                                <Button
-                                  type="submit"
-                                  className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300/50"
-                                >
-                                  <RefreshCw />
-                                  Reactivate
-                                </Button>
-                              </form>
-                            )}
-                            <Button type="submit" form={`product-update-${product.id}`}>
-                              <Save />
-                              Update product
+                      <div className="flex justify-end">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <Pencil />
                             </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Manage product</DialogTitle>
+                              <DialogDescription>
+                                {isActive
+                                  ? "Update details or deactivate this product."
+                                  : "Update details or reactivate this product."}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form
+                              id={`product-update-${product.id}`}
+                              action={updateProduct}
+                              className="space-y-4"
+                            >
+                              <input
+                                type="hidden"
+                                name="id"
+                                value={product.id}
+                              />
+                              <input
+                                type="hidden"
+                                name="is_active"
+                                value={product.is_active ? "on" : "off"}
+                              />
+                              <ProductFormFields product={product} />
+                            </form>
+                            <DialogFooter className="flex-row justify-end">
+                              {isActive ? (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="destructive" type="button">
+                                      <Trash2 />
+                                      Deactivate
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>
+                                        Deactivate product
+                                      </DialogTitle>
+                                      <DialogDescription>
+                                        This will hide the product from the POS
+                                        catalog but keep existing tickets
+                                        intact.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="text-sm text-foreground">
+                                      <p>
+                                        Product:{" "}
+                                        <span className="font-medium text-foreground">
+                                          {product.name}
+                                        </span>
+                                      </p>
+                                    </div>
+                                    <form action={archiveProduct}>
+                                      <input
+                                        type="hidden"
+                                        name="id"
+                                        value={product.id}
+                                      />
+                                      <DialogFooter>
+                                        <DialogClose asChild>
+                                          <Button variant="ghost" type="button">
+                                            Cancel
+                                          </Button>
+                                        </DialogClose>
+                                        <Button
+                                          variant="destructive"
+                                          type="submit"
+                                        >
+                                          <Trash2 />
+                                          Deactivate
+                                        </Button>
+                                      </DialogFooter>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
+                              ) : (
+                                <form
+                                  action={reactivateProduct}
+                                  className="inline-flex"
+                                >
+                                  <input
+                                    type="hidden"
+                                    name="id"
+                                    value={product.id}
+                                  />
+                                  <Button
+                                    type="submit"
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300/50"
+                                  >
+                                    <RefreshCw />
+                                    Reactivate
+                                  </Button>
+                                </form>
+                              )}
+                              <Button
+                                type="submit"
+                                form={`product-update-${product.id}`}
+                              >
+                                <Save />
+                                Update product
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -553,7 +598,7 @@ export function ProductsCard({
           </Table>
         </div>
       ) : (
-        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-2xl border border-border bg-background">
             <Package className="size-8 text-muted-foreground" />
           </div>
