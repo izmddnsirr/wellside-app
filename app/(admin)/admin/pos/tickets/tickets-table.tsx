@@ -505,6 +505,31 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
     return sorted;
   }, [debouncedSearch, filters, sort, tickets]);
 
+  const groupedTickets = useMemo(() => {
+    return filteredTickets.reduce<
+      Array<{
+        dayKey: string;
+        dayLabel: string;
+        tickets: TicketRow[];
+      }>
+    >((groups, ticket) => {
+      const dayKey = getDayKey(ticket.created_at);
+      const lastGroup = groups[groups.length - 1];
+
+      if (!lastGroup || lastGroup.dayKey !== dayKey) {
+        groups.push({
+          dayKey,
+          dayLabel: formatDayGroupLabel(ticket.created_at),
+          tickets: [ticket],
+        });
+        return groups;
+      }
+
+      lastGroup.tickets.push(ticket);
+      return groups;
+    }, []);
+  }, [filteredTickets]);
+
   const resetFilters = () => {
     setFilters({
       status: "all",
@@ -520,45 +545,47 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
-          <Select
-            value={filters.status}
-            onValueChange={(value) =>
-              setFilters((prev) => ({ ...prev, status: value }))
-            }
-          >
-            <SelectTrigger className="h-9 w-37.5">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="unpaid">Unpaid</SelectItem>
-              <SelectItem value="refunded">Refunded</SelectItem>
-              {hasVoidStatus ? (
-                <SelectItem value="void">Void</SelectItem>
-              ) : null}
-            </SelectContent>
-          </Select>
-          <Select value={filters.date} onValueChange={handleDateFilterChange}>
-            <SelectTrigger className="h-9 w-40">
-              <SelectValue placeholder="Date scope" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All tickets</SelectItem>
-              <SelectItem value="month">Month</SelectItem>
-              <SelectItem value="custom">Date range</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap">
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            <Select
+              value={filters.status}
+              onValueChange={(value) =>
+                setFilters((prev) => ({ ...prev, status: value }))
+              }
+            >
+              <SelectTrigger className="h-9 w-full sm:w-37.5">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="unpaid">Unpaid</SelectItem>
+                <SelectItem value="refunded">Refunded</SelectItem>
+                {hasVoidStatus ? (
+                  <SelectItem value="void">Void</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+            <Select value={filters.date} onValueChange={handleDateFilterChange}>
+              <SelectTrigger className="h-9 w-full sm:w-40">
+                <SelectValue placeholder="Date scope" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tickets</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+                <SelectItem value="custom">Date range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {filters.date === "month" ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-30 justify-between"
+                    className="h-9 w-full justify-between sm:min-w-30 sm:w-auto"
                   >
                     {formatMonthLabel(filters.month)}
                   </Button>
@@ -612,7 +639,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="px-0"
+                className="justify-start px-0 sm:justify-center"
                 onClick={() =>
                   setFilters((prev) => ({
                     ...prev,
@@ -626,12 +653,12 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
             </div>
           ) : null}
           {filters.date === "custom" ? (
-            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 min-w-35 justify-between text-left"
+                    className="h-9 w-full justify-between text-left sm:min-w-35 sm:w-auto"
                   >
                     {range?.from ? formatRangeLabel(range) : "Pick date range"}
                   </Button>
@@ -639,7 +666,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                 <PopoverContent className="p-2" align="start">
                   <Calendar
                     mode="range"
-                    numberOfMonths={2}
+                    numberOfMonths={1}
                     selected={range}
                     onSelect={(value) => {
                       setRange(value);
@@ -659,7 +686,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="px-0"
+                className="justify-start px-0 sm:justify-center"
                 onClick={() => {
                   setRange(undefined);
                   setFilters((prev) => ({
@@ -675,9 +702,9 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
             </div>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:flex-nowrap">
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="h-9 w-45">
+            <SelectTrigger className="h-9 w-full sm:w-45">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
@@ -691,19 +718,26 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
               <SelectItem value="total_asc">Total: Low → High</SelectItem>
             </SelectContent>
           </Select>
-          <div className="relative w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              name="ticket-search"
-              placeholder="Search tickets"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              className="w-full pl-9"
-            />
+          <div className="flex w-full gap-2 sm:contents">
+            <div className="relative flex-1 sm:w-64 sm:flex-none">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                name="ticket-search"
+                placeholder="Search tickets"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                className="w-full pl-9"
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="shrink-0 px-3 sm:justify-center"
+            >
+              Reset
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
-            Reset
-          </Button>
         </div>
       </div>
       {filters.date === "month" && filters.month ? (
@@ -730,133 +764,100 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
-          <Table className="table-fixed">
-            <TableHeader className="bg-muted/40">
-              <TableRow className="border-border/60">
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Time
-                </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Barber
-                </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Sale type
-                </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Status
-                </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Payment
-                </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Total
-                </TableHead>
-                <TableHead className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTickets.map((ticket, index) => {
-                const currentDayKey = getDayKey(ticket.created_at);
-                const previousDayKey =
-                  index > 0
-                    ? getDayKey(filteredTickets[index - 1].created_at)
-                    : null;
-                const isNewDay =
-                  index === 0 || currentDayKey !== previousDayKey;
-                const dayGroupLabel = formatDayGroupLabel(ticket.created_at);
-                const barberLabel = formatBarberName(ticket.barber);
-                const saleTypeLabel = getSaleTypeLabel(ticket.ticket_items);
-                const status = ticket.payment_status ?? "unpaid";
-                const isPaid = status === "paid";
-                const paymentMethod = (
-                  ticket.payment_method ?? ""
-                ).toLowerCase();
-                const isCash = paymentMethod === "cash";
-                const totalAmount =
-                  typeof ticket.total_amount === "number"
-                    ? ticket.total_amount
-                    : null;
-                const storedCashReceived =
-                  typeof ticket.cash_received === "number"
-                    ? ticket.cash_received
-                    : null;
-                const storedChangeDue =
-                  typeof ticket.change_due === "number"
-                    ? ticket.change_due
-                    : null;
-                const cashReceived =
-                  isPaid && isCash ? (storedCashReceived ?? totalAmount) : null;
-                const balanceAmount = isPaid
-                  ? (storedChangeDue ??
-                    (isCash && cashReceived !== null && totalAmount !== null
-                      ? cashReceived - totalAmount
-                      : totalAmount !== null
-                        ? 0
-                        : null))
-                  : null;
-                const tone = getStatusTone(status);
-                const itemLines =
-                  ticket.ticket_items?.map((item, index) => {
-                    const detail = item.services ?? item.products;
-                    const name = detail?.name || "Item";
-                    const price =
-                      typeof item.unit_price === "number"
-                        ? item.unit_price
-                        : typeof detail?.base_price === "number"
-                          ? detail.base_price
-                          : null;
-                    const qty = item.qty ?? 0;
-                    const lineTotal = price !== null ? price * qty : null;
-                    return {
-                      key: `${name}-${index}`,
-                      label: name,
-                      qty,
-                      price,
-                      lineTotal,
-                    };
-                  }) ?? [];
-                return (
-                  <Fragment key={ticket.id}>
-                    {isNewDay ? (
-                      <TableRow className="bg-black hover:bg-black dark:bg-white dark:hover:bg-white">
-                        <TableCell
-                          colSpan={7}
-                          className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white dark:text-black"
-                        >
-                          {dayGroupLabel}
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                    <TableRow className="border-border/60 bg-background hover:bg-muted/50">
-                      <TableCell className="px-4 py-3 text-muted-foreground">
-                        {formatTimeValue(ticket.created_at)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">
-                        {barberLabel}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">
-                        {saleTypeLabel}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge variant="outline" className={tone.badge}>
-                          {toTitleCase(status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-muted-foreground">
-                        {formatPaymentMethod(ticket.payment_method)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 font-semibold text-foreground">
-                        {formatMoney(ticket.total_amount)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <div className="flex justify-end">
+        <>
+          <div className="space-y-3 lg:hidden">
+            {groupedTickets.map((group) => (
+              <section key={group.dayKey} className="space-y-2">
+                <div className="rounded-lg bg-black px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white dark:bg-white dark:text-black">
+                  {group.dayLabel}
+                </div>
+                <div className="space-y-2">
+                  {group.tickets.map((ticket) => {
+                    const barberLabel = formatBarberName(ticket.barber);
+                    const saleTypeLabel = getSaleTypeLabel(ticket.ticket_items);
+                    const status = ticket.payment_status ?? "unpaid";
+                    const isPaid = status === "paid";
+                    const paymentMethod = (
+                      ticket.payment_method ?? ""
+                    ).toLowerCase();
+                    const isCash = paymentMethod === "cash";
+                    const totalAmount =
+                      typeof ticket.total_amount === "number"
+                        ? ticket.total_amount
+                        : null;
+                    const storedCashReceived =
+                      typeof ticket.cash_received === "number"
+                        ? ticket.cash_received
+                        : null;
+                    const storedChangeDue =
+                      typeof ticket.change_due === "number"
+                        ? ticket.change_due
+                        : null;
+                    const cashReceived =
+                      isPaid && isCash
+                        ? (storedCashReceived ?? totalAmount)
+                        : null;
+                    const balanceAmount = isPaid
+                      ? (storedChangeDue ??
+                        (isCash && cashReceived !== null && totalAmount !== null
+                          ? cashReceived - totalAmount
+                          : totalAmount !== null
+                            ? 0
+                            : null))
+                      : null;
+                    const tone = getStatusTone(status);
+                    const itemLines =
+                      ticket.ticket_items?.map((item, index) => {
+                        const detail = item.services ?? item.products;
+                        const name = detail?.name || "Item";
+                        const price =
+                          typeof item.unit_price === "number"
+                            ? item.unit_price
+                            : typeof detail?.base_price === "number"
+                              ? detail.base_price
+                              : null;
+                        const qty = item.qty ?? 0;
+                        const lineTotal = price !== null ? price * qty : null;
+                        return {
+                          key: `${name}-${index}`,
+                          label: name,
+                          qty,
+                          price,
+                          lineTotal,
+                        };
+                      }) ?? [];
+
+                    return (
+                      <div
+                        key={ticket.id}
+                        className="rounded-lg border border-border/60 bg-card px-3 py-2.5 shadow-sm"
+                      >
+                        {/* Header: time + ticket no + badge + eye */}
+                        <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-sm font-semibold text-foreground">
+                                {formatTimeValue(ticket.created_at)}
+                              </span>
+                              <span className="truncate text-xs text-muted-foreground">
+                                {ticket.ticket_no ?? ticket.id}
+                              </span>
+                            </div>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`shrink-0 text-xs ${tone.badge}`}
+                          >
+                            {toTitleCase(status)}
+                          </Badge>
                           <Sheet>
                             <SheetTrigger asChild>
-                              <Button size="icon" variant="outline">
-                                <Eye />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-7 shrink-0 text-muted-foreground"
+                              >
+                                <Eye className="size-3.5" />
                               </Button>
                             </SheetTrigger>
                             <SheetContent className="p-0">
@@ -1029,14 +1030,361 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                             </SheetContent>
                           </Sheet>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  </Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                        {/* Compact inline metadata */}
+                        <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+                          <div className="flex items-center gap-1 truncate">
+                            <span className="text-muted-foreground">
+                              Barber
+                            </span>
+                            <span className="truncate font-medium text-foreground">
+                              {barberLabel}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 truncate">
+                            <span className="text-muted-foreground">
+                              Sale type
+                            </span>
+                            <span className="truncate font-medium text-foreground">
+                              {saleTypeLabel}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 truncate">
+                            <span className="text-muted-foreground">
+                              Payment
+                            </span>
+                            <span className="truncate font-medium text-foreground">
+                              {formatPaymentMethod(ticket.payment_method)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 truncate">
+                            <span className="text-muted-foreground">Total</span>
+                            <span className="font-semibold text-foreground">
+                              {formatMoney(ticket.total_amount)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+          <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card lg:block">
+            <Table className="table-fixed">
+              <TableHeader className="bg-muted/40">
+                <TableRow className="border-border/60">
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Time
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Barber
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Sale type
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Payment
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Total
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTickets.map((ticket, index) => {
+                  const currentDayKey = getDayKey(ticket.created_at);
+                  const previousDayKey =
+                    index > 0
+                      ? getDayKey(filteredTickets[index - 1].created_at)
+                      : null;
+                  const isNewDay =
+                    index === 0 || currentDayKey !== previousDayKey;
+                  const dayGroupLabel = formatDayGroupLabel(ticket.created_at);
+                  const barberLabel = formatBarberName(ticket.barber);
+                  const saleTypeLabel = getSaleTypeLabel(ticket.ticket_items);
+                  const status = ticket.payment_status ?? "unpaid";
+                  const isPaid = status === "paid";
+                  const paymentMethod = (
+                    ticket.payment_method ?? ""
+                  ).toLowerCase();
+                  const isCash = paymentMethod === "cash";
+                  const totalAmount =
+                    typeof ticket.total_amount === "number"
+                      ? ticket.total_amount
+                      : null;
+                  const storedCashReceived =
+                    typeof ticket.cash_received === "number"
+                      ? ticket.cash_received
+                      : null;
+                  const storedChangeDue =
+                    typeof ticket.change_due === "number"
+                      ? ticket.change_due
+                      : null;
+                  const cashReceived =
+                    isPaid && isCash
+                      ? (storedCashReceived ?? totalAmount)
+                      : null;
+                  const balanceAmount = isPaid
+                    ? (storedChangeDue ??
+                      (isCash && cashReceived !== null && totalAmount !== null
+                        ? cashReceived - totalAmount
+                        : totalAmount !== null
+                          ? 0
+                          : null))
+                    : null;
+                  const tone = getStatusTone(status);
+                  const itemLines =
+                    ticket.ticket_items?.map((item, index) => {
+                      const detail = item.services ?? item.products;
+                      const name = detail?.name || "Item";
+                      const price =
+                        typeof item.unit_price === "number"
+                          ? item.unit_price
+                          : typeof detail?.base_price === "number"
+                            ? detail.base_price
+                            : null;
+                      const qty = item.qty ?? 0;
+                      const lineTotal = price !== null ? price * qty : null;
+                      return {
+                        key: `${name}-${index}`,
+                        label: name,
+                        qty,
+                        price,
+                        lineTotal,
+                      };
+                    }) ?? [];
+                  return (
+                    <Fragment key={ticket.id}>
+                      {isNewDay ? (
+                        <TableRow className="bg-black hover:bg-black dark:bg-white dark:hover:bg-white">
+                          <TableCell
+                            colSpan={7}
+                            className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white dark:text-black"
+                          >
+                            {dayGroupLabel}
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                      <TableRow className="border-border/60 bg-background hover:bg-muted/50">
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {formatTimeValue(ticket.created_at)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {barberLabel}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {saleTypeLabel}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <Badge variant="outline" className={tone.badge}>
+                            {toTitleCase(status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
+                          {formatPaymentMethod(ticket.payment_method)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 font-semibold text-foreground">
+                          {formatMoney(ticket.total_amount)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex justify-end">
+                            <Sheet>
+                              <SheetTrigger asChild>
+                                <Button size="icon" variant="outline">
+                                  <Eye />
+                                </Button>
+                              </SheetTrigger>
+                              <SheetContent className="p-0">
+                                <div className="flex h-full flex-col bg-muted/10">
+                                  <SheetHeader className="border-b bg-background px-6 py-4 pr-12">
+                                    <SheetTitle className="text-base font-semibold text-foreground">
+                                      {ticket.ticket_no ?? ticket.id}
+                                    </SheetTitle>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className="h-6 gap-2 border-border bg-muted/50 px-2 text-[11px] text-muted-foreground"
+                                      >
+                                        {barberLabel}
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={`h-6 px-2 text-[11px] ${tone.badge}`}
+                                      >
+                                        {toTitleCase(status)}
+                                      </Badge>
+                                    </div>
+                                  </SheetHeader>
+                                  <div className="flex-1 overflow-auto px-6 pb-6 pt-4">
+                                    <div className="rounded-2xl border border-border bg-background">
+                                      <div className="px-4 py-4">
+                                        <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                          <span>Items</span>
+                                          <span>Amount</span>
+                                        </div>
+                                        {itemLines.length > 0 ? (
+                                          <ul className="mt-3 divide-y divide-dashed divide-border">
+                                            {itemLines.map((item) => (
+                                              <li
+                                                key={item.key}
+                                                className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                                              >
+                                                <div className="min-w-0 space-y-1">
+                                                  <p className="font-medium text-foreground">
+                                                    {item.label}
+                                                  </p>
+                                                  <p className="text-xs text-muted-foreground">
+                                                    x{item.qty} ·{" "}
+                                                    {item.price !== null
+                                                      ? formatMoney(item.price)
+                                                      : "-"}
+                                                  </p>
+                                                </div>
+                                                <p className="text-sm font-semibold text-foreground">
+                                                  {item.lineTotal !== null
+                                                    ? formatMoney(
+                                                        item.lineTotal,
+                                                      )
+                                                    : "-"}
+                                                </p>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        ) : (
+                                          <p className="mt-3 text-sm font-medium text-foreground">
+                                            -
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="border-t border-dashed border-border px-4 py-4">
+                                        <div className="space-y-2 text-sm">
+                                          <div className="flex items-center justify-between text-muted-foreground">
+                                            <span>Subtotal</span>
+                                            <span>
+                                              {formatMoney(totalAmount)}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center justify-between text-base font-semibold text-foreground">
+                                            <span>Total</span>
+                                            <span>
+                                              {formatMoney(totalAmount)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="border-t border-dashed border-border px-4 py-4">
+                                        <div className="space-y-3 text-sm">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground">
+                                              Method
+                                            </span>
+                                            <span className="font-medium text-foreground">
+                                              {isPaid
+                                                ? toTitleCase(
+                                                    ticket.payment_method,
+                                                  )
+                                                : "-"}
+                                            </span>
+                                          </div>
+                                          {isPaid && isCash ? (
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-muted-foreground">
+                                                Cash received
+                                              </span>
+                                              <span className="font-medium text-foreground">
+                                                {formatMoney(cashReceived)}
+                                              </span>
+                                            </div>
+                                          ) : null}
+                                          {isPaid ? (
+                                            <div className="flex items-center justify-between font-semibold text-foreground">
+                                              <span>Balance</span>
+                                              <span>
+                                                {formatMoney(balanceAmount)}
+                                              </span>
+                                            </div>
+                                          ) : null}
+                                          <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground">
+                                              Paid at
+                                            </p>
+                                            <p className="font-medium text-foreground">
+                                              {isPaid
+                                                ? formatTimeValue(
+                                                    ticket.paid_at,
+                                                  )
+                                                : "-"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="border-t border-dashed border-border px-4 py-3">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                          Ticket ID
+                                        </p>
+                                        <p className="mt-1 break-all text-xs font-medium text-foreground">
+                                          {ticket.id}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                                      {isPaid ? (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setRefundTarget({
+                                              id: ticket.id,
+                                              label:
+                                                ticket.ticket_no ?? ticket.id,
+                                              total: totalAmount,
+                                            });
+                                            setRefundDialogOpen(true);
+                                            setRefundError(null);
+                                          }}
+                                          disabled={refundLoading}
+                                        >
+                                          Refund
+                                        </Button>
+                                      ) : null}
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => {
+                                          setDeleteTarget({
+                                            id: ticket.id,
+                                            label:
+                                              ticket.ticket_no ?? ticket.id,
+                                          });
+                                          setDeleteDialogOpen(true);
+                                          setDeleteError(null);
+                                        }}
+                                        disabled={deleteLoading}
+                                      >
+                                        Delete ticket
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </SheetContent>
+                            </Sheet>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
       <Dialog
         open={deleteDialogOpen}
