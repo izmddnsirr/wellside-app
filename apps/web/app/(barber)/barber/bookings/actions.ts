@@ -50,7 +50,7 @@ export const updateBookingStatus = async (
       customer:customer_id (first_name, last_name, email, phone),
       barber:barber_id (display_name, first_name, last_name),
       service:service_id (name, base_price)
-    `
+    `,
     )
     .eq("id", id)
     .maybeSingle();
@@ -80,7 +80,7 @@ export const updateBookingStatus = async (
         await sendBookingCancellationEmailTo(
           payload,
           payload.customerEmail,
-          "Customer"
+          "Customer",
         );
       }
     } catch (emailError) {

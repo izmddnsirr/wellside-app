@@ -212,9 +212,7 @@ export default async function ConfirmingBookingPage({
       redirectWithError("booking");
     }
 
-    if (
-      hasRestWindowOverlap(startAt, endAt, operatingRules.restWindows)
-    ) {
+    if (hasRestWindowOverlap(startAt, endAt, operatingRules.restWindows)) {
       redirectWithError("booking");
     }
 

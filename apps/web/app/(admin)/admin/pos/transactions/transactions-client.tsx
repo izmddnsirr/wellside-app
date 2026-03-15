@@ -277,9 +277,8 @@ export function TransactionsClient() {
   const [customPriceDialogOpen, setCustomPriceDialogOpen] = useState(false);
   const [pendingCustomItem, setPendingCustomItem] =
     useState<CatalogItem | null>(null);
-  const [shiftMetrics, setShiftMetrics] = useState<ShiftMetrics>(
-    EMPTY_SHIFT_METRICS,
-  );
+  const [shiftMetrics, setShiftMetrics] =
+    useState<ShiftMetrics>(EMPTY_SHIFT_METRICS);
 
   const loadShiftMetrics = async (shiftId: string) => {
     const supabase = createAdminClient();
@@ -999,7 +998,9 @@ export function TransactionsClient() {
                       <div className="space-y-5 text-sm">
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div>
-                            <p className="text-xs text-muted-foreground">Shift</p>
+                            <p className="text-xs text-muted-foreground">
+                              Shift
+                            </p>
                             <p className="font-semibold">
                               {activeShift?.shift_code ||
                                 activeShift?.label ||
@@ -1011,7 +1012,9 @@ export function TransactionsClient() {
                             <p className="text-xs text-muted-foreground">
                               Duration
                             </p>
-                            <p className="font-semibold">{shiftDurationLabel}</p>
+                            <p className="font-semibold">
+                              {shiftDurationLabel}
+                            </p>
                           </div>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">

@@ -180,8 +180,7 @@ export function BarbersCard({
       },
       "barber-demote-blocked": {
         type: "error",
-        message:
-          "Cannot move barber while there are active bookings assigned.",
+        message: "Cannot move barber while there are active bookings assigned.",
       },
       "barber-demote-failed": {
         type: "error",
@@ -354,7 +353,10 @@ export function BarbersCard({
 
     const firstName = readField("first_name", selectedBarber.first_name);
     const lastName = readField("last_name", selectedBarber.last_name);
-    const displayNameInput = readField("display_name", selectedBarber.display_name);
+    const displayNameInput = readField(
+      "display_name",
+      selectedBarber.display_name,
+    );
     const fallbackDisplayName = [firstName, lastName].filter(Boolean).join(" ");
     const displayName =
       displayNameInput || fallbackDisplayName
@@ -694,7 +696,9 @@ export function BarbersCard({
                     <Input
                       id="update-barber-phone"
                       name="phone"
-                      defaultValue={formatMalaysiaPhoneInput(selectedBarber?.phone ?? null)}
+                      defaultValue={formatMalaysiaPhoneInput(
+                        selectedBarber?.phone ?? null,
+                      )}
                       inputMode="numeric"
                       pattern="[0-9]*"
                       onInput={(event) => {
@@ -744,7 +748,9 @@ export function BarbersCard({
                       <SelectContent>
                         <SelectItem value="Junior">Junior</SelectItem>
                         <SelectItem value="Senior">Senior</SelectItem>
-                        <SelectItem value="Professional">Professional</SelectItem>
+                        <SelectItem value="Professional">
+                          Professional
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -818,14 +824,14 @@ export function BarbersCard({
                 Move to customer
               </Button>
               <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeUpdateDialog}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Update barber</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeUpdateDialog}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Update barber</Button>
               </div>
             </DialogFooter>
           </form>
@@ -839,8 +845,8 @@ export function BarbersCard({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Move to customer</DialogTitle>
-          <DialogDescription>
-            This will move{" "}
+            <DialogDescription>
+              This will move{" "}
               <span className="font-medium text-foreground">
                 {demoteTarget
                   ? [demoteTarget.first_name, demoteTarget.last_name]
