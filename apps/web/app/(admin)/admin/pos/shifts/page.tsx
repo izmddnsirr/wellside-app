@@ -29,6 +29,7 @@ export default async function Page() {
             total_amount,
             payment_status,
             payment_method,
+            barber:barber_id (display_name, first_name, last_name),
             ticket_items (
               qty,
               unit_price,
@@ -41,6 +42,9 @@ export default async function Page() {
       : { data: [] };
   const normalizedTickets = (tickets ?? []).map((ticket) => ({
     ...ticket,
+    barber: Array.isArray(ticket.barber)
+      ? ticket.barber[0] ?? null
+      : ticket.barber ?? null,
     ticket_items:
       ticket.ticket_items?.map((item) => ({
         ...item,
@@ -178,6 +182,68 @@ export default async function Page() {
     ])
   );
 
+  const barberSalesByShiftMap = paidTickets.reduce<
+    Record<
+      string,
+      Map<
+        string,
+        {
+          key: string;
+          label: string;
+          total: number;
+        }
+      >
+    >
+  >((acc, ticket) => {
+    if (!ticket.shift_id || !ticket.ticket_items?.length) {
+      return acc;
+    }
+
+    const barberName =
+      ticket.barber?.display_name ||
+      [ticket.barber?.first_name, ticket.barber?.last_name]
+        .filter(Boolean)
+        .join(" ") ||
+      "Unknown";
+
+    const shiftBarberSales = acc[ticket.shift_id] ?? new Map();
+    const serviceTotal = ticket.ticket_items.reduce((sum, item) => {
+      if (!item.services) {
+        return sum;
+      }
+      const qty = item.qty ?? 0;
+      const price =
+        typeof item.unit_price === "number"
+          ? item.unit_price
+          : item.services.base_price ?? 0;
+      return sum + qty * price;
+    }, 0);
+
+    if (serviceTotal <= 0) {
+      acc[ticket.shift_id] = shiftBarberSales;
+      return acc;
+    }
+
+    const existing = shiftBarberSales.get(barberName) ?? {
+      key: barberName,
+      label: barberName,
+      total: 0,
+    };
+    existing.total += serviceTotal;
+    shiftBarberSales.set(barberName, existing);
+    acc[ticket.shift_id] = shiftBarberSales;
+    return acc;
+  }, {});
+
+  const barberSalesByShift = Object.fromEntries(
+    Object.entries(barberSalesByShiftMap).map(([shiftId, barbers]) => [
+      shiftId,
+      Array.from(barbers.values()).sort((a, b) =>
+        a.total === b.total ? a.label.localeCompare(b.label) : b.total - a.total
+      ),
+    ])
+  );
+
   return (
     <AdminShell title="Shift history">
       <div className="px-4 lg:px-6">
@@ -188,6 +254,7 @@ export default async function Page() {
           ewalletSalesByShift={ewalletSalesByShift}
           refundedSalesByShift={refundedSalesByShift}
           ticketsCountByShift={ticketsCountByShift}
+          barberSalesByShift={barberSalesByShift}
           itemsByShift={itemsByShift}
         />
       </div>

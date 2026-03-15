@@ -42,6 +42,7 @@ import {
 import { ChevronLeft, ChevronRight, Clock, Pencil, Search } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { deleteShift } from "./actions";
 
 type ShiftSummary = {
@@ -62,6 +63,12 @@ type ShiftItemSummary = {
   total: number;
 };
 
+type ShiftBarberSalesSummary = {
+  key: string;
+  label: string;
+  total: number;
+};
+
 type ShiftsTableProps = {
   shifts: ShiftSummary[];
   salesByShift: Record<string, number>;
@@ -69,6 +76,7 @@ type ShiftsTableProps = {
   ewalletSalesByShift: Record<string, number>;
   refundedSalesByShift: Record<string, number>;
   ticketsCountByShift: Record<string, number>;
+  barberSalesByShift: Record<string, ShiftBarberSalesSummary[]>;
   itemsByShift: Record<string, ShiftItemSummary[]>;
 };
 
@@ -259,6 +267,7 @@ export function ShiftsTable({
   ewalletSalesByShift,
   refundedSalesByShift,
   ticketsCountByShift,
+  barberSalesByShift,
   itemsByShift,
 }: ShiftsTableProps) {
   const [searchInput, setSearchInput] = useState("");
@@ -325,13 +334,16 @@ export function ShiftsTable({
     setDeleteError(null);
     const result = await deleteShift(deleteTarget.id);
     if (!result?.ok) {
-      setDeleteError(result?.error ?? "Failed to delete shift.");
+      const message = result?.error ?? "Failed to delete shift.";
+      setDeleteError(message);
+      toast.error(message);
       setDeleteLoading(false);
       return;
     }
     setDeleteLoading(false);
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
+    toast.success("Shift deleted.");
     router.refresh();
   };
 
@@ -579,7 +591,7 @@ export function ShiftsTable({
                 <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Sales
                 </TableHead>
-                <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
                 <TableHead className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -619,6 +631,7 @@ export function ShiftsTable({
                   refundedSalesByShift[shift.id] ?? 0,
                 );
                 const totalTickets = ticketsCountByShift[shift.id] ?? 0;
+                const shiftBarberSales = barberSalesByShift[shift.id] ?? [];
                 const shiftItems = itemsByShift[shift.id] ?? [];
                 const itemsTotal = shiftItems.reduce(
                   (total, item) => total + item.total,
@@ -657,12 +670,14 @@ export function ShiftsTable({
                       <TableCell className="px-4 py-3 font-semibold text-foreground">
                         {formatMoney(salesByShift[shift.id] ?? 0)}
                       </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge variant="outline" className={tone.badge}>
-                          {formatStatusLabel(shift.status, shift.end_at)}
-                        </Badge>
+                      <TableCell className="px-4 py-3 text-center">
+                        <div className="flex justify-center">
+                          <Badge variant="outline" className={tone.badge}>
+                            {formatStatusLabel(shift.status, shift.end_at)}
+                          </Badge>
+                        </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3">
+                      <TableCell className="px-4 py-3 text-right">
                         <div className="flex justify-end">
                           <Sheet>
                             <SheetTrigger asChild>
@@ -771,6 +786,33 @@ export function ShiftsTable({
                                           </span>
                                         </div>
                                       </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        Barber sales
+                                      </p>
+                                      {shiftBarberSales.length > 0 ? (
+                                        <div className="divide-y divide-border/60 text-sm">
+                                          {shiftBarberSales.map((barber) => (
+                                            <div
+                                              key={barber.key}
+                                              className="flex items-center justify-between gap-4 py-2"
+                                            >
+                                              <p className="font-medium text-foreground">
+                                                {barber.label}
+                                              </p>
+                                              <span className="font-medium text-foreground">
+                                                {formatMoney(barber.total)}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                          No barber service sales recorded for
+                                          this shift.
+                                        </p>
+                                      )}
                                     </div>
                                     <div className="space-y-2">
                                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

@@ -14,6 +14,7 @@ const createService = async (formData: FormData) => {
   const basePrice = basePriceRaw === "" ? null : Number(basePriceRaw);
   const duration = Number(formData.get("duration_minutes"));
   const isActive = formData.get("is_active") === "on";
+  const allowBooking = formData.get("allow_booking") !== "off";
 
   if (
     !name ||
@@ -29,6 +30,7 @@ const createService = async (formData: FormData) => {
     base_price: basePrice,
     duration_minutes: duration,
     is_active: isActive,
+    allow_booking: allowBooking,
   });
 
   if (error) {
@@ -49,6 +51,7 @@ const updateService = async (formData: FormData) => {
   const basePrice = basePriceRaw === "" ? null : Number(basePriceRaw);
   const duration = Number(formData.get("duration_minutes"));
   const isActive = formData.get("is_active") === "on";
+  const allowBooking = formData.get("allow_booking") !== "off";
 
   if (
     !id ||
@@ -67,6 +70,7 @@ const updateService = async (formData: FormData) => {
       base_price: basePrice,
       duration_minutes: duration,
       is_active: isActive,
+      allow_booking: allowBooking,
     })
     .eq("id", id);
 
@@ -77,6 +81,34 @@ const updateService = async (formData: FormData) => {
 
   revalidatePath("/admin/services");
   redirect("/admin/services?toast=service-updated");
+};
+
+const updateServiceBooking = async ({
+  id,
+  allowBooking,
+}: {
+  id: string;
+  allowBooking: boolean;
+}) => {
+  "use server";
+  const supabase = await createAdminClient();
+
+  if (!id) {
+    return { ok: false, message: "Invalid service id." };
+  }
+
+  const { error } = await supabase
+    .from("services")
+    .update({ allow_booking: allowBooking })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Failed to update booking availability", error);
+    return { ok: false, message: "Failed to update booking availability." };
+  }
+
+  revalidatePath("/admin/services");
+  return { ok: true };
 };
 
 const archiveService = async (formData: FormData) => {
@@ -126,7 +158,7 @@ export default async function Page() {
   const { data: services, error } = await supabase
     .from("services")
     .select(
-      "id, name, service_code, base_price, duration_minutes, is_active, created_at"
+      "id, name, service_code, base_price, duration_minutes, is_active, allow_booking, created_at",
     )
     .order("created_at", { ascending: false });
   const errorMessage = error
@@ -134,15 +166,14 @@ export default async function Page() {
     : null;
 
   return (
-    <AdminShell
-      title="Services"
-    >
+    <AdminShell title="Services">
       <div className="px-4 lg:px-6">
         <ServicesCard
           services={services ?? []}
           errorMessage={errorMessage}
           createService={createService}
           updateService={updateService}
+          updateServiceBooking={updateServiceBooking}
           archiveService={archiveService}
           reactivateService={reactivateService}
         />

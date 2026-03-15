@@ -30,8 +30,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Eye,
-  EyeOff,
   Package,
   Pencil,
   Plus,
@@ -87,8 +85,8 @@ const getStockStatus = (stockQty: number | null, isActive: boolean) => {
     return {
       label: "Deactivated",
       className:
-        "bg-slate-100 text-slate-900 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
-      dot: "bg-slate-500",
+        "bg-red-100 text-red-900 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800",
+      dot: "bg-red-500",
     };
   }
   if (stockQty === null || Number.isNaN(stockQty)) {
@@ -190,7 +188,6 @@ export function ProductsCard({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all" });
   const [sort, setSort] = useState("sku_asc");
-  const [showInactive, setShowInactive] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -237,12 +234,6 @@ export function ProductsCard({
     };
 
     const matchesStatus = (product: Product) => {
-      if (showInactive) {
-        return !product.is_active;
-      }
-      if (!product.is_active) {
-        return false;
-      }
       if (filters.status === "all") {
         return true;
       }
@@ -304,13 +295,12 @@ export function ProductsCard({
     });
 
     return sorted;
-  }, [debouncedSearch, filters.status, products, showInactive, sort]);
+  }, [debouncedSearch, filters.status, products, sort]);
 
   const resetFilters = () => {
     setFilters({ status: "all" });
     setSort("sku_asc");
     setSearchInput("");
-    setShowInactive(false);
   };
 
   return (
@@ -399,23 +389,6 @@ export function ProductsCard({
                 </form>
               </DialogContent>
             </Dialog>
-            <Button
-              variant={showInactive ? "secondary" : "outline"}
-              size="icon"
-              onClick={() => setShowInactive((prev) => !prev)}
-              aria-label={
-                showInactive
-                  ? "Show active products"
-                  : "Show deactivated products"
-              }
-              title={
-                showInactive
-                  ? "Show active products"
-                  : "Show deactivated products"
-              }
-            >
-              {showInactive ? <Eye /> : <EyeOff />}
-            </Button>
           </div>
         </div>
       </div>
@@ -426,22 +399,22 @@ export function ProductsCard({
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   SKU
                 </TableHead>
                 <TableHead className="w-[28%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Product
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[20%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Price
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Stock
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[16%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[10%] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Actions
                 </TableHead>
               </TableRow>
@@ -458,24 +431,28 @@ export function ProductsCard({
                     key={product.id}
                     className="bg-background hover:bg-muted/50"
                   >
-                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
+                    <TableCell className="w-[14%] px-4 py-3 text-muted-foreground">
                       {product.sku || "-"}
                     </TableCell>
                     <TableCell className="w-[28%] px-4 py-3 font-semibold text-foreground">
-                      {product.name}
+                      <span className="block truncate">{product.name}</span>
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-foreground">
-                      {formatPrice(product.base_price)}
+                    <TableCell className="w-[20%] px-4 py-3 text-foreground">
+                      <span className="block truncate">
+                        {formatPrice(product.base_price)}
+                      </span>
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
+                    <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
                       {formatStock(product.stock_qty)}
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3">
-                      <Badge variant="outline" className={status.className}>
-                        {status.label}
-                      </Badge>
+                    <TableCell className="w-[16%] px-4 py-3 text-center">
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className={status.className}>
+                          {status.label}
+                        </Badge>
+                      </div>
                     </TableCell>
-                    <TableCell className="w-[20%] px-4 py-3">
+                    <TableCell className="w-[10%] px-4 py-3 text-right">
                       <div className="flex justify-end">
                         <Dialog>
                           <DialogTrigger asChild>

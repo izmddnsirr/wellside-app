@@ -59,6 +59,20 @@ type BarberSummary = {
   is_active: boolean | null;
 };
 
+type ShiftMetrics = {
+  ticketCount: number;
+  paidSales: number;
+  cashSales: number;
+  ewalletSales: number;
+};
+
+const EMPTY_SHIFT_METRICS: ShiftMetrics = {
+  ticketCount: 0,
+  paidSales: 0,
+  cashSales: 0,
+  ewalletSales: 0,
+};
+
 const formatMoney = (value: number) =>
   new Intl.NumberFormat("en-MY", {
     style: "currency",
@@ -82,6 +96,33 @@ const formatTime = (value: string | null) => {
       part.type === "dayPeriod" ? part.value.toUpperCase() : part.value,
     )
     .join("");
+};
+
+const formatDuration = (startAt: string | null, endAt: Date) => {
+  if (!startAt) {
+    return "-";
+  }
+
+  const startedAt = new Date(startAt);
+  if (Number.isNaN(startedAt.getTime())) {
+    return "-";
+  }
+
+  const totalMinutes = Math.floor(
+    Math.max(endAt.getTime() - startedAt.getTime(), 0) / 60000,
+  );
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes}m`;
+  }
+
+  if (minutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${minutes}m`;
 };
 
 const getLocalDateValue = () =>
@@ -236,6 +277,52 @@ export function TransactionsClient() {
   const [customPriceDialogOpen, setCustomPriceDialogOpen] = useState(false);
   const [pendingCustomItem, setPendingCustomItem] =
     useState<CatalogItem | null>(null);
+  const [shiftMetrics, setShiftMetrics] = useState<ShiftMetrics>(
+    EMPTY_SHIFT_METRICS,
+  );
+
+  const loadShiftMetrics = async (shiftId: string) => {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("tickets")
+      .select("total_amount, payment_status, payment_method")
+      .eq("shift_id", shiftId);
+
+    if (error) {
+      console.error("Failed to load shift metrics", error);
+      return;
+    }
+
+    const nextMetrics = (data ?? []).reduce<ShiftMetrics>(
+      (acc, ticket) => {
+        acc.ticketCount += 1;
+
+        const status = (ticket.payment_status ?? "").toLowerCase();
+        const method = (ticket.payment_method ?? "").toLowerCase();
+        const amount = Number(ticket.total_amount ?? 0);
+
+        if (status === "paid") {
+          acc.paidSales += amount;
+          if (method === "cash") {
+            acc.cashSales += amount;
+          }
+          if (method === "ewallet") {
+            acc.ewalletSales += amount;
+          }
+        }
+
+        return acc;
+      },
+      {
+        ticketCount: 0,
+        paidSales: 0,
+        cashSales: 0,
+        ewalletSales: 0,
+      },
+    );
+
+    setShiftMetrics(nextMetrics);
+  };
   useEffect(() => {
     let isMounted = true;
 
@@ -267,6 +354,12 @@ export function TransactionsClient() {
       setShiftLoading(false);
 
       setIsShiftOpen(Boolean(data));
+
+      if (data?.id) {
+        void loadShiftMetrics(data.id);
+      } else {
+        setShiftMetrics(EMPTY_SHIFT_METRICS);
+      }
     };
 
     const fetchServices = async () => {
@@ -395,6 +488,10 @@ export function TransactionsClient() {
     };
   }, []);
 
+  const displayedShiftMetrics = activeShift?.id
+    ? shiftMetrics
+    : EMPTY_SHIFT_METRICS;
+
   const handleOpenShift = async () => {
     if (isShiftOpen || activeShift) {
       setShiftActionError("Shift is already active.");
@@ -422,6 +519,7 @@ export function TransactionsClient() {
         lastShiftError.details ||
         "Failed to open shift.";
       setShiftActionError(errorMessage);
+      toast.error(errorMessage, { position: "top-center" });
       setOpenShiftLoading(false);
       return;
     }
@@ -433,6 +531,9 @@ export function TransactionsClient() {
       const nextChar = lastChar.charCodeAt(0) + 1;
       if (nextChar > "Z".charCodeAt(0)) {
         setShiftActionError("Shift label exceeded Z for today.");
+        toast.error("Shift label exceeded Z for today.", {
+          position: "top-center",
+        });
         setOpenShiftLoading(false);
         return;
       }
@@ -456,19 +557,23 @@ export function TransactionsClient() {
       const errorMessage =
         error.message || error.details || "Failed to open shift.";
       setShiftActionError(errorMessage);
+      toast.error(errorMessage, { position: "top-center" });
       setOpenShiftLoading(false);
       return;
     }
 
     setActiveShift(data);
+    void loadShiftMetrics(data.id);
     setIsShiftOpen(true);
     setOpenShiftDialogOpen(false);
+    toast.success("Shift opened.", { position: "top-center" });
     setOpenShiftLoading(false);
   };
 
   const handleCloseShift = async () => {
     if (!activeShift?.id) {
       setShiftActionError("No active shift to close.");
+      toast.error("No active shift to close.", { position: "top-center" });
       return;
     }
     setCloseShiftLoading(true);
@@ -487,13 +592,16 @@ export function TransactionsClient() {
       const errorMessage =
         error.message || error.details || "Failed to close shift.";
       setShiftActionError(errorMessage);
+      toast.error(errorMessage, { position: "top-center" });
       setCloseShiftLoading(false);
       return;
     }
 
     setActiveShift(null);
+    setShiftMetrics(EMPTY_SHIFT_METRICS);
     setIsShiftOpen(false);
     setCloseShiftDialogOpen(false);
+    toast.success("Shift closed.", { position: "top-center" });
     setCloseShiftLoading(false);
   };
 
@@ -714,6 +822,11 @@ export function TransactionsClient() {
       : changeDue > 0
         ? `Return Change ${formatMoney(changeDue)}`
         : `Charge ${formatMoney(subtotal)}`;
+  const shiftClosePreviewTime = new Date();
+  const shiftDurationLabel = formatDuration(
+    activeShift?.start_at ?? null,
+    shiftClosePreviewTime,
+  );
 
   const applyCashPreset = (value: number) => {
     const digits = String(Math.round(value * 100));
@@ -805,6 +918,16 @@ export function TransactionsClient() {
     setCartItems([]);
     setCashReceived("");
     setCheckoutDialogOpen(false);
+    setShiftMetrics((prev) => ({
+      ticketCount: prev.ticketCount + 1,
+      paidSales: prev.paidSales + subtotal,
+      cashSales:
+        paymentMethod === "cash" ? prev.cashSales + subtotal : prev.cashSales,
+      ewalletSales:
+        paymentMethod === "ewallet"
+          ? prev.ewalletSales + subtotal
+          : prev.ewalletSales,
+    }));
     toast.success(`Payment confirmed for ${ticketNo ?? ticketId ?? "-"}.`, {
       position: "top-center",
     });
@@ -870,33 +993,89 @@ export function TransactionsClient() {
                       <DialogHeader>
                         <DialogTitle>Close shift</DialogTitle>
                         <DialogDescription>
-                          Confirm closing the current shift.
+                          Review the shift summary before closing it.
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-3 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Shift</p>
-                          <p className="font-semibold">
-                            {activeShift?.shift_code ||
-                              activeShift?.label ||
-                              activeShift?.id ||
-                              "-"}
-                          </p>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="space-y-5 text-sm">
+                        <div className="grid gap-4 sm:grid-cols-2">
                           <div>
+                            <p className="text-xs text-muted-foreground">Shift</p>
+                            <p className="font-semibold">
+                              {activeShift?.shift_code ||
+                                activeShift?.label ||
+                                activeShift?.id ||
+                                "-"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Duration
+                            </p>
+                            <p className="font-semibold">{shiftDurationLabel}</p>
+                          </div>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
                             <p className="text-xs text-muted-foreground">
                               Opened at
                             </p>
-                            <p>{formatTime(activeShift?.start_at ?? null)}</p>
+                            <p className="font-semibold">
+                              {formatTime(activeShift?.start_at ?? null)}
+                            </p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
                             <p className="text-xs text-muted-foreground">
                               Close at
                             </p>
-                            <p>{formatTime(new Date().toISOString())}</p>
+                            <p className="font-semibold">
+                              {formatTime(shiftClosePreviewTime.toISOString())}
+                            </p>
                           </div>
                         </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                            <p className="text-xs text-muted-foreground">
+                              Tickets
+                            </p>
+                            <p className="font-semibold">
+                              {displayedShiftMetrics.ticketCount}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                            <p className="text-xs text-muted-foreground">
+                              Paid sales
+                            </p>
+                            <p className="font-semibold">
+                              {formatMoney(displayedShiftMetrics.paidSales)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                            <p className="text-xs text-muted-foreground">
+                              Cash sales
+                            </p>
+                            <p className="font-semibold">
+                              {formatMoney(displayedShiftMetrics.cashSales)}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                            <p className="text-xs text-muted-foreground">
+                              E-wallet sales
+                            </p>
+                            <p className="font-semibold">
+                              {formatMoney(displayedShiftMetrics.ewalletSales)}
+                            </p>
+                          </div>
+                        </div>
+                        {cartItemCount > 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            Current cart has {cartItemCount} item
+                            {cartItemCount > 1 ? "s" : ""} worth{" "}
+                            {formatMoney(subtotal)}. Complete or clear it before
+                            closing if needed.
+                          </p>
+                        ) : null}
                         {shiftActionError ? (
                           <p className="text-xs text-red-500">
                             {shiftActionError}
@@ -905,13 +1084,7 @@ export function TransactionsClient() {
                       </div>
                       <DialogFooter>
                         <Button
-                          variant="outline"
-                          onClick={() => setCloseShiftDialogOpen(false)}
-                          disabled={closeShiftLoading}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
+                          className="h-11 w-full"
                           onClick={handleCloseShift}
                           disabled={closeShiftLoading}
                         >

@@ -11,7 +11,7 @@ const updateCustomerStatus = async (formData: FormData) => {
   const statusValue = String(formData.get("is_active") ?? "");
 
   if (!id) {
-    return;
+    redirect("/admin/customers?toast=customer-update-invalid");
   }
 
   const isActive = statusValue === "active";
@@ -22,11 +22,11 @@ const updateCustomerStatus = async (formData: FormData) => {
 
   if (error) {
     console.error("Failed to update customer status", error);
-    return;
+    redirect("/admin/customers?toast=customer-update-error");
   }
 
   revalidatePath("/admin/customers");
-  redirect("/admin/customers");
+  redirect("/admin/customers?toast=customer-update-success");
 };
 
 export default async function Page() {

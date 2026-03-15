@@ -13,6 +13,7 @@ import {
   Clock,
   Package,
   Receipt,
+  Settings,
   Scissors,
   Ticket,
   Users,
@@ -39,6 +40,11 @@ const data = {
           title: "Dashboard",
           url: "/admin",
           icon: Home,
+        },
+        {
+          title: "Queue",
+          url: "/admin/queue",
+          icon: ListChecks,
         },
         {
           title: "Bookings",
@@ -86,6 +92,11 @@ const data = {
           title: "Report",
           url: "/admin/report",
           icon: FileText, // TODO: verify icon match
+        },
+        {
+          title: "Settings",
+          url: "/admin/settings",
+          icon: Settings,
         },
       ],
     },
@@ -147,7 +158,7 @@ export function AppSidebarClient({
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              className="data-[slot=sidebar-menu-button]:p-1.5! hover:bg-transparent hover:text-inherit active:bg-transparent active:text-inherit"
             >
               <Link href="/admin">
                 {/* <IconInnerShadowTop className="size-5!" /> */}

@@ -6,8 +6,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { createAdminClient } from "@/utils/supabase/server";
+import { CalendarDays, Clock3, DollarSign } from "lucide-react";
 import { Metadata } from "next";
+import Link from "next/link";
 import { BookingsChartCard } from "./components/bookings-chart-card";
 
 export const metadata: Metadata = {
@@ -76,6 +80,27 @@ type LowStockRow = {
   name: string | null;
   stock_qty: number | null;
 };
+
+const quickActions = [
+  {
+    href: "/admin/pos",
+    label: "Open POS",
+    icon: DollarSign,
+    featured: true,
+  },
+  {
+    href: "/admin/bookings",
+    label: "View Booking",
+    icon: Clock3,
+    featured: false,
+  },
+  {
+    href: "/admin/bookings/calendar",
+    label: "View Calendar",
+    icon: CalendarDays,
+    featured: false,
+  },
+] as const;
 
 export default async function Page() {
   const supabase = await createAdminClient();
@@ -407,13 +432,35 @@ export default async function Page() {
 
   return (
     <AdminShell title="Dashboard">
+      <div className="grid gap-4 px-5 lg:px-6 md:grid-cols-3">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+
+          return (
+            <Link
+              key={action.href}
+              href={action.href}
+              className={cn(
+                buttonVariants({ variant: action.featured ? "default" : "outline" }),
+                "h-13 justify-center rounded-xl px-6 text-base font-semibold shadow-none",
+                action.featured
+                  ? "bg-foreground text-background hover:bg-foreground/90"
+                  : "border-border/80 bg-background text-foreground hover:bg-accent/40",
+              )}
+            >
+              <Icon className="size-5 shrink-0" />
+              <span className="leading-none">{action.label}</span>
+            </Link>
+          );
+        })}
+      </div>
       <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
         <Card className="border-border/60 bg-card">
           <CardHeader>
             <CardDescription className="text-muted-foreground">
               Total bookings
             </CardDescription>
-            <CardTitle className="text-3xl text-foreground">
+            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
               {totalBookingsToday}
             </CardTitle>
           </CardHeader>
@@ -426,7 +473,7 @@ export default async function Page() {
             <CardDescription className="text-muted-foreground">
               Total tickets today
             </CardDescription>
-            <CardTitle className="text-3xl text-foreground">
+            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
               {totalTicketsToday}
             </CardTitle>
           </CardHeader>
@@ -439,7 +486,7 @@ export default async function Page() {
             <CardDescription className="text-muted-foreground">
               Total sales today
             </CardDescription>
-            <CardTitle className="text-3xl text-foreground">
+            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
               {formatCurrency(totalSalesToday)}
             </CardTitle>
           </CardHeader>
@@ -452,7 +499,7 @@ export default async function Page() {
             <CardDescription className="text-muted-foreground">
               Total sales this month
             </CardDescription>
-            <CardTitle className="text-3xl text-foreground">
+            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
               {formatCurrency(totalSalesThisMonth)}
             </CardTitle>
           </CardHeader>
@@ -480,13 +527,17 @@ export default async function Page() {
             <CardDescription className="text-muted-foreground">
               Booking outcomes today
             </CardDescription>
-            <CardTitle className="text-2xl text-foreground">
+            <CardTitle className="font-mono text-2xl text-foreground tabular-nums">
               {cancelledToday + noShowToday}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm text-muted-foreground">
-            <p>Cancelled: {cancelledToday}</p>
-            <p>No-show: {noShowToday}</p>
+            <p>
+              Cancelled: <span className="font-mono tabular-nums">{cancelledToday}</span>
+            </p>
+            <p>
+              No-show: <span className="font-mono tabular-nums">{noShowToday}</span>
+            </p>
           </CardContent>
         </Card>
 
@@ -495,12 +546,15 @@ export default async function Page() {
             <CardDescription className="text-muted-foreground">
               Barber utilization today
             </CardDescription>
-            <CardTitle className="text-2xl text-foreground">
+            <CardTitle className="font-mono text-2xl text-foreground tabular-nums">
               {barberUtilization}%
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {bookedBarbersToday}/{activeBarbers} active barbers had bookings.
+            <span className="font-mono tabular-nums">
+              {bookedBarbersToday}/{activeBarbers}
+            </span>{" "}
+            active barbers had bookings.
           </CardContent>
         </Card>
 
@@ -509,13 +563,23 @@ export default async function Page() {
             <CardDescription className="text-muted-foreground">
               Payment split today
             </CardDescription>
-            <CardTitle className="text-2xl text-foreground">
+            <CardTitle className="font-mono text-2xl text-foreground tabular-nums">
               {formatCurrency(totalSalesToday)}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm text-muted-foreground">
-            <p>Cash: {formatCurrency(todayCashSales)}</p>
-            <p>E-wallet: {formatCurrency(todayEwalletSales)}</p>
+            <p>
+              Cash:{" "}
+              <span className="font-mono tabular-nums">
+                {formatCurrency(todayCashSales)}
+              </span>
+            </p>
+            <p>
+              E-wallet:{" "}
+              <span className="font-mono tabular-nums">
+                {formatCurrency(todayEwalletSales)}
+              </span>
+            </p>
           </CardContent>
         </Card>
 
@@ -524,7 +588,7 @@ export default async function Page() {
             <CardDescription className="text-muted-foreground">
               Low stock alert
             </CardDescription>
-            <CardTitle className="text-2xl text-foreground">
+            <CardTitle className="font-mono text-2xl text-foreground tabular-nums">
               {lowStockProducts.length}
             </CardTitle>
           </CardHeader>
@@ -532,7 +596,11 @@ export default async function Page() {
             {lowStockProducts.length > 0 ? (
               lowStockProducts.slice(0, 2).map((product) => (
                 <p key={product.id}>
-                  {product.name ?? "Product"} (stock {product.stock_qty ?? 0})
+                  {product.name ?? "Product"} (stock{" "}
+                  <span className="font-mono tabular-nums">
+                    {product.stock_qty ?? 0}
+                  </span>
+                  )
                 </p>
               ))
             ) : (

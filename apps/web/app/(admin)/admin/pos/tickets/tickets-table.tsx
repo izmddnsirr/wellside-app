@@ -43,6 +43,7 @@ import { ChevronLeft, ChevronRight, Eye, Search, Ticket } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { deleteTicket, refundTicket } from "./actions";
 
 type TicketItem = {
@@ -358,13 +359,16 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
     setDeleteError(null);
     const result = await deleteTicket(deleteTarget.id);
     if (!result?.ok) {
-      setDeleteError(result?.error ?? "Failed to delete ticket.");
+      const message = result?.error ?? "Failed to delete ticket.";
+      setDeleteError(message);
+      toast.error(message);
       setDeleteLoading(false);
       return;
     }
     setDeleteLoading(false);
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
+    toast.success("Ticket deleted.");
     router.refresh();
   };
 
@@ -384,13 +388,16 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
     setRefundError(null);
     const result = await refundTicket(refundTarget.id);
     if (!result?.ok) {
-      setRefundError(result?.error ?? "Failed to refund ticket.");
+      const message = result?.error ?? "Failed to refund ticket.";
+      setRefundError(message);
+      toast.error(message);
       setRefundLoading(false);
       return;
     }
     setRefundLoading(false);
     setRefundDialogOpen(false);
     setRefundTarget(null);
+    toast.success("Ticket refunded.");
     router.refresh();
   };
 
@@ -1083,7 +1090,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                   <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Sale type
                   </TableHead>
-                  <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <TableHead className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Status
                   </TableHead>
                   <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1182,10 +1189,12 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                         <TableCell className="px-4 py-3 text-muted-foreground">
                           {saleTypeLabel}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
-                          <Badge variant="outline" className={tone.badge}>
-                            {toTitleCase(status)}
-                          </Badge>
+                        <TableCell className="px-4 py-3 text-center">
+                          <div className="flex justify-center">
+                            <Badge variant="outline" className={tone.badge}>
+                              {toTitleCase(status)}
+                            </Badge>
+                          </div>
                         </TableCell>
                         <TableCell className="px-4 py-3 text-muted-foreground">
                           {formatPaymentMethod(ticket.payment_method)}
@@ -1193,7 +1202,7 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                         <TableCell className="px-4 py-3 font-semibold text-foreground">
                           {formatMoney(ticket.total_amount)}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="px-4 py-3 text-right">
                           <div className="flex justify-end">
                             <Sheet>
                               <SheetTrigger asChild>

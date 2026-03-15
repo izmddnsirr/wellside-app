@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -49,12 +50,14 @@ type Barber = {
   working_start_time: string | null;
   working_end_time: string | null;
   barber_level: string | null;
+  off_days: string[] | null;
 };
 
 type BarbersCardProps = {
   barbers: Barber[];
   errorMessage?: string | null;
   createBarber: (formData: FormData) => Promise<void>;
+  moveBarberToCustomer: (formData: FormData) => Promise<void>;
 };
 
 const formatDate = (value: string | null) => {
@@ -83,6 +86,21 @@ const formatWorkingTime = (value: string | null) => {
   return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
 };
 
+const formatMalaysiaPhoneInput = (value: string | null) => {
+  if (!value) {
+    return "";
+  }
+
+  const digits = value.replace(/\D/g, "");
+  if (digits.startsWith("60")) {
+    return digits.slice(2);
+  }
+  if (digits.startsWith("0")) {
+    return digits.slice(1);
+  }
+  return digits;
+};
+
 const getStatusTone = (isActive: boolean | null) =>
   isActive
     ? {
@@ -96,10 +114,21 @@ const getStatusTone = (isActive: boolean | null) =>
         dot: "bg-rose-500",
       };
 
+const OFF_DAY_OPTIONS = [
+  { key: "monday", label: "Monday" },
+  { key: "tuesday", label: "Tuesday" },
+  { key: "wednesday", label: "Wednesday" },
+  { key: "thursday", label: "Thursday" },
+  { key: "friday", label: "Friday" },
+  { key: "saturday", label: "Saturday" },
+  { key: "sunday", label: "Sunday" },
+] as const;
+
 export function BarbersCard({
   barbers,
   errorMessage,
   createBarber,
+  moveBarberToCustomer,
 }: BarbersCardProps) {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -107,8 +136,11 @@ export function BarbersCard({
   const [sort, setSort] = useState("name_asc");
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
+  const [isDemoteOpen, setIsDemoteOpen] = useState(false);
+  const [demoteTarget, setDemoteTarget] = useState<Barber | null>(null);
   const [selectedBarberLevel, setSelectedBarberLevel] = useState<string>("");
   const [selectedBarberActive, setSelectedBarberActive] = useState(true);
+  const [selectedOffDays, setSelectedOffDays] = useState<string[]>([]);
   const [newBarberLevel, setNewBarberLevel] = useState("");
   const [newBarberActive, setNewBarberActive] = useState(true);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -122,14 +154,51 @@ export function BarbersCard({
     if (!toastKey) {
       return;
     }
-    const message = {
-      "barber-created": "Barber account created.",
-      "barber-converted": "Customer converted to barber.",
-      "barber-password-invalid": "Password invalid or mismatch.",
-      "barber-password-failed": "Failed to update password.",
-    }[toastKey];
-    if (message) {
-      toast.success(message, { id: toastKey });
+    const messageMap: Record<
+      string,
+      { type: "success" | "error"; message: string }
+    > = {
+      "barber-created": {
+        type: "success",
+        message: "Barber account created.",
+      },
+      "barber-converted": {
+        type: "success",
+        message: "Customer converted to barber.",
+      },
+      "barber-password-invalid": {
+        type: "error",
+        message: "Password invalid or mismatch.",
+      },
+      "barber-password-failed": {
+        type: "error",
+        message: "Failed to update password.",
+      },
+      "barber-demoted": {
+        type: "success",
+        message: "Barber moved to customer.",
+      },
+      "barber-demote-blocked": {
+        type: "error",
+        message:
+          "Cannot move barber while there are active bookings assigned.",
+      },
+      "barber-demote-failed": {
+        type: "error",
+        message: "Failed to move barber to customer.",
+      },
+      "barber-demote-invalid": {
+        type: "error",
+        message: "Invalid barber selected for move.",
+      },
+    };
+    const config = messageMap[toastKey];
+    if (config) {
+      if (config.type === "success") {
+        toast.success(config.message, { id: toastKey });
+      } else {
+        toast.error(config.message, { id: toastKey });
+      }
     }
     const params = new URLSearchParams(searchParamsString);
     params.delete("toast");
@@ -233,6 +302,7 @@ export function BarbersCard({
     setSelectedBarber(barber);
     setSelectedBarberLevel(barber.barber_level ?? "");
     setSelectedBarberActive(Boolean(barber.is_active));
+    setSelectedOffDays((barber.off_days ?? []).map((day) => day.toLowerCase()));
     setIsUpdateOpen(true);
   };
 
@@ -241,7 +311,18 @@ export function BarbersCard({
     setSelectedBarber(null);
     setSelectedBarberLevel("");
     setSelectedBarberActive(true);
+    setSelectedOffDays([]);
     setUpdateError(null);
+  };
+
+  const openDemoteDialog = (barber: Barber) => {
+    setDemoteTarget(barber);
+    setIsDemoteOpen(true);
+  };
+
+  const closeDemoteDialog = () => {
+    setIsDemoteOpen(false);
+    setDemoteTarget(null);
   };
 
   const normalizeValue = (value: FormDataEntryValue | null) => {
@@ -264,16 +345,24 @@ export function BarbersCard({
     }
 
     const formData = new FormData(event.currentTarget);
-    const firstName = normalizeValue(formData.get("first_name"));
-    const lastName = normalizeValue(formData.get("last_name"));
-    const displayNameInput = normalizeValue(formData.get("display_name"));
+    const readField = (name: string, fallback: string | null) => {
+      if (!formData.has(name)) {
+        return fallback;
+      }
+      return normalizeValue(formData.get(name));
+    };
+
+    const firstName = readField("first_name", selectedBarber.first_name);
+    const lastName = readField("last_name", selectedBarber.last_name);
+    const displayNameInput = readField("display_name", selectedBarber.display_name);
     const fallbackDisplayName = [firstName, lastName].filter(Boolean).join(" ");
     const displayName =
       displayNameInput || fallbackDisplayName
         ? (displayNameInput ?? fallbackDisplayName)
         : null;
 
-    const phoneInput = normalizeValue(formData.get("phone"));
+    const emailValue = readField("email", selectedBarber.email);
+    const phoneInput = readField("phone", selectedBarber.phone);
     const normalizedPhone = phoneInput
       ? normalizePhone(phoneInput, "MY")
       : null;
@@ -286,11 +375,12 @@ export function BarbersCard({
       first_name: firstName,
       last_name: lastName,
       display_name: displayName,
-      email: normalizeValue(formData.get("email")),
+      email: emailValue,
       phone: normalizedPhone,
       working_start_time: normalizeValue(formData.get("working_start_time")),
       working_end_time: normalizeValue(formData.get("working_end_time")),
       barber_level: selectedBarberLevel || null,
+      off_days: selectedOffDays,
       is_active: formData.get("is_active") === "on",
     };
 
@@ -558,97 +648,141 @@ export function BarbersCard({
             </DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleUpdateSubmit}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="update-barber-first-name">First name</Label>
-                <Input
-                  id="update-barber-first-name"
-                  name="first_name"
-                  defaultValue={selectedBarber?.first_name ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="update-barber-last-name">Last name</Label>
-                <Input
-                  id="update-barber-last-name"
-                  name="last_name"
-                  defaultValue={selectedBarber?.last_name ?? ""}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="update-barber-email">Email</Label>
-              <Input
-                id="update-barber-email"
-                name="email"
-                type="email"
-                defaultValue={selectedBarber?.email ?? ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="update-barber-phone">Phone</Label>
-              <div className="flex">
-                <div className="flex items-center gap-2 rounded-l-md border border-border bg-muted/40 px-3 text-sm font-medium text-foreground/80">
-                  <span aria-hidden="true" className="text-base">
-                    🇲🇾
-                  </span>
-                  <span className="text-sm">+60</span>
+            <Tabs defaultValue="profile" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="profile" className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="update-barber-first-name">First name</Label>
+                    <Input
+                      id="update-barber-first-name"
+                      name="first_name"
+                      defaultValue={selectedBarber?.first_name ?? ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="update-barber-last-name">Last name</Label>
+                    <Input
+                      id="update-barber-last-name"
+                      name="last_name"
+                      defaultValue={selectedBarber?.last_name ?? ""}
+                    />
+                  </div>
                 </div>
-                <Input
-                  id="update-barber-phone"
-                  name="phone"
-                  defaultValue={selectedBarber?.phone ?? ""}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  onInput={(event) => {
-                    const target = event.currentTarget;
-                    target.value = target.value.replace(/\D/g, "");
-                  }}
-                  className="rounded-l-none"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="update-barber-working-start-time">
-                  Working start time
-                </Label>
-                <Input
-                  id="update-barber-working-start-time"
-                  name="working_start_time"
-                  type="time"
-                  defaultValue={selectedBarber?.working_start_time ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="update-barber-working-end-time">
-                  Working end time
-                </Label>
-                <Input
-                  id="update-barber-working-end-time"
-                  name="working_end_time"
-                  type="time"
-                  defaultValue={selectedBarber?.working_end_time ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="update-barber-level">Barber level</Label>
-                <Select
-                  name="barber_level"
-                  value={selectedBarberLevel || undefined}
-                  onValueChange={(value) => setSelectedBarberLevel(value)}
-                >
-                  <SelectTrigger id="update-barber-level">
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Junior">Junior</SelectItem>
-                    <SelectItem value="Senior">Senior</SelectItem>
-                    <SelectItem value="Professional">Professional</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="update-barber-email">Email</Label>
+                  <Input
+                    id="update-barber-email"
+                    name="email"
+                    type="email"
+                    defaultValue={selectedBarber?.email ?? ""}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="update-barber-phone">Phone</Label>
+                  <div className="flex">
+                    <div className="flex items-center gap-2 rounded-l-md border border-border bg-muted/40 px-3 text-sm font-medium text-foreground/80">
+                      <span aria-hidden="true" className="text-base">
+                        🇲🇾
+                      </span>
+                      <span className="text-sm">+60</span>
+                    </div>
+                    <Input
+                      id="update-barber-phone"
+                      name="phone"
+                      defaultValue={formatMalaysiaPhoneInput(selectedBarber?.phone ?? null)}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onInput={(event) => {
+                        const target = event.currentTarget;
+                        target.value = target.value.replace(/\D/g, "");
+                      }}
+                      className="rounded-l-none"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="schedule" className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="update-barber-working-start-time">
+                      Working start time
+                    </Label>
+                    <Input
+                      id="update-barber-working-start-time"
+                      name="working_start_time"
+                      type="time"
+                      defaultValue={selectedBarber?.working_start_time ?? ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="update-barber-working-end-time">
+                      Working end time
+                    </Label>
+                    <Input
+                      id="update-barber-working-end-time"
+                      name="working_end_time"
+                      type="time"
+                      defaultValue={selectedBarber?.working_end_time ?? ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="update-barber-level">Barber level</Label>
+                    <Select
+                      name="barber_level"
+                      value={selectedBarberLevel || undefined}
+                      onValueChange={(value) => setSelectedBarberLevel(value)}
+                    >
+                      <SelectTrigger id="update-barber-level">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Junior">Junior</SelectItem>
+                        <SelectItem value="Senior">Senior</SelectItem>
+                        <SelectItem value="Professional">Professional</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Off Days (Select Multiple)</Label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {OFF_DAY_OPTIONS.map((day) => {
+                      const isChecked = selectedOffDays.includes(day.key);
+                      return (
+                        <Label
+                          key={day.key}
+                          htmlFor={`update-barber-offday-${day.key}`}
+                          className="flex items-center gap-2 text-sm font-normal"
+                        >
+                          <Checkbox
+                            id={`update-barber-offday-${day.key}`}
+                            checked={isChecked}
+                            onCheckedChange={(value) =>
+                              setSelectedOffDays((prev) =>
+                                value === true
+                                  ? [...prev, day.key]
+                                  : prev.filter((item) => item !== day.key),
+                              )
+                            }
+                          />
+                          {day.label}
+                        </Label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Selected off days will be saved with this barber profile.
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
             <input
               type="hidden"
               name="is_active"
@@ -669,7 +803,21 @@ export function BarbersCard({
             {updateError ? (
               <p className="text-sm text-red-600">{updateError}</p>
             ) : null}
-            <DialogFooter>
+            <DialogFooter className="justify-between">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-amber-700 hover:text-amber-800"
+                onClick={() => {
+                  if (selectedBarber) {
+                    closeUpdateDialog();
+                    openDemoteDialog(selectedBarber);
+                  }
+                }}
+              >
+                Move to customer
+              </Button>
+              <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -678,6 +826,52 @@ export function BarbersCard({
                 Cancel
               </Button>
               <Button type="submit">Update barber</Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isDemoteOpen}
+        onOpenChange={(open) => (open ? null : closeDemoteDialog())}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move to customer</DialogTitle>
+          <DialogDescription>
+            This will move{" "}
+              <span className="font-medium text-foreground">
+                {demoteTarget
+                  ? [demoteTarget.first_name, demoteTarget.last_name]
+                      .filter(Boolean)
+                      .join(" ") || "this barber"
+                  : "this barber"}
+              </span>{" "}
+              from barber role to customer role.
+            </DialogDescription>
+          </DialogHeader>
+          <form action={moveBarberToCustomer} className="space-y-4">
+            <input type="hidden" name="id" value={demoteTarget?.id ?? ""} />
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+              This action will be blocked if the barber still has active
+              bookings (`scheduled` or `in_progress`).
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeDemoteDialog}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={!demoteTarget?.id}
+              >
+                Move to customer
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -708,7 +902,7 @@ export function BarbersCard({
                 <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Level
                 </TableHead>
-                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[10%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
                 <TableHead className="w-[8%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -747,15 +941,17 @@ export function BarbersCard({
                     <TableCell className="w-[12%] px-4 py-3 text-foreground">
                       {barber.barber_level || "-"}
                     </TableCell>
-                    <TableCell className="w-[10%] px-4 py-3">
-                      <Badge variant="outline" className={tone.badge}>
-                        {barber.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                    <TableCell className="w-[10%] px-4 py-3 text-center">
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className={tone.badge}>
+                          {barber.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
                     </TableCell>
                     <TableCell className="w-[8%] px-4 py-3 text-muted-foreground">
                       {formatDate(barber.created_at)}
                     </TableCell>
-                    <TableCell className="w-[10%] px-4 py-3">
+                    <TableCell className="w-[10%] px-4 py-3 text-right">
                       <div className="flex justify-end">
                         <Button
                           variant="outline"

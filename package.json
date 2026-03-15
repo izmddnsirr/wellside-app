@@ -13,6 +13,6 @@
     "start": "npm run start -w web"
   },
   "devDependencies": {
-    "turbo": "^2.5.0"
+    "turbo": "^2.8.17"
   }
 }

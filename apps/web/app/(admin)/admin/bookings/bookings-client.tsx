@@ -1,30 +1,51 @@
 "use client";
 
-import type { BookingRow } from "./bookings-card";
+import type { BarberUnavailabilityRow, BookingRow } from "./bookings-card";
 import { BookingsCard } from "./bookings-card";
+import type {
+  RestWindow,
+  TemporaryClosure,
+  WeeklySchedule,
+} from "@/utils/shop-operations";
 
 type BookingFormOption = {
   id: string;
   name: string;
   working_start_time?: string | null;
   working_end_time?: string | null;
+  off_days?: string[] | null;
 };
 
 type ServiceFormOption = BookingFormOption & {
   durationMinutes: number | null;
 };
 
+type BookingMutationResult = {
+  ok: boolean;
+  error?: string;
+};
+
 type BookingsClientProps = {
   bookings: BookingRow[];
+  unavailabilityEntries?: BarberUnavailabilityRow[];
   errorMessage?: string | null;
   allowedStatuses: string[];
-  updateBookingStatus: (formData: FormData) => Promise<void>;
-  cancelBooking?: (formData: FormData) => Promise<void>;
-  deleteBooking?: (formData: FormData) => Promise<void>;
-  createBooking?: (formData: FormData) => Promise<void>;
+  updateBookingStatus: (formData: FormData) => Promise<BookingMutationResult>;
+  cancelBooking?: (formData: FormData) => Promise<BookingMutationResult>;
+  deleteBooking?: (formData: FormData) => Promise<BookingMutationResult>;
+  createBooking?: (formData: FormData) => Promise<BookingMutationResult>;
+  createBarberUnavailability?: (
+    formData: FormData,
+  ) => Promise<BookingMutationResult>;
+  deleteBarberUnavailability?: (
+    formData: FormData,
+  ) => Promise<BookingMutationResult>;
   customerOptions?: BookingFormOption[];
   barberOptions?: BookingFormOption[];
   serviceOptions?: ServiceFormOption[];
+  shopWeeklySchedule?: WeeklySchedule;
+  shopTemporaryClosures?: TemporaryClosure[];
+  shopRestWindows?: RestWindow[];
   allowCancel?: boolean;
   allowDelete?: boolean;
   showActions?: boolean;

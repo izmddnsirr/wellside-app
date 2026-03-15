@@ -9,6 +9,7 @@ import {
 } from "@/utils/email/booking-cancellation";
 import {
   evaluateShopDateStatus,
+  hasRestWindowOverlap,
   loadShopOperatingRules,
 } from "@/utils/shop-operations";
 import { allowedStatuses } from "./constants";
@@ -26,6 +27,21 @@ const malaysiaHourMinuteFormatter = new Intl.DateTimeFormat("en-GB", {
   hour12: false,
   timeZone: "Asia/Kuala_Lumpur",
 });
+
+const malaysiaWeekdayFormatter = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const WEEKDAY_KEYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
 
 const parseTimeToMinutes = (value: string | null) => {
   if (!value) {
@@ -73,6 +89,17 @@ const toMinutesInMalaysia = (value: string) => {
   return hour * 60 + minute;
 };
 
+const toWeekdayInMalaysia = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const weekday = malaysiaWeekdayFormatter.format(date).toLowerCase();
+  return WEEKDAY_KEYS.includes(weekday as (typeof WEEKDAY_KEYS)[number])
+    ? weekday
+    : null;
+};
+
 const revalidateBookings = () => {
   revalidatePath("/admin/bookings");
   revalidatePath("/admin/bookings/active");
@@ -80,16 +107,21 @@ const revalidateBookings = () => {
   revalidatePath("/admin/bookings/calendar");
 };
 
-export const createBooking = async (formData: FormData) => {
+type BookingMutationResult = {
+  ok: boolean;
+  error?: string;
+};
+
+export const createBarberUnavailability = async (formData: FormData) => {
   const supabase = await createAdminClient();
-  const customerId = String(formData.get("customer_id") ?? "");
   const barberId = String(formData.get("barber_id") ?? "");
-  const serviceId = String(formData.get("service_id") ?? "");
   const startAt = String(formData.get("start_at") ?? "");
   const endAt = String(formData.get("end_at") ?? "");
+  const reasonRaw = String(formData.get("reason") ?? "");
+  const reason = reasonRaw.trim();
 
-  if (!customerId || !barberId || !serviceId || !startAt || !endAt) {
-    return;
+  if (!barberId || !startAt || !endAt) {
+    return { ok: false, error: "Missing unavailability details." } satisfies BookingMutationResult;
   }
 
   const startMs = new Date(startAt).getTime();
@@ -99,7 +131,162 @@ export const createBooking = async (formData: FormData) => {
     !Number.isFinite(endMs) ||
     endMs <= startMs
   ) {
-    return;
+    return { ok: false, error: "Invalid unavailability time range." } satisfies BookingMutationResult;
+  }
+
+  const { data: overlappingBooking, error: overlapBookingError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("barber_id", barberId)
+    .in("status", ["scheduled", "in_progress"])
+    .lt("start_at", endAt)
+    .gt("end_at", startAt)
+    .limit(1)
+    .maybeSingle();
+
+  if (overlapBookingError) {
+    console.error(
+      "Failed to validate booking overlap for unavailability",
+      overlapBookingError,
+    );
+    return { ok: false, error: "Failed to validate overlapping bookings." } satisfies BookingMutationResult;
+  }
+
+  if (overlappingBooking) {
+    return { ok: false, error: "This time already has a booking." } satisfies BookingMutationResult;
+  }
+
+  const { data: overlappingUnavailability, error: overlapUnavailabilityError } =
+    await supabase
+      .from("barber_unavailability")
+      .select("id")
+      .eq("barber_id", barberId)
+      .lt("start_at", endAt)
+      .gt("end_at", startAt)
+      .limit(1)
+      .maybeSingle();
+
+  if (overlapUnavailabilityError) {
+    console.error(
+      "Failed to validate unavailability overlap",
+      overlapUnavailabilityError,
+    );
+    return { ok: false, error: "Failed to validate unavailability overlap." } satisfies BookingMutationResult;
+  }
+
+  if (overlappingUnavailability) {
+    return { ok: false, error: "This unavailability range already exists." } satisfies BookingMutationResult;
+  }
+
+  const { error } = await supabase.from("barber_unavailability").insert({
+    barber_id: barberId,
+    start_at: startAt,
+    end_at: endAt,
+    reason: reason || null,
+  });
+
+  if (error) {
+    console.error("Failed to create barber unavailability", error);
+    return { ok: false, error: "Failed to create unavailability." } satisfies BookingMutationResult;
+  }
+
+  revalidateBookings();
+  return { ok: true } satisfies BookingMutationResult;
+};
+
+export const deleteBarberUnavailability = async (formData: FormData) => {
+  const supabase = await createAdminClient();
+  const unavailabilityId = String(formData.get("unavailability_id") ?? "");
+
+  if (!unavailabilityId) {
+    return { ok: false, error: "Missing unavailability id." } satisfies BookingMutationResult;
+  }
+
+  const { error } = await supabase
+    .from("barber_unavailability")
+    .delete()
+    .eq("id", unavailabilityId);
+
+  if (error) {
+    console.error("Failed to delete barber unavailability", error);
+    return { ok: false, error: "Failed to delete unavailability." } satisfies BookingMutationResult;
+  }
+
+  revalidateBookings();
+  return { ok: true } satisfies BookingMutationResult;
+};
+
+export const createBooking = async (formData: FormData) => {
+  const supabase = await createAdminClient();
+  const customerId = String(formData.get("customer_id") ?? "").trim();
+  const walkInName = String(formData.get("customer_name") ?? "").trim();
+  const walkInPhone = String(formData.get("customer_phone") ?? "").trim();
+  const barberId = String(formData.get("barber_id") ?? "");
+  const serviceId = String(formData.get("service_id") ?? "");
+  const startAt = String(formData.get("start_at") ?? "");
+  const endAt = String(formData.get("end_at") ?? "");
+
+  if (!barberId || !serviceId || !startAt || !endAt) {
+    return { ok: false, error: "Missing booking details." } satisfies BookingMutationResult;
+  }
+
+  const resolvedCustomerId: string | null = customerId || null;
+  let walkInCustomerId: string | null = null;
+
+  if (!resolvedCustomerId) {
+    if (!walkInName || !walkInPhone) {
+      return { ok: false, error: "Select existing customer or provide walk-in name and phone." } satisfies BookingMutationResult;
+    }
+
+    const { data: existingWalkIn, error: walkInLookupError } = await supabase
+      .from("walk_in_customers")
+      .select("id")
+      .eq("phone", walkInPhone)
+      .limit(1)
+      .maybeSingle();
+
+    if (walkInLookupError) {
+      console.error("Failed to lookup walk-in customer", walkInLookupError);
+      return { ok: false, error: "Failed to lookup walk-in customer." } satisfies BookingMutationResult;
+    }
+
+    if (existingWalkIn?.id) {
+      walkInCustomerId = existingWalkIn.id;
+      const { error: updateWalkInError } = await supabase
+        .from("walk_in_customers")
+        .update({ name: walkInName })
+        .eq("id", existingWalkIn.id);
+
+      if (updateWalkInError) {
+        console.error("Failed to update walk-in customer", updateWalkInError);
+      }
+    } else {
+      const { data: createdWalkIn, error: createWalkInError } = await supabase
+        .from("walk_in_customers")
+        .insert({
+          name: walkInName,
+          phone: walkInPhone,
+        })
+        .select("id")
+        .single();
+
+      if (createWalkInError || !createdWalkIn?.id) {
+        console.error("Failed to create walk-in customer", createWalkInError);
+        return { ok: false, error: "Failed to create walk-in customer." } satisfies BookingMutationResult;
+      }
+
+      walkInCustomerId = createdWalkIn.id;
+    }
+  }
+
+  const startMs = new Date(startAt).getTime();
+  const endMs = new Date(endAt).getTime();
+  if (
+    !Number.isFinite(startMs) ||
+    !Number.isFinite(endMs) ||
+    endMs <= startMs
+  ) {
+    return { ok: false, error: "Invalid booking time range." } satisfies BookingMutationResult;
   }
 
   const operatingRules = await loadShopOperatingRules(createAdminAuthClient());
@@ -110,40 +297,66 @@ export const createBooking = async (formData: FormData) => {
   );
 
   if (shopStatus.closed) {
-    return;
+    return { ok: false, error: "Shop is closed for the selected date." } satisfies BookingMutationResult;
+  }
+
+  if (
+    hasRestWindowOverlap(startAt, endAt, operatingRules.restWindows)
+  ) {
+    return { ok: false, error: "Selected time overlaps rest time." } satisfies BookingMutationResult;
   }
 
   const { data: barberProfile, error: barberError } = await supabase
     .from("profiles")
-    .select("working_start_time, working_end_time")
+    .select("working_start_time, working_end_time, off_days")
     .eq("id", barberId)
     .single();
 
   if (barberError || !barberProfile) {
     console.error("Failed to load barber profile for booking", barberError);
-    return;
+    return { ok: false, error: "Failed to load barber profile." } satisfies BookingMutationResult;
   }
 
   const workingStartMinutes = parseTimeToMinutes(
     barberProfile.working_start_time,
   );
-  const workingEndMinutes = parseTimeToMinutes(barberProfile.working_end_time);
+  const rawWorkingEndMinutes = parseTimeToMinutes(
+    barberProfile.working_end_time,
+  );
   const bookingStartMinutes = toMinutesInMalaysia(startAt);
-  const bookingEndMinutes = toMinutesInMalaysia(endAt);
+  const rawBookingEndMinutes = toMinutesInMalaysia(endAt);
+  const bookingWeekday = toWeekdayInMalaysia(startAt);
+  const offDays = Array.isArray(barberProfile.off_days)
+    ? barberProfile.off_days.map((value: string) => value.toLowerCase())
+    : [];
+  const bookingStartDateKey = toMalaysiaDateKey(startAt);
+  const bookingEndDateKey = toMalaysiaDateKey(endAt);
 
-  const sameMalaysiaDay =
-    toMalaysiaDateKey(startAt) === toMalaysiaDateKey(endAt);
+  const workingEndMinutes =
+    workingStartMinutes !== null && rawWorkingEndMinutes !== null
+      ? rawWorkingEndMinutes <= workingStartMinutes
+        ? rawWorkingEndMinutes + 24 * 60
+        : rawWorkingEndMinutes
+      : null;
+
+  const bookingEndMinutes =
+    bookingStartMinutes !== null && rawBookingEndMinutes !== null
+      ? bookingEndDateKey !== bookingStartDateKey ||
+        rawBookingEndMinutes <= bookingStartMinutes
+        ? rawBookingEndMinutes + 24 * 60
+        : rawBookingEndMinutes
+      : null;
 
   if (
-    !sameMalaysiaDay ||
     workingStartMinutes === null ||
     workingEndMinutes === null ||
     bookingStartMinutes === null ||
     bookingEndMinutes === null ||
+    (bookingWeekday !== null && offDays.includes(bookingWeekday)) ||
     bookingStartMinutes < workingStartMinutes ||
     bookingEndMinutes > workingEndMinutes
   ) {
-    return;
+    return { ok: false, error: "Selected time is outside barber working hours." } satisfies BookingMutationResult;
   }
 
   const { data: overlappingBooking, error: overlapError } = await supabase
@@ -158,15 +371,38 @@ export const createBooking = async (formData: FormData) => {
 
   if (overlapError) {
     console.error("Failed to validate booking overlap", overlapError);
-    return;
+    return { ok: false, error: "Failed to validate booking overlap." } satisfies BookingMutationResult;
   }
 
   if (overlappingBooking) {
-    return;
+    return { ok: false, error: "Selected slot is no longer available." } satisfies BookingMutationResult;
+  }
+
+  const { data: overlappingUnavailability, error: unavailabilityError } =
+    await supabase
+      .from("barber_unavailability")
+      .select("id")
+      .eq("barber_id", barberId)
+      .lt("start_at", endAt)
+      .gt("end_at", startAt)
+      .limit(1)
+      .maybeSingle();
+
+  if (unavailabilityError) {
+    console.error(
+      "Failed to validate barber unavailability overlap",
+      unavailabilityError,
+    );
+    return { ok: false, error: "Failed to validate barber availability." } satisfies BookingMutationResult;
+  }
+
+  if (overlappingUnavailability) {
+    return { ok: false, error: "Selected slot is marked unavailable." } satisfies BookingMutationResult;
   }
 
   const { error } = await supabase.from("bookings").insert({
-    customer_id: customerId,
+    customer_id: resolvedCustomerId,
+    walk_in_customer_id: walkInCustomerId,
     barber_id: barberId,
     service_id: serviceId,
     start_at: startAt,
@@ -176,10 +412,11 @@ export const createBooking = async (formData: FormData) => {
 
   if (error) {
     console.error("Failed to create booking", error);
-    return;
+    return { ok: false, error: "Failed to create booking." } satisfies BookingMutationResult;
   }
 
   revalidateBookings();
+  return { ok: true } satisfies BookingMutationResult;
 };
 
 export const updateBookingStatus = async (formData: FormData) => {
@@ -191,7 +428,7 @@ export const updateBookingStatus = async (formData: FormData) => {
     !id ||
     !allowedStatuses.includes(status as (typeof allowedStatuses)[number])
   ) {
-    return;
+    return { ok: false, error: "Invalid booking status update." } satisfies BookingMutationResult;
   }
 
   const bookingDetails =
@@ -223,7 +460,7 @@ export const updateBookingStatus = async (formData: FormData) => {
 
   if (error) {
     console.error("Failed to update booking status", error);
-    return;
+    return { ok: false, error: "Failed to update booking status." } satisfies BookingMutationResult;
   }
 
   if (status === "cancelled" && bookingDetails) {
@@ -273,6 +510,7 @@ export const updateBookingStatus = async (formData: FormData) => {
   }
 
   revalidateBookings();
+  return { ok: true } satisfies BookingMutationResult;
 };
 
 export const cancelBooking = async (formData: FormData) => {
@@ -280,7 +518,7 @@ export const cancelBooking = async (formData: FormData) => {
   const id = String(formData.get("id") ?? "");
 
   if (!id) {
-    return;
+    return { ok: false, error: "Missing booking id." } satisfies BookingMutationResult;
   }
 
   const { data: bookingDetails } = await supabase
@@ -306,7 +544,7 @@ export const cancelBooking = async (formData: FormData) => {
 
   if (error) {
     console.error("Failed to cancel booking", error);
-    return;
+    return { ok: false, error: "Failed to cancel booking." } satisfies BookingMutationResult;
   }
 
   if (bookingDetails) {
@@ -356,6 +594,7 @@ export const cancelBooking = async (formData: FormData) => {
   }
 
   revalidateBookings();
+  return { ok: true } satisfies BookingMutationResult;
 };
 
 export const deleteBooking = async (formData: FormData) => {
@@ -363,15 +602,16 @@ export const deleteBooking = async (formData: FormData) => {
   const id = String(formData.get("id") ?? "");
 
   if (!id) {
-    return;
+    return { ok: false, error: "Missing booking id." } satisfies BookingMutationResult;
   }
 
   const { error } = await supabase.from("bookings").delete().eq("id", id);
 
   if (error) {
     console.error("Failed to delete booking", error);
-    return;
+    return { ok: false, error: "Failed to delete booking." } satisfies BookingMutationResult;
   }
 
   revalidateBookings();
+  return { ok: true } satisfies BookingMutationResult;
 };

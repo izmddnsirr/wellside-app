@@ -13,7 +13,14 @@ export const allowedStatuses = [
   "cancelled",
 ] as const;
 
-export const updateBookingStatus = async (formData: FormData) => {
+type BookingMutationResult = {
+  ok: boolean;
+  error?: string;
+};
+
+export const updateBookingStatus = async (
+  formData: FormData,
+): Promise<BookingMutationResult> => {
   "use server";
   const supabase = await createBarberClient();
   const {
@@ -27,7 +34,7 @@ export const updateBookingStatus = async (formData: FormData) => {
     !id ||
     !allowedStatuses.includes(status as (typeof allowedStatuses)[number])
   ) {
-    return;
+    return { ok: false, error: "Invalid booking status update request." };
   }
 
   const { data: booking } = await supabase
@@ -49,7 +56,7 @@ export const updateBookingStatus = async (formData: FormData) => {
     .maybeSingle();
 
   if (!booking || booking.barber_id !== user.id) {
-    return;
+    return { ok: false, error: "Booking not found." };
   }
 
   const { error } = await supabase.rpc("barber_update_booking_status", {
@@ -59,7 +66,7 @@ export const updateBookingStatus = async (formData: FormData) => {
 
   if (error) {
     console.error("Failed to update booking status", error);
-    return;
+    return { ok: false, error: "Failed to update booking status." };
   }
 
   if (status === "cancelled") {
@@ -84,4 +91,6 @@ export const updateBookingStatus = async (formData: FormData) => {
   revalidatePath("/barber/bookings");
   revalidatePath("/barber/bookings/active");
   revalidatePath("/barber/bookings/past");
+
+  return { ok: true };
 };

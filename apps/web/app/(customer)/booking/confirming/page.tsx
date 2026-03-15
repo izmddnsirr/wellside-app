@@ -7,6 +7,7 @@ import {
 } from "@/utils/email/booking-confirmation";
 import {
   evaluateShopDateStatus,
+  hasRestWindowOverlap,
   loadShopOperatingRules,
 } from "@/utils/shop-operations";
 import { ConfirmingBookingClient } from "./confirming-booking-client";
@@ -42,6 +43,21 @@ const malaysiaHourMinuteFormatter = new Intl.DateTimeFormat("en-GB", {
   hour12: false,
   timeZone: "Asia/Kuala_Lumpur",
 });
+
+const malaysiaWeekdayFormatter = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const WEEKDAY_KEYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
 
 const parseTimeToMinutes = (value: string | null) => {
   if (!value) {
@@ -87,6 +103,17 @@ const toMinutesInMalaysia = (value: string) => {
     return null;
   }
   return hour * 60 + minute;
+};
+
+const toWeekdayInMalaysia = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const weekday = malaysiaWeekdayFormatter.format(date).toLowerCase();
+  return WEEKDAY_KEYS.includes(weekday as (typeof WEEKDAY_KEYS)[number])
+    ? weekday
+    : null;
 };
 
 export default async function ConfirmingBookingPage({
@@ -185,9 +212,15 @@ export default async function ConfirmingBookingPage({
       redirectWithError("booking");
     }
 
+    if (
+      hasRestWindowOverlap(startAt, endAt, operatingRules.restWindows)
+    ) {
+      redirectWithError("booking");
+    }
+
     const { data: barberProfile, error: barberError } = await supabase
       .from("profiles")
-      .select("working_start_time, working_end_time")
+      .select("working_start_time, working_end_time, off_days")
       .eq("id", barberId)
       .single();
 
@@ -198,20 +231,39 @@ export default async function ConfirmingBookingPage({
     const workingStartMinutes = parseTimeToMinutes(
       barberProfile?.working_start_time ?? null,
     );
-    const workingEndMinutes = parseTimeToMinutes(
+    const rawWorkingEndMinutes = parseTimeToMinutes(
       barberProfile?.working_end_time ?? null,
     );
     const bookingStartMinutes = toMinutesInMalaysia(startAt);
-    const bookingEndMinutes = toMinutesInMalaysia(endAt);
-    const sameMalaysiaDay =
-      toMalaysiaDateKey(startAt) === toMalaysiaDateKey(endAt);
+    const rawBookingEndMinutes = toMinutesInMalaysia(endAt);
+    const bookingWeekday = toWeekdayInMalaysia(startAt);
+    const offDays = Array.isArray(barberProfile?.off_days)
+      ? barberProfile.off_days.map((value: string) => value.toLowerCase())
+      : [];
+    const bookingStartDateKey = toMalaysiaDateKey(startAt);
+    const bookingEndDateKey = toMalaysiaDateKey(endAt);
+
+    const workingEndMinutes =
+      workingStartMinutes !== null && rawWorkingEndMinutes !== null
+        ? rawWorkingEndMinutes <= workingStartMinutes
+          ? rawWorkingEndMinutes + 24 * 60
+          : rawWorkingEndMinutes
+        : null;
+
+    const bookingEndMinutes =
+      bookingStartMinutes !== null && rawBookingEndMinutes !== null
+        ? bookingEndDateKey !== bookingStartDateKey ||
+          rawBookingEndMinutes <= bookingStartMinutes
+          ? rawBookingEndMinutes + 24 * 60
+          : rawBookingEndMinutes
+        : null;
 
     if (
-      !sameMalaysiaDay ||
       workingStartMinutes === null ||
       workingEndMinutes === null ||
       bookingStartMinutes === null ||
       bookingEndMinutes === null ||
+      (bookingWeekday !== null && offDays.includes(bookingWeekday)) ||
       bookingStartMinutes < workingStartMinutes ||
       bookingEndMinutes > workingEndMinutes
     ) {
@@ -233,6 +285,24 @@ export default async function ConfirmingBookingPage({
     }
 
     if (overlappingBooking) {
+      redirectWithError("booking");
+    }
+
+    const { data: overlappingUnavailability, error: unavailabilityError } =
+      await supabase
+        .from("barber_unavailability")
+        .select("id")
+        .eq("barber_id", barberId)
+        .lt("start_at", endAt)
+        .gt("end_at", startAt)
+        .limit(1)
+        .maybeSingle();
+
+    if (unavailabilityError) {
+      redirectWithError("booking");
+    }
+
+    if (overlappingUnavailability) {
       redirectWithError("booking");
     }
 

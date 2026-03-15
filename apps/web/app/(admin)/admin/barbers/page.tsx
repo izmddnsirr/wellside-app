@@ -47,6 +47,10 @@ const createBarber = async (formData: FormData) => {
   const workingStart = normalizeValue(formData.get("working_start_time"));
   const workingEnd = normalizeValue(formData.get("working_end_time"));
   const barberLevel = normalizeValue(formData.get("barber_level"));
+  const offDays = formData
+    .getAll("off_days")
+    .map((value) => String(value).trim().toLowerCase())
+    .filter(Boolean);
   const isActive = formData.get("is_active") === "on";
 
   const { data: existingProfile, error: profileLookupError } = await supabase
@@ -142,6 +146,7 @@ const createBarber = async (formData: FormData) => {
       working_start_time: workingStart,
       working_end_time: workingEnd,
       barber_level: barberLevel,
+      off_days: offDays,
       is_active: isActive,
     },
     { onConflict: "id" }
@@ -156,12 +161,64 @@ const createBarber = async (formData: FormData) => {
   redirect(`/admin/barbers?toast=barber-${status}`);
 };
 
+const moveBarberToCustomer = async (formData: FormData) => {
+  "use server";
+  const supabase = createAdminAuthClient();
+  const barberId = String(formData.get("id") ?? "");
+
+  if (!barberId) {
+    redirect("/admin/barbers?toast=barber-demote-invalid");
+  }
+
+  const { data: activeBooking, error: bookingError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("barber_id", barberId)
+    .in("status", ["scheduled", "in_progress"])
+    .limit(1)
+    .maybeSingle();
+
+  if (bookingError) {
+    console.error("Failed to validate active bookings for demotion", bookingError);
+    redirect("/admin/barbers?toast=barber-demote-failed");
+  }
+
+  if (activeBooking) {
+    redirect("/admin/barbers?toast=barber-demote-blocked");
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({
+      role: "customer",
+      working_start_time: null,
+      working_end_time: null,
+      barber_level: null,
+      is_active: true,
+    })
+    .eq("id", barberId)
+    .eq("role", "barber");
+
+  if (updateError) {
+    console.error("Failed to move barber to customer", updateError);
+    redirect("/admin/barbers?toast=barber-demote-failed");
+  }
+
+  revalidatePath("/admin/barbers");
+  revalidatePath("/admin/customers");
+  revalidatePath("/admin/bookings");
+  revalidatePath("/admin/bookings/active");
+  revalidatePath("/admin/bookings/past");
+  revalidatePath("/admin/bookings/calendar");
+  redirect("/admin/barbers?toast=barber-demoted");
+};
+
 export default async function Page() {
   const supabase = await createAdminClient();
   const { data: barbers, error } = await supabase
     .from("profiles")
     .select(
-      "id, first_name, last_name, display_name, email, phone, is_active, created_at, working_start_time, working_end_time, barber_level"
+      "id, first_name, last_name, display_name, email, phone, is_active, created_at, working_start_time, working_end_time, barber_level, off_days"
     )
     .eq("role", "barber")
     .order("created_at", { ascending: false });
@@ -178,6 +235,7 @@ export default async function Page() {
           barbers={barbers ?? []}
           errorMessage={errorMessage}
           createBarber={createBarber}
+          moveBarberToCustomer={moveBarberToCustomer}
         />
       </div>
     </AdminShell>

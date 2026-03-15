@@ -12,6 +12,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -36,16 +42,29 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CalendarClock,
+  CircleOff,
   ChevronLeft,
   ChevronRight,
   History,
   Pencil,
+  Plus,
   Search,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
+import { toast } from "sonner";
+import type {
+  RestWindow,
+  TemporaryClosure,
+  WeeklySchedule,
+} from "@/utils/shop-operations";
+import {
+  DEFAULT_WEEKLY_SCHEDULE,
+  evaluateShopDateStatus,
+  hasRestWindowOverlap,
+} from "@/utils/shop-operations";
 
 export type BookingRow = {
   id: string;
@@ -61,6 +80,10 @@ export type BookingRow = {
     email: string | null;
     phone: string | null;
   } | null;
+  walk_in_customer: {
+    name: string | null;
+    phone: string | null;
+  } | null;
   barber: {
     first_name: string | null;
     last_name: string | null;
@@ -72,28 +95,54 @@ export type BookingRow = {
   } | null;
 };
 
+export type BarberUnavailabilityRow = {
+  id: string;
+  barber_id: string;
+  start_at: string;
+  end_at: string;
+  reason: string | null;
+};
+
 export type BookingFormOption = {
   id: string;
   name: string;
+  email?: string | null;
+  phone?: string | null;
   working_start_time?: string | null;
   working_end_time?: string | null;
+  off_days?: string[] | null;
 };
 
 export type ServiceFormOption = BookingFormOption & {
   durationMinutes: number | null;
 };
 
+type BookingMutationResult = {
+  ok: boolean;
+  error?: string;
+};
+
 type BookingsCardProps = {
   bookings: BookingRow[];
+  unavailabilityEntries?: BarberUnavailabilityRow[];
   errorMessage?: string | null;
   allowedStatuses: string[];
-  updateBookingStatus: (formData: FormData) => Promise<void>;
-  cancelBooking?: (formData: FormData) => Promise<void>;
-  deleteBooking?: (formData: FormData) => Promise<void>;
-  createBooking?: (formData: FormData) => Promise<void>;
+  updateBookingStatus: (formData: FormData) => Promise<BookingMutationResult>;
+  cancelBooking?: (formData: FormData) => Promise<BookingMutationResult>;
+  deleteBooking?: (formData: FormData) => Promise<BookingMutationResult>;
+  createBooking?: (formData: FormData) => Promise<BookingMutationResult>;
+  createBarberUnavailability?: (
+    formData: FormData,
+  ) => Promise<BookingMutationResult>;
+  deleteBarberUnavailability?: (
+    formData: FormData,
+  ) => Promise<BookingMutationResult>;
   customerOptions?: BookingFormOption[];
   barberOptions?: BookingFormOption[];
   serviceOptions?: ServiceFormOption[];
+  shopWeeklySchedule?: WeeklySchedule;
+  shopTemporaryClosures?: TemporaryClosure[];
+  shopRestWindows?: RestWindow[];
   allowCancel?: boolean;
   allowDelete?: boolean;
   showActions?: boolean;
@@ -154,6 +203,23 @@ const formatMoney = (value: number | null) => {
 
 const joinName = (first: string | null, last: string | null) =>
   [first, last].filter(Boolean).join(" ") || "-";
+
+const getBookingCustomerName = (booking: BookingRow) => {
+  const existingName = joinName(
+    booking.customer?.first_name ?? null,
+    booking.customer?.last_name ?? null,
+  );
+  if (existingName !== "-") {
+    return existingName;
+  }
+  return booking.walk_in_customer?.name?.trim() || "Walk-in";
+};
+
+const getBookingCustomerContact = (booking: BookingRow) =>
+  booking.customer?.phone ||
+  booking.customer?.email ||
+  booking.walk_in_customer?.phone ||
+  "-";
 
 const formatStatusLabel = (status: string | null) => {
   if (!status) {
@@ -228,7 +294,7 @@ const bookingTableHeadClass =
 const bookingTableHeadActionsClass =
   "px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
 const bookingTableCellClass = "px-4 py-3";
-const bookingTableCellActionsClass = "px-4 py-3";
+const bookingTableCellActionsClass = "px-4 py-3 text-right";
 const bookingColumnClass = {
   date: "w-[12%]",
   time: "w-[14%]",
@@ -328,8 +394,8 @@ const MONTH_LABELS = [
   "Dec",
 ];
 
-const CALENDAR_START_MINUTES = 12 * 60;
-const CALENDAR_END_MINUTES = 22 * 60;
+const CALENDAR_DEFAULT_START_MINUTES = 12 * 60;
+const CALENDAR_DEFAULT_END_MINUTES = 22 * 60;
 const CALENDAR_SLOT_MINUTES = 60;
 const CALENDAR_ROW_HEIGHT = 72;
 const CALENDAR_TIME_COLUMN_WIDTH = 88;
@@ -365,6 +431,11 @@ const malaysiaWeekdayFormatter = new Intl.DateTimeFormat("en-MY", {
 
 const malaysiaDayFormatter = new Intl.DateTimeFormat("en-MY", {
   day: "2-digit",
+  timeZone: "Asia/Kuala_Lumpur",
+});
+
+const malaysiaWeekdayKeyFormatter = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
   timeZone: "Asia/Kuala_Lumpur",
 });
 
@@ -410,6 +481,11 @@ const toMinutesInMalaysia = (value: string | null) => {
   return hour * 60 + minute;
 };
 
+const toWeekdayKeyInMalaysia = (value: Date) => {
+  const weekday = malaysiaWeekdayKeyFormatter.format(value).toLowerCase();
+  return weekday;
+};
+
 const toInitials = (name: string) =>
   name
     .split(" ")
@@ -445,12 +521,26 @@ const parseTimeToMinutes = (value: string | null | undefined) => {
 };
 
 const formatMinutesToTimeLabel = (minutes: number) => {
-  const hour24 = Math.floor(minutes / 60);
-  const minute = minutes % 60;
+  const normalizedMinutes = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hour24 = Math.floor(normalizedMinutes / 60);
+  const minute = normalizedMinutes % 60;
   const hour12 = ((hour24 + 11) % 12) + 1;
   const suffix = hour24 >= 12 ? "PM" : "AM";
   const minuteLabel = String(minute).padStart(2, "0");
   return `${hour12}:${minuteLabel} ${suffix}`;
+};
+
+const normalizeCalendarEndMinutes = (
+  startMinutes: number | null,
+  endMinutes: number | null,
+) => {
+  if (endMinutes === null) {
+    return null;
+  }
+  if (startMinutes !== null && endMinutes <= startMinutes) {
+    return endMinutes + 24 * 60;
+  }
+  return endMinutes;
 };
 
 const formatWorkingHoursLabel = (
@@ -479,17 +569,42 @@ const toIsoFromCalendarSlot = (calendarDateKey: string, minutes: number) => {
   return new Date(utcMillis).toISOString();
 };
 
+const formatIsoToDateField = (value: string) => toCalendarDateKey(value);
+
+const formatIsoToTimeField = (value: string) => {
+  const minutes = toMinutesInMalaysia(value);
+  if (minutes === null) {
+    return "";
+  }
+  const hour = String(Math.floor(minutes / 60)).padStart(2, "0");
+  const minute = String(minutes % 60).padStart(2, "0");
+  return `${hour}:${minute}`;
+};
+
+const formatMinutesToTimeField = (minutes: number) => {
+  const normalized = ((minutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hour = String(Math.floor(normalized / 60)).padStart(2, "0");
+  const minute = String(normalized % 60).padStart(2, "0");
+  return `${hour}:${minute}`;
+};
+
 export function BookingsCard({
   bookings,
+  unavailabilityEntries = [],
   errorMessage,
   allowedStatuses,
   updateBookingStatus,
   cancelBooking,
   deleteBooking,
   createBooking,
+  createBarberUnavailability,
+  deleteBarberUnavailability,
   customerOptions = [],
   barberOptions = [],
   serviceOptions = [],
+  shopWeeklySchedule = DEFAULT_WEEKLY_SCHEDULE,
+  shopTemporaryClosures = [],
+  shopRestWindows = [],
   allowCancel = true,
   allowDelete = true,
   showActions = true,
@@ -520,14 +635,26 @@ export function BookingsCard({
     Record<string, string>
   >({});
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [unavailabilityDialogOpen, setUnavailabilityDialogOpen] =
+    useState(false);
   const [createBookingDraft, setCreateBookingDraft] = useState<{
     customerId: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
     barberId: string;
     serviceId: string;
-    startAt: string;
-    endAt: string;
-    dateLabel: string;
-    timeLabel: string;
+    bookingDate: string;
+    bookingTime: string;
+    notes: string;
+  } | null>(null);
+  const [unavailabilityDraft, setUnavailabilityDraft] = useState<{
+    barberId: string;
+    barberName: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    reason: string;
   } | null>(null);
   const statusOptions = useMemo(
     () => allowedStatuses.filter((status) => status !== "cancelled"),
@@ -594,10 +721,7 @@ export function BookingsCard({
       if (!debouncedSearch) {
         return true;
       }
-      const customerName = joinName(
-        booking.customer?.first_name ?? null,
-        booking.customer?.last_name ?? null,
-      );
+      const customerName = getBookingCustomerName(booking);
       const barberName = joinName(
         booking.barber?.first_name ?? null,
         booking.barber?.last_name ?? null,
@@ -609,6 +733,8 @@ export function BookingsCard({
         customerName,
         booking.customer?.email,
         booking.customer?.phone,
+        booking.walk_in_customer?.name,
+        booking.walk_in_customer?.phone,
         barberName,
         booking.service?.name,
       ]
@@ -663,14 +789,8 @@ export function BookingsCard({
       const dateB = dateValueB ? new Date(dateValueB).getTime() : 0;
       const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      const nameA = joinName(
-        a.customer?.first_name ?? null,
-        a.customer?.last_name ?? null,
-      );
-      const nameB = joinName(
-        b.customer?.first_name ?? null,
-        b.customer?.last_name ?? null,
-      );
+      const nameA = getBookingCustomerName(a);
+      const nameB = getBookingCustomerName(b);
 
       if (sort === "date_desc") {
         const diff = dateB - dateA;
@@ -809,22 +929,95 @@ export function BookingsCard({
     return output;
   }, [barberOptions, bookings, calendarWeekBookings, filteredBookings]);
 
+  const workingHoursByBarberId = useMemo(() => {
+    return new Map(
+      barberOptions.map((barberOption) => {
+        const start = parseTimeToMinutes(barberOption.working_start_time);
+        const end = normalizeCalendarEndMinutes(
+          start,
+          parseTimeToMinutes(barberOption.working_end_time),
+        );
+        return [
+          barberOption.id,
+          {
+            start,
+            end,
+            offDays: new Set(
+              (barberOption.off_days ?? []).map((value) =>
+                String(value).toLowerCase(),
+              ),
+            ),
+          },
+        ] as const;
+      }),
+    );
+  }, [barberOptions]);
+
+  const calendarVisibleRange = useMemo(() => {
+    const selectedDayBookings = calendarWeekBookings.filter((booking) => {
+      const dateValue = booking.start_at ?? booking.booking_date;
+      return toCalendarDateKey(dateValue) === calendarDateKey;
+    });
+
+    const rangeStarts: number[] = [];
+    const rangeEnds: number[] = [];
+
+    workingHoursByBarberId.forEach((workingHours) => {
+      if (workingHours.start !== null) {
+        rangeStarts.push(workingHours.start);
+      }
+      if (workingHours.end !== null) {
+        rangeEnds.push(workingHours.end);
+      }
+    });
+
+    selectedDayBookings.forEach((booking) => {
+      const startMinutes = toMinutesInMalaysia(booking.start_at);
+      const endMinutes = normalizeCalendarEndMinutes(
+        startMinutes,
+        toMinutesInMalaysia(booking.end_at ?? booking.start_at),
+      );
+
+      if (startMinutes !== null) {
+        rangeStarts.push(startMinutes);
+      }
+      if (endMinutes !== null) {
+        rangeEnds.push(endMinutes);
+      }
+    });
+
+    const rawStart =
+      rangeStarts.length > 0
+        ? Math.min(...rangeStarts)
+        : CALENDAR_DEFAULT_START_MINUTES;
+    const rawEnd =
+      rangeEnds.length > 0
+        ? Math.max(...rangeEnds)
+        : CALENDAR_DEFAULT_END_MINUTES;
+
+    const startMinutes =
+      Math.floor(rawStart / CALENDAR_SLOT_MINUTES) * CALENDAR_SLOT_MINUTES;
+    const endMinutes = Math.max(
+      startMinutes + CALENDAR_SLOT_MINUTES,
+      Math.ceil(rawEnd / CALENDAR_SLOT_MINUTES) * CALENDAR_SLOT_MINUTES,
+    );
+
+    return { startMinutes, endMinutes };
+  }, [calendarDateKey, calendarWeekBookings, workingHoursByBarberId]);
+
   const calendarSlots = useMemo(() => {
     const slotCount =
-      (CALENDAR_END_MINUTES - CALENDAR_START_MINUTES) / CALENDAR_SLOT_MINUTES;
+      (calendarVisibleRange.endMinutes - calendarVisibleRange.startMinutes) /
+      CALENDAR_SLOT_MINUTES;
     return Array.from({ length: slotCount }, (_, index) => {
-      const minutes = CALENDAR_START_MINUTES + index * CALENDAR_SLOT_MINUTES;
-      const hour24 = Math.floor(minutes / 60);
-      const minute = minutes % 60;
-      const hour12 = ((hour24 + 11) % 12) + 1;
-      const suffix = hour24 >= 12 ? "PM" : "AM";
-      const minuteLabel = String(minute).padStart(2, "0");
       return {
-        label: `${hour12}:${minuteLabel} ${suffix}`,
+        label: formatMinutesToTimeLabel(
+          calendarVisibleRange.startMinutes + index * CALENDAR_SLOT_MINUTES,
+        ),
         show: true,
       };
     });
-  }, []);
+  }, [calendarVisibleRange]);
 
   const calendarEvents = useMemo(() => {
     const barberIdByName = new Map(
@@ -846,28 +1039,36 @@ export function BookingsCard({
           toCalendarBarberId(barberName);
 
         const startMinutes = toMinutesInMalaysia(booking.start_at);
-        const endMinutes = toMinutesInMalaysia(
-          booking.end_at ?? booking.start_at,
+        const endMinutes = normalizeCalendarEndMinutes(
+          startMinutes,
+          toMinutesInMalaysia(booking.end_at ?? booking.start_at),
         );
 
         const safeStart =
-          startMinutes === null ? CALENDAR_START_MINUTES : startMinutes;
+          startMinutes === null
+            ? calendarVisibleRange.startMinutes
+            : startMinutes;
         const safeEnd =
           endMinutes === null
             ? safeStart + CALENDAR_SLOT_MINUTES
             : Math.max(endMinutes, safeStart + CALENDAR_SLOT_MINUTES);
 
-        const clampedStart = Math.max(CALENDAR_START_MINUTES, safeStart);
-        const clampedEnd = Math.min(CALENDAR_END_MINUTES, safeEnd);
+        const clampedStart = Math.max(
+          calendarVisibleRange.startMinutes,
+          safeStart,
+        );
+        const clampedEnd = Math.min(calendarVisibleRange.endMinutes, safeEnd);
 
         const startRow =
           Math.floor(
-            (clampedStart - CALENDAR_START_MINUTES) / CALENDAR_SLOT_MINUTES,
+            (clampedStart - calendarVisibleRange.startMinutes) /
+              CALENDAR_SLOT_MINUTES,
           ) + 1;
         const endRow = Math.max(
           startRow + 1,
           Math.ceil(
-            (clampedEnd - CALENDAR_START_MINUTES) / CALENDAR_SLOT_MINUTES,
+            (clampedEnd - calendarVisibleRange.startMinutes) /
+              CALENDAR_SLOT_MINUTES,
           ) + 1,
         );
 
@@ -879,35 +1080,163 @@ export function BookingsCard({
           startRow,
           endRow,
           time: formatTimeRange(booking.start_at, booking.end_at),
-          client: joinName(
-            booking.customer?.first_name ?? null,
-            booking.customer?.last_name ?? null,
-          ),
+          client: getBookingCustomerName(booking),
           service: booking.service?.name ?? "-",
           tone: tone.badge,
         };
       });
-  }, [calendarBarbers, calendarDateKey, calendarWeekBookings]);
+  }, [
+    calendarBarbers,
+    calendarDateKey,
+    calendarVisibleRange,
+    calendarWeekBookings,
+  ]);
 
-  const hasCalendarBookings = calendarEvents.length > 0;
+  const calendarUnavailabilityEvents = useMemo(() => {
+    return unavailabilityEntries.reduce<
+      Array<{
+        id: string;
+        barberId: string;
+        startRow: number;
+        endRow: number;
+        reason: string | null;
+      }>
+    >((output, entry) => {
+      if (
+        !entry.barber_id ||
+        toCalendarDateKey(entry.start_at) !== calendarDateKey
+      ) {
+        return output;
+      }
+
+      const startMinutes = toMinutesInMalaysia(entry.start_at);
+      const endMinutes = normalizeCalendarEndMinutes(
+        startMinutes,
+        toMinutesInMalaysia(entry.end_at),
+      );
+
+      const safeStart =
+        startMinutes === null
+          ? calendarVisibleRange.startMinutes
+          : startMinutes;
+      const safeEnd =
+        endMinutes === null
+          ? safeStart + CALENDAR_SLOT_MINUTES
+          : Math.max(endMinutes, safeStart + CALENDAR_SLOT_MINUTES);
+
+      const clampedStart = Math.max(
+        calendarVisibleRange.startMinutes,
+        safeStart,
+      );
+      const clampedEnd = Math.min(calendarVisibleRange.endMinutes, safeEnd);
+      if (clampedEnd <= clampedStart) {
+        return output;
+      }
+
+      const startRow =
+        Math.floor(
+          (clampedStart - calendarVisibleRange.startMinutes) /
+            CALENDAR_SLOT_MINUTES,
+        ) + 1;
+      const endRow = Math.max(
+        startRow + 1,
+        Math.ceil(
+          (clampedEnd - calendarVisibleRange.startMinutes) /
+            CALENDAR_SLOT_MINUTES,
+        ) + 1,
+      );
+
+      output.push({
+        id: entry.id,
+        barberId: entry.barber_id,
+        startRow,
+        endRow,
+        reason: entry.reason,
+      });
+      return output;
+    }, []);
+  }, [calendarDateKey, calendarVisibleRange, unavailabilityEntries]);
+
   const canCreateFromCalendar =
     Boolean(createBooking) &&
     customerOptions.length > 0 &&
     barberOptions.length > 0 &&
     serviceOptions.length > 0;
 
-  const workingHoursByBarberId = useMemo(() => {
-    return new Map(
-      barberOptions.map((barberOption) => {
-        const start = parseTimeToMinutes(barberOption.working_start_time);
-        const end = parseTimeToMinutes(barberOption.working_end_time);
-        return [barberOption.id, { start, end }] as const;
-      }),
-    );
-  }, [barberOptions]);
+  const createBookingTiming = useMemo(() => {
+    if (!createBookingDraft) {
+      return {
+        startAt: "",
+        endAt: "",
+      };
+    }
+
+    const startMinutes = parseTimeToMinutes(createBookingDraft.bookingTime);
+
+    if (!createBookingDraft.bookingDate || startMinutes === null) {
+      return {
+        startAt: "",
+        endAt: "",
+      };
+    }
+
+    return {
+      startAt:
+        toIsoFromCalendarSlot(createBookingDraft.bookingDate, startMinutes) ??
+        "",
+      endAt:
+        toIsoFromCalendarSlot(
+          createBookingDraft.bookingDate,
+          startMinutes + CALENDAR_SLOT_MINUTES,
+        ) ?? "",
+    };
+  }, [createBookingDraft]);
+
+  const unavailabilityTiming = useMemo(() => {
+    if (!unavailabilityDraft) {
+      return {
+        startAt: "",
+        endAt: "",
+      };
+    }
+
+    const startMinutes = parseTimeToMinutes(unavailabilityDraft.startTime);
+    const endMinutes = parseTimeToMinutes(unavailabilityDraft.endTime);
+
+    if (
+      !unavailabilityDraft.date ||
+      startMinutes === null ||
+      endMinutes === null ||
+      endMinutes <= startMinutes
+    ) {
+      return {
+        startAt: "",
+        endAt: "",
+      };
+    }
+
+    return {
+      startAt:
+        toIsoFromCalendarSlot(unavailabilityDraft.date, startMinutes) ?? "",
+      endAt: toIsoFromCalendarSlot(unavailabilityDraft.date, endMinutes) ?? "",
+    };
+  }, [unavailabilityDraft]);
+
+  const calendarDateShopStatus = useMemo(
+    () =>
+      evaluateShopDateStatus(
+        calendarDateKey,
+        shopWeeklySchedule,
+        shopTemporaryClosures,
+      ),
+    [calendarDateKey, shopTemporaryClosures, shopWeeklySchedule],
+  );
 
   const canCreateInSlot = (barberId: string, slotIndex: number) => {
     if (!canCreateFromCalendar) {
+      return false;
+    }
+    if (calendarDateShopStatus.closed) {
       return false;
     }
     const workingHours = workingHoursByBarberId.get(barberId);
@@ -918,11 +1247,43 @@ export function BookingsCard({
     ) {
       return false;
     }
+    const weekdayKey = toWeekdayKeyInMalaysia(calendarDate);
+    if (workingHours.offDays.has(weekdayKey)) {
+      return false;
+    }
 
     const slotStart =
-      CALENDAR_START_MINUTES + slotIndex * CALENDAR_SLOT_MINUTES;
+      calendarVisibleRange.startMinutes + slotIndex * CALENDAR_SLOT_MINUTES;
     const slotEnd = slotStart + CALENDAR_SLOT_MINUTES;
-    return slotStart >= workingHours.start && slotEnd <= workingHours.end;
+    if (!(slotStart >= workingHours.start && slotEnd <= workingHours.end)) {
+      return false;
+    }
+
+    const slotDateKey = toCalendarDateKey(calendarDate);
+    const slotStartISO = toIsoFromCalendarSlot(slotDateKey, slotStart);
+    const slotEndISO = toIsoFromCalendarSlot(slotDateKey, slotEnd);
+    if (
+      !slotStartISO ||
+      !slotEndISO ||
+      hasRestWindowOverlap(slotStartISO, slotEndISO, shopRestWindows)
+    ) {
+      return false;
+    }
+
+    const hasBlockedRange = calendarUnavailabilityEvents.some((entry) => {
+      if (entry.barberId !== barberId) {
+        return false;
+      }
+      const blockedStart =
+        calendarVisibleRange.startMinutes +
+        (entry.startRow - 1) * CALENDAR_SLOT_MINUTES;
+      const blockedEnd =
+        calendarVisibleRange.startMinutes +
+        (entry.endRow - 1) * CALENDAR_SLOT_MINUTES;
+      return slotStart < blockedEnd && blockedStart < slotEnd;
+    });
+
+    return !hasBlockedRange;
   };
 
   const openCreateBookingDialog = (
@@ -942,7 +1303,7 @@ export function BookingsCard({
     }
 
     const startMinutes =
-      CALENDAR_START_MINUTES + slotIndex * CALENDAR_SLOT_MINUTES;
+      calendarVisibleRange.startMinutes + slotIndex * CALENDAR_SLOT_MINUTES;
     const endMinutes = startMinutes + CALENDAR_SLOT_MINUTES;
     const startAt = toIsoFromCalendarSlot(dateKey, startMinutes);
     const endAt = toIsoFromCalendarSlot(dateKey, endMinutes);
@@ -960,15 +1321,68 @@ export function BookingsCard({
       barberOptions[0];
 
     setCreateBookingDraft({
-      customerId: customerOptions[0]?.id ?? "",
+      customerId: "",
+      customerName: "",
+      customerPhone: "",
+      customerEmail: "",
       barberId: preferredBarber?.id ?? barberOptions[0]?.id ?? "",
-      serviceId: serviceOptions[0]?.id ?? "",
-      startAt,
-      endAt,
-      dateLabel: formatCalendarDateLabel(calendarDate),
-      timeLabel: formatTimeRange(startAt, endAt),
+      serviceId: "",
+      bookingDate: formatIsoToDateField(startAt),
+      bookingTime: formatIsoToTimeField(startAt),
+      notes: "",
     });
     setCreateDialogOpen(true);
+  };
+
+  const openUnavailabilityDialog = (
+    barberId: string,
+    barberName: string,
+    slotIndex: number,
+  ) => {
+    if (!canCreateInSlot(barberId, slotIndex)) {
+      return;
+    }
+
+    const dateKey = toCalendarDateKey(calendarDate);
+    if (!dateKey) {
+      return;
+    }
+
+    const startMinutes =
+      calendarVisibleRange.startMinutes + slotIndex * CALENDAR_SLOT_MINUTES;
+    const endMinutes = startMinutes + CALENDAR_SLOT_MINUTES;
+
+    setUnavailabilityDraft({
+      barberId,
+      barberName,
+      date: dateKey,
+      startTime: formatMinutesToTimeField(startMinutes),
+      endTime: formatMinutesToTimeField(endMinutes),
+      reason: "",
+    });
+    setUnavailabilityDialogOpen(true);
+  };
+
+  const runBookingMutation = async (
+    mutation: (formData: FormData) => Promise<BookingMutationResult>,
+    formData: FormData,
+    successMessage: string,
+    onSuccess?: () => void,
+  ) => {
+    try {
+      const result = await mutation(formData);
+      if (!result?.ok) {
+        toast.error(result?.error ?? "Action failed. Please try again.");
+        return;
+      }
+
+      onSuccess?.();
+      toast.success(successMessage);
+      router.refresh();
+    } catch (error) {
+      console.error("Booking mutation failed", error);
+      toast.error("Action failed. Please try again.");
+    }
   };
 
   const hasActiveFilters =
@@ -1216,55 +1630,56 @@ export function BookingsCard({
     : "Completed bookings will show up here.";
 
   const calendarWeekSelector = (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="px-1 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <Button
           variant="outline"
           size="sm"
+          className="h-11 rounded-xl px-5"
           onClick={() => {
             const previousWeek = new Date(calendarDate);
             previousWeek.setDate(previousWeek.getDate() - 7);
-            setCalendarDate(startOfDay(previousWeek));
+            setCalendarDate(startOfWeek(previousWeek));
           }}
         >
+          <ChevronLeft className="size-4" />
           Prev week
         </Button>
-        <span className="text-xs text-muted-foreground">
-          {calendarWeekLabel}
-        </span>
+        <div className="flex flex-1 items-center justify-center gap-3 sm:gap-4">
+          {calendarWeekDays.map((day) => {
+            const isActive = toCalendarDateKey(day) === calendarDateKey;
+            return (
+              <Button
+                key={toCalendarDateKey(day)}
+                variant={isActive ? "default" : "outline"}
+                className="h-19 w-19 rounded-full border-border/70 p-0 shadow-sm"
+                onClick={() => setCalendarDate(startOfDay(day))}
+              >
+                <span className="flex flex-col items-center leading-tight">
+                  <span className="text-[11px] uppercase tracking-normal">
+                    {malaysiaWeekdayFormatter.format(day)}
+                  </span>
+                  <span className="text-2xl font-semibold">
+                    {malaysiaDayFormatter.format(day)}
+                  </span>
+                </span>
+              </Button>
+            );
+          })}
+        </div>
         <Button
           variant="outline"
           size="sm"
+          className="h-11 rounded-xl px-5"
           onClick={() => {
             const nextWeek = new Date(calendarDate);
             nextWeek.setDate(nextWeek.getDate() + 7);
-            setCalendarDate(startOfDay(nextWeek));
+            setCalendarDate(startOfWeek(nextWeek));
           }}
         >
           Next week
+          <ChevronRight className="size-4" />
         </Button>
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-3 py-1">
-        {calendarWeekDays.map((day) => {
-          const isActive = toCalendarDateKey(day) === calendarDateKey;
-          return (
-            <Button
-              key={toCalendarDateKey(day)}
-              variant={isActive ? "default" : "outline"}
-              className="h-14 w-14 rounded-full p-0"
-              onClick={() => setCalendarDate(startOfDay(day))}
-            >
-              <span className="flex flex-col items-center leading-tight">
-                <span className="text-[10px] uppercase tracking-wide">
-                  {malaysiaWeekdayFormatter.format(day)}
-                </span>
-                <span className="text-xs font-semibold">
-                  {malaysiaDayFormatter.format(day)}
-                </span>
-              </span>
-            </Button>
-          );
-        })}
       </div>
     </div>
   );
@@ -1280,33 +1695,59 @@ export function BookingsCard({
           }
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create booking</DialogTitle>
-            <DialogDescription>
-              Create a booking for {createBookingDraft.dateLabel} at{" "}
-              {createBookingDraft.timeLabel}.
+        <DialogContent className="p-4 sm:max-w-140 sm:p-5">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl">Add Booking</DialogTitle>
+            <DialogDescription className="text-sm">
+              Create a new manual booking
             </DialogDescription>
           </DialogHeader>
           <form
-            action={createBooking}
-            className="space-y-4"
-            onSubmit={() => setCreateDialogOpen(false)}
+            action={async (formData) => {
+              if (!createBooking) {
+                return;
+              }
+              await runBookingMutation(
+                createBooking,
+                formData,
+                "Booking created.",
+                () => {
+                  setCreateDialogOpen(false);
+                  setCreateBookingDraft(null);
+                },
+              );
+            }}
+            className="space-y-3"
           >
             <input
               type="hidden"
               name="start_at"
-              value={createBookingDraft.startAt}
+              value={createBookingTiming.startAt}
             />
             <input
               type="hidden"
               name="end_at"
-              value={createBookingDraft.endAt}
+              value={createBookingTiming.endAt}
             />
             <input
               type="hidden"
               name="customer_id"
               value={createBookingDraft.customerId}
+            />
+            <input
+              type="hidden"
+              name="customer_name"
+              value={createBookingDraft.customerName}
+            />
+            <input
+              type="hidden"
+              name="customer_phone"
+              value={createBookingDraft.customerPhone}
+            />
+            <input
+              type="hidden"
+              name="customer_email"
+              value={createBookingDraft.customerEmail}
             />
             <input
               type="hidden"
@@ -1320,93 +1761,250 @@ export function BookingsCard({
             />
 
             <div className="space-y-2">
-              <p className="text-sm font-semibold">Customer</p>
-              <Select
-                value={createBookingDraft.customerId}
-                onValueChange={(value) =>
+              <label
+                htmlFor="create-booking-customer-name"
+                className="text-xs font-medium"
+              >
+                Customer Name *
+              </label>
+              <Input
+                id="create-booking-customer-name"
+                list="create-booking-customers"
+                value={createBookingDraft.customerName}
+                placeholder="Enter customer name"
+                className="h-9"
+                onChange={(event) => {
+                  const nextName = event.target.value;
+                  const matchedCustomer =
+                    customerOptions.find(
+                      (customer) =>
+                        normalizeName(customer.name) ===
+                        normalizeName(nextName),
+                    ) ?? null;
+
                   setCreateBookingDraft((prev) =>
                     prev
                       ? {
                           ...prev,
-                          customerId: value,
+                          customerName: nextName,
+                          customerId: matchedCustomer?.id ?? "",
+                          customerPhone: matchedCustomer?.phone ?? "",
+                          customerEmail: matchedCustomer?.email ?? "",
                         }
                       : prev,
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customerOptions.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  );
+                }}
+                required
+              />
+              <datalist id="create-booking-customers">
+                {customerOptions.map((customer) => (
+                  <option key={customer.id} value={customer.name} />
+                ))}
+              </datalist>
+              {!createBookingDraft.customerId ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Select existing customer or enter walk-in name and phone.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label
+                  htmlFor="create-booking-customer-phone"
+                  className="text-xs font-medium"
+                >
+                  Phone *
+                </label>
+                <Input
+                  id="create-booking-customer-phone"
+                  value={createBookingDraft.customerPhone}
+                  placeholder="Enter phone number"
+                  className="h-9"
+                  onChange={(event) =>
+                    setCreateBookingDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            customerPhone: event.target.value,
+                          }
+                        : prev,
+                    )
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="create-booking-customer-email"
+                  className="text-xs font-medium"
+                >
+                  Email
+                </label>
+                <Input
+                  id="create-booking-customer-email"
+                  value={createBookingDraft.customerEmail}
+                  placeholder="Enter email (optional)"
+                  className="h-9"
+                  onChange={(event) =>
+                    setCreateBookingDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            customerEmail: event.target.value,
+                          }
+                        : prev,
+                    )
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Staff *</label>
+                <Select
+                  value={createBookingDraft.barberId}
+                  onValueChange={(value) =>
+                    setCreateBookingDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            barberId: value,
+                          }
+                        : prev,
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-9 w-full">
+                    <SelectValue placeholder="Select barber" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {barberOptions.map((barberOption) => (
+                      <SelectItem key={barberOption.id} value={barberOption.id}>
+                        {barberOption.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Services *</label>
+                <Select
+                  value={createBookingDraft.serviceId}
+                  onValueChange={(value) =>
+                    setCreateBookingDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            serviceId: value,
+                          }
+                        : prev,
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-9 w-full">
+                    <SelectValue placeholder="Select service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceOptions.map((serviceOption) => (
+                      <SelectItem
+                        key={serviceOption.id}
+                        value={serviceOption.id}
+                      >
+                        {serviceOption.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label
+                  htmlFor="create-booking-date"
+                  className="text-xs font-medium"
+                >
+                  Date *
+                </label>
+                <Input
+                  id="create-booking-date"
+                  type="date"
+                  value={createBookingDraft.bookingDate}
+                  onChange={(event) =>
+                    setCreateBookingDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            bookingDate: event.target.value,
+                          }
+                        : prev,
+                    )
+                  }
+                  className="h-9"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="create-booking-time"
+                  className="text-xs font-medium"
+                >
+                  Time *
+                </label>
+                <Input
+                  id="create-booking-time"
+                  type="time"
+                  value={createBookingDraft.bookingTime}
+                  className="h-9"
+                  onChange={(event) =>
+                    setCreateBookingDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            bookingTime: event.target.value,
+                          }
+                        : prev,
+                    )
+                  }
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-semibold">Barber</p>
-              <Select
-                value={createBookingDraft.barberId}
-                onValueChange={(value) =>
+              <label
+                htmlFor="create-booking-notes"
+                className="text-xs font-medium"
+              >
+                Notes
+              </label>
+              <textarea
+                id="create-booking-notes"
+                value={createBookingDraft.notes}
+                placeholder="Internal notes (optional)"
+                onChange={(event) =>
                   setCreateBookingDraft((prev) =>
                     prev
                       ? {
                           ...prev,
-                          barberId: value,
+                          notes: event.target.value,
                         }
                       : prev,
                   )
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select barber" />
-                </SelectTrigger>
-                <SelectContent>
-                  {barberOptions.map((barberOption) => (
-                    <SelectItem key={barberOption.id} value={barberOption.id}>
-                      {barberOption.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Service</p>
-              <Select
-                value={createBookingDraft.serviceId}
-                onValueChange={(value) =>
-                  setCreateBookingDraft((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          serviceId: value,
-                        }
-                      : prev,
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select service" />
-                </SelectTrigger>
-                <SelectContent>
-                  {serviceOptions.map((serviceOption) => (
-                    <SelectItem key={serviceOption.id} value={serviceOption.id}>
-                      {serviceOption.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-1">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   setCreateDialogOpen(false);
                   setCreateBookingDraft(null);
@@ -1414,12 +2012,206 @@ export function BookingsCard({
               >
                 Cancel
               </Button>
-              <Button type="submit">Create booking</Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={
+                  !(
+                    createBookingDraft.customerId ||
+                    (createBookingDraft.customerName &&
+                      createBookingDraft.customerPhone)
+                  ) ||
+                  !createBookingDraft.barberId ||
+                  !createBookingDraft.serviceId ||
+                  !createBookingTiming.startAt ||
+                  !createBookingTiming.endAt
+                }
+              >
+                Create Booking
+              </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
     ) : null;
+
+  const unavailabilityDialog = unavailabilityDraft ? (
+    <Dialog
+      open={unavailabilityDialogOpen}
+      onOpenChange={(open) => {
+        setUnavailabilityDialogOpen(open);
+        if (!open) {
+          setUnavailabilityDraft(null);
+        }
+      }}
+    >
+      <DialogContent className="p-4 sm:max-w-120 sm:p-5">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl">Add Unavailability</DialogTitle>
+          <DialogDescription className="text-sm">
+            Block this barber from receiving bookings during selected time.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          action={async (formData) => {
+            if (!createBarberUnavailability) {
+              toast.error("Create unavailability action is not connected.");
+              return;
+            }
+
+            await runBookingMutation(
+              createBarberUnavailability,
+              formData,
+              "Unavailability added.",
+              () => {
+                setUnavailabilityDialogOpen(false);
+                setUnavailabilityDraft(null);
+              },
+            );
+          }}
+          className="space-y-3"
+        >
+          <input
+            type="hidden"
+            name="barber_id"
+            value={unavailabilityDraft.barberId}
+          />
+          <input
+            type="hidden"
+            name="start_at"
+            value={unavailabilityTiming.startAt}
+          />
+          <input
+            type="hidden"
+            name="end_at"
+            value={unavailabilityTiming.endAt}
+          />
+          <div className="space-y-2">
+            <label className="text-xs font-medium">Barber</label>
+            <Input
+              value={unavailabilityDraft.barberName}
+              className="h-9"
+              disabled
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-xs font-medium" htmlFor="ua-date">
+                Date *
+              </label>
+              <Input
+                id="ua-date"
+                type="date"
+                value={unavailabilityDraft.date}
+                onChange={(event) =>
+                  setUnavailabilityDraft((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          date: event.target.value,
+                        }
+                      : prev,
+                  )
+                }
+                className="h-9"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium">Time *</label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="time"
+                  value={unavailabilityDraft.startTime}
+                  onChange={(event) =>
+                    setUnavailabilityDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            startTime: event.target.value,
+                          }
+                        : prev,
+                    )
+                  }
+                  className="h-9"
+                  required
+                />
+                <Input
+                  type="time"
+                  value={unavailabilityDraft.endTime}
+                  onChange={(event) =>
+                    setUnavailabilityDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            endTime: event.target.value,
+                          }
+                        : prev,
+                    )
+                  }
+                  className="h-9"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-medium" htmlFor="ua-reason">
+              Reason
+            </label>
+            <textarea
+              id="ua-reason"
+              name="reason"
+              value={unavailabilityDraft.reason}
+              placeholder="Lunch break, emergency, training, etc."
+              onChange={(event) =>
+                setUnavailabilityDraft((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        reason: event.target.value,
+                      }
+                    : prev,
+                )
+              }
+              className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setUnavailabilityDialogOpen(false);
+                setUnavailabilityDraft(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={
+                !createBarberUnavailability ||
+                !unavailabilityDraft.barberId ||
+                !unavailabilityDraft.date ||
+                !unavailabilityDraft.startTime ||
+                !unavailabilityDraft.endTime ||
+                !unavailabilityTiming.startAt ||
+                !unavailabilityTiming.endAt
+              }
+            >
+              Save
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   const calendarView = (
     <div className="rounded-2xl border border-border/60 bg-card">
@@ -1430,6 +2222,19 @@ export function BookingsCard({
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-275">
+            <div
+              className="grid border-b border-border/60 bg-muted/20"
+              style={{
+                gridTemplateColumns: `${CALENDAR_TIME_COLUMN_WIDTH}px repeat(${calendarBarbers.length}, minmax(0, 1fr))`,
+              }}
+            >
+              <div
+                className="flex h-11 items-center justify-center px-3 text-center text-xs font-semibold uppercase tracking-normal text-muted-foreground"
+                style={{ gridColumn: `1 / span ${calendarBarbers.length + 1}` }}
+              >
+                {calendarWeekLabel}
+              </div>
+            </div>
             <div
               className="grid border-b border-border/60 bg-muted/40"
               style={{
@@ -1497,32 +2302,86 @@ export function BookingsCard({
                     }}
                   >
                     {calendarSlots.map((slot, index) => {
+                      const slotStart =
+                        calendarVisibleRange.startMinutes +
+                        index * CALENDAR_SLOT_MINUTES;
+                      const slotEnd = slotStart + CALENDAR_SLOT_MINUTES;
+                      const slotDateKey = toCalendarDateKey(calendarDate);
+                      const slotStartISO = toIsoFromCalendarSlot(
+                        slotDateKey,
+                        slotStart,
+                      );
+                      const slotEndISO = toIsoFromCalendarSlot(
+                        slotDateKey,
+                        slotEnd,
+                      );
+                      const isRestSlot =
+                        Boolean(slotStartISO) &&
+                        Boolean(slotEndISO) &&
+                        hasRestWindowOverlap(
+                          slotStartISO as string,
+                          slotEndISO as string,
+                          shopRestWindows,
+                        );
                       const isSlotSelectable = canCreateInSlot(
                         barber.id,
                         index,
                       );
+                      if (!isSlotSelectable) {
+                        return (
+                          <div
+                            key={`${barber.id}-${index}`}
+                            className="group relative border-b border-border/60 transition-colors"
+                          >
+                            {isRestSlot ? (
+                              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                                Rest
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      }
+
                       return (
-                        <div
-                          key={`${barber.id}-${index}`}
-                          className={`group relative border-b border-border/60 transition-colors ${
-                            isSlotSelectable
-                              ? "cursor-pointer hover:bg-primary/20"
-                              : "cursor-default"
-                          }`}
-                          onClick={() =>
-                            openCreateBookingDialog(
-                              barber.id,
-                              barber.name,
-                              index,
-                            )
-                          }
-                        >
-                          {isSlotSelectable ? (
-                            <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-2xl font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                              +
-                            </span>
-                          ) : null}
-                        </div>
+                        <DropdownMenu key={`${barber.id}-${index}`}>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="group relative h-full w-full cursor-pointer border-b border-border/60 text-left transition-colors hover:bg-primary/20"
+                              aria-label={`Open slot actions for ${barber.name} at ${slot.label}`}
+                            >
+                              <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-2xl font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                                +
+                              </span>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" side="right">
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                openCreateBookingDialog(
+                                  barber.id,
+                                  barber.name,
+                                  index,
+                                )
+                              }
+                            >
+                              <Plus />
+                              <span>Add Booking</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                openUnavailabilityDialog(
+                                  barber.id,
+                                  barber.name,
+                                  index,
+                                )
+                              }
+                            >
+                              <CircleOff />
+                              <span>Add Unavailability</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       );
                     })}
                   </div>
@@ -1532,6 +2391,54 @@ export function BookingsCard({
                       gridTemplateRows: `repeat(${calendarSlots.length}, ${CALENDAR_ROW_HEIGHT}px)`,
                     }}
                   >
+                    {calendarUnavailabilityEvents
+                      .filter((event) => event.barberId === barber.id)
+                      .map((event) => (
+                        <div
+                          key={`unavailable-${event.id}`}
+                          style={{
+                            gridRow: `${event.startRow} / ${event.endRow}`,
+                          }}
+                          className="pointer-events-auto flex min-h-full flex-col justify-center gap-1 overflow-hidden rounded-lg border border-zinc-300 bg-zinc-100/95 px-3 py-2 text-[11px] leading-tight text-zinc-700"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="truncate text-xs font-semibold uppercase tracking-wide">
+                              Unavailable
+                            </span>
+                            {deleteBarberUnavailability ? (
+                              <form
+                                action={async (formData) => {
+                                  await runBookingMutation(
+                                    deleteBarberUnavailability,
+                                    formData,
+                                    "Unavailability removed.",
+                                  );
+                                }}
+                                className="shrink-0"
+                              >
+                                <input
+                                  type="hidden"
+                                  name="unavailability_id"
+                                  value={event.id}
+                                />
+                                <Button
+                                  type="submit"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-6 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </form>
+                            ) : null}
+                          </div>
+                          {event.reason ? (
+                            <span className="truncate text-[10px]">
+                              {event.reason}
+                            </span>
+                          ) : null}
+                        </div>
+                      ))}
                     {calendarEvents
                       .filter((event) => event.barberId === barber.id)
                       .map((event) => (
@@ -1560,11 +2467,6 @@ export function BookingsCard({
           </div>
         </div>
       )}
-      {!hasCalendarBookings ? (
-        <div className="border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
-          No bookings for {formatCalendarDateLabel(calendarDate)}.
-        </div>
-      ) : null}
     </div>
   );
 
@@ -1612,7 +2514,7 @@ export function BookingsCard({
                 Barber
               </TableHead>
               <TableHead
-                className={`${bookingColumnClass.status} ${bookingTableHeadClass}`}
+                className={`${bookingColumnClass.status} ${bookingTableHeadClass} text-center`}
               >
                 Status
               </TableHead>
@@ -1646,14 +2548,9 @@ export function BookingsCard({
                   <TableCell
                     className={`${bookingColumnClass.customer} ${bookingTableCellClass} text-foreground`}
                   >
-                    {joinName(
-                      booking.customer?.first_name ?? null,
-                      booking.customer?.last_name ?? null,
-                    )}
+                    {getBookingCustomerName(booking)}
                     <div className="text-xs text-muted-foreground">
-                      {booking.customer?.phone ||
-                        booking.customer?.email ||
-                        "-"}
+                      {getBookingCustomerContact(booking)}
                     </div>
                   </TableCell>
                   <TableCell
@@ -1676,11 +2573,13 @@ export function BookingsCard({
                     )}
                   </TableCell>
                   <TableCell
-                    className={`${bookingColumnClass.status} ${bookingTableCellClass}`}
+                    className={`${bookingColumnClass.status} ${bookingTableCellClass} text-center`}
                   >
-                    <Badge variant="outline" className={tone.badge}>
-                      {formatStatusLabel(booking.status ?? null)}
-                    </Badge>
+                    <div className="flex justify-center">
+                      <Badge variant="outline" className={tone.badge}>
+                        {formatStatusLabel(booking.status ?? null)}
+                      </Badge>
+                    </div>
                   </TableCell>
                   {showActions ? (
                     <TableCell
@@ -1713,15 +2612,10 @@ export function BookingsCard({
                               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                                 <div className="min-w-0">
                                   <p className="text-lg font-semibold leading-tight">
-                                    {joinName(
-                                      booking.customer?.first_name ?? null,
-                                      booking.customer?.last_name ?? null,
-                                    )}
+                                    {getBookingCustomerName(booking)}
                                   </p>
                                   <p className="text-sm text-muted-foreground">
-                                    {booking.customer?.phone ||
-                                      booking.customer?.email ||
-                                      "-"}
+                                    {getBookingCustomerContact(booking)}
                                   </p>
                                 </div>
                                 <div className="flex justify-start sm:justify-end">
@@ -1792,9 +2686,15 @@ export function BookingsCard({
                                 </label>
                                 <form
                                   id={`update-booking-${booking.id}`}
-                                  action={updateBookingStatus}
+                                  action={async (formData) => {
+                                    await runBookingMutation(
+                                      updateBookingStatus,
+                                      formData,
+                                      "Booking status updated.",
+                                      () => setOpenDialogId(null),
+                                    );
+                                  }}
                                   className="contents"
-                                  onSubmit={() => setOpenDialogId(null)}
                                 >
                                   <input
                                     type="hidden"
@@ -1853,8 +2753,17 @@ export function BookingsCard({
                                   {allowCancel && cancelBooking ? (
                                     <form
                                       id={`cancel-booking-${booking.id}`}
-                                      action={cancelBooking}
-                                      onSubmit={() => setOpenDialogId(null)}
+                                      action={async (formData) => {
+                                        if (!cancelBooking) {
+                                          return;
+                                        }
+                                        await runBookingMutation(
+                                          cancelBooking,
+                                          formData,
+                                          "Booking cancelled.",
+                                          () => setOpenDialogId(null),
+                                        );
+                                      }}
                                     >
                                       <input
                                         type="hidden"
@@ -1929,7 +2838,7 @@ export function BookingsCard({
                 Barber
               </TableHead>
               <TableHead
-                className={`${bookingColumnClass.status} ${bookingTableHeadClass}`}
+                className={`${bookingColumnClass.status} ${bookingTableHeadClass} text-center`}
               >
                 Status
               </TableHead>
@@ -1963,14 +2872,9 @@ export function BookingsCard({
                   <TableCell
                     className={`${bookingColumnClass.customer} ${bookingTableCellClass} text-foreground`}
                   >
-                    {joinName(
-                      booking.customer?.first_name ?? null,
-                      booking.customer?.last_name ?? null,
-                    )}
+                    {getBookingCustomerName(booking)}
                     <div className="text-xs text-muted-foreground">
-                      {booking.customer?.phone ||
-                        booking.customer?.email ||
-                        "-"}
+                      {getBookingCustomerContact(booking)}
                     </div>
                   </TableCell>
                   <TableCell
@@ -1993,11 +2897,13 @@ export function BookingsCard({
                     )}
                   </TableCell>
                   <TableCell
-                    className={`${bookingColumnClass.status} ${bookingTableCellClass}`}
+                    className={`${bookingColumnClass.status} ${bookingTableCellClass} text-center`}
                   >
-                    <Badge variant="outline" className={tone.badge}>
-                      {formatStatusLabel(booking.status ?? null)}
-                    </Badge>
+                    <div className="flex justify-center">
+                      <Badge variant="outline" className={tone.badge}>
+                        {formatStatusLabel(booking.status ?? null)}
+                      </Badge>
+                    </div>
                   </TableCell>
                   {showActions ? (
                     <TableCell
@@ -2005,7 +2911,15 @@ export function BookingsCard({
                     >
                       <div className="flex justify-end">
                         {allowDelete && deleteBooking ? (
-                          <form action={deleteBooking}>
+                          <form
+                            action={async (formData) => {
+                              await runBookingMutation(
+                                deleteBooking,
+                                formData,
+                                "Booking deleted.",
+                              );
+                            }}
+                          >
                             <input type="hidden" name="id" value={booking.id} />
                             <Button
                               variant="destructive"
@@ -2033,6 +2947,7 @@ export function BookingsCard({
         <div className="space-y-4">
           {calendarWeekSelector}
           {createBookingDialog}
+          {unavailabilityDialog}
           {calendarView}
         </div>
       );
@@ -2072,6 +2987,7 @@ export function BookingsCard({
           </p>
           {calendarWeekSelector}
           {createBookingDialog}
+          {unavailabilityDialog}
           {calendarView}
         </TabsContent>
         <TabsContent value="past" className="space-y-3">

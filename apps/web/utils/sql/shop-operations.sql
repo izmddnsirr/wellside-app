@@ -18,6 +18,16 @@ create table if not exists public.shop_temporary_closures (
   constraint valid_closure_range check (start_date <= end_date)
 );
 
+create table if not exists public.shop_rest_windows (
+  id uuid primary key default gen_random_uuid(),
+  start_time time not null,
+  end_time time not null,
+  reason text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  constraint valid_rest_range check (start_time <> end_time)
+);
+
 insert into public.shop_weekly_schedule (weekday, is_open, is_active)
 values
   ('monday', true, true),
@@ -31,3 +41,6 @@ on conflict (weekday) do nothing;
 
 create index if not exists idx_shop_temporary_closures_active_dates
   on public.shop_temporary_closures (is_active, start_date, end_date);
+
+create index if not exists idx_shop_rest_windows_active_time
+  on public.shop_rest_windows (is_active, start_time, end_time);

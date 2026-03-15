@@ -5,7 +5,6 @@ import {
   Check,
   LogOut,
   MoreVertical,
-  Settings,
   Sun,
   UserCircle,
 } from "lucide-react"
@@ -162,15 +161,6 @@ export function NavUser({
               >
                 <UserCircle />
                 Account
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(event) => {
-                  event.preventDefault()
-                  router.push("/admin/settings")
-                }}
-              >
-                <Settings />
-                Settings
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />

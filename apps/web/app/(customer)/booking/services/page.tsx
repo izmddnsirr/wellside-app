@@ -74,9 +74,11 @@ export default async function SelectServicesPage({
   const supabase = await createClient();
   const { data: servicesData, error: servicesError } = await supabase
     .from("services")
-    .select("id, service_code, name, base_price, duration_minutes, is_active")
+    .select(
+      "id, service_code, name, base_price, duration_minutes, is_active, allow_booking",
+    )
     .eq("is_active", true)
-    .not("base_price", "is", null)
+    .eq("allow_booking", true)
     .order("service_code", { ascending: true })
     .order("name", { ascending: true });
   const services = servicesData ?? [];
@@ -93,7 +95,7 @@ export default async function SelectServicesPage({
   const serviceId = readParam(params.serviceId);
 
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-[1200px]">
+    <div className="mx-auto w-full max-w-xl lg:max-w-300">
       <div className="pb-12">
         <div className="flex flex-col gap-10 lg:flex lg:flex-row lg:items-start lg:gap-12">
           <div className="flex flex-col gap-6 lg:flex-[1.4] lg:min-w-0">
@@ -154,13 +156,15 @@ export default async function SelectServicesPage({
                 ) : null}
                 {services.map((service: ServiceRow) => {
                   const durationValue = formatServiceDuration(
-                    service.duration_minutes
+                    service.duration_minutes,
                   );
                   const priceValue = formatServicePrice(service.base_price);
                   const durationLabel = durationValue ?? "-";
-                  const priceLabel = priceValue ?? "-";
+                  const priceLabel = priceValue ?? "Custom price";
                   const isSelected =
-                    (serviceId ? serviceId === service.id : serviceName === service.name) &&
+                    (serviceId
+                      ? serviceId === service.id
+                      : serviceName === service.name) &&
                     serviceDuration === durationValue &&
                     servicePrice === priceValue;
                   const selectionQuery = buildQuery({

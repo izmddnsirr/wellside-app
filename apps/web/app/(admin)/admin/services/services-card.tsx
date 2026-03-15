@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -30,8 +31,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Eye,
-  EyeOff,
   Pencil,
   Plus,
   RefreshCw,
@@ -41,7 +40,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 type Service = {
@@ -51,6 +50,7 @@ type Service = {
   base_price: number | null;
   duration_minutes: number | null;
   is_active: boolean;
+  allow_booking?: boolean | null;
 };
 
 type ServicesCardProps = {
@@ -58,6 +58,10 @@ type ServicesCardProps = {
   errorMessage?: string | null;
   createService: (formData: FormData) => Promise<void>;
   updateService: (formData: FormData) => Promise<void>;
+  updateServiceBooking: (payload: {
+    id: string;
+    allowBooking: boolean;
+  }) => Promise<{ ok: boolean; message?: string }>;
   archiveService: (formData: FormData) => Promise<void>;
   reactivateService: (formData: FormData) => Promise<void>;
 };
@@ -90,8 +94,8 @@ const getStatusTone = (isActive: boolean) =>
       }
     : {
         badge:
-          "bg-slate-100 text-slate-900 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
-        dot: "bg-slate-500",
+          "bg-red-100 text-red-900 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800",
+        dot: "bg-red-500",
       };
 
 const ServiceFormFields = ({ service }: { service?: Service | null }) => (
@@ -138,11 +142,55 @@ const ServiceFormFields = ({ service }: { service?: Service | null }) => (
   </>
 );
 
+const ServiceAvailabilityFields = ({
+  service,
+}: {
+  service?: Service | null;
+}) => {
+  const [allowInQueue, setAllowInQueue] = useState(Boolean(service?.is_active));
+  const [allowInBooking, setAllowInBooking] = useState(
+    service?.allow_booking ?? Boolean(service?.is_active),
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-4">
+        <div className="space-y-1 pr-4">
+          <p className="text-base font-medium text-foreground">
+            Allow in Queue
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Enable this service for walk-in queue bookings
+          </p>
+        </div>
+        <Switch checked={allowInQueue} onCheckedChange={setAllowInQueue} />
+      </div>
+      <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-4">
+        <div className="space-y-1 pr-4">
+          <p className="text-base font-medium text-foreground">
+            Allow in Booking
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Enable this service for advance bookings
+          </p>
+        </div>
+        <Switch checked={allowInBooking} onCheckedChange={setAllowInBooking} />
+      </div>
+      <input
+        type="hidden"
+        name="allow_booking"
+        value={allowInBooking ? "on" : "off"}
+      />
+    </div>
+  );
+};
+
 export function ServicesCard({
   services,
   errorMessage,
   createService,
   updateService,
+  updateServiceBooking,
   archiveService,
   reactivateService,
 }: ServicesCardProps) {
@@ -150,7 +198,9 @@ export function ServicesCard({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all" });
   const [sort, setSort] = useState("code_asc");
-  const [showInactive, setShowInactive] = useState(false);
+  const [serviceAvailabilityOverrides, setServiceAvailabilityOverrides] =
+    useState<Record<string, { queue: boolean; booking: boolean }>>({});
+  const [isBookingPending, startBookingTransition] = useTransition();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -195,12 +245,6 @@ export function ServicesCard({
     };
 
     const matchesStatus = (service: Service) => {
-      if (showInactive) {
-        return !service.is_active;
-      }
-      if (!service.is_active) {
-        return false;
-      }
       if (filters.status === "all") {
         return true;
       }
@@ -255,13 +299,12 @@ export function ServicesCard({
     });
 
     return sorted;
-  }, [debouncedSearch, filters.status, services, showInactive, sort]);
+  }, [debouncedSearch, filters.status, services, sort]);
 
   const resetFilters = () => {
     setFilters({ status: "all" });
     setSort("code_asc");
     setSearchInput("");
-    setShowInactive(false);
   };
 
   return (
@@ -275,7 +318,7 @@ export function ServicesCard({
                 setFilters((prev) => ({ ...prev, status: value }))
               }
             >
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="h-9 w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -287,7 +330,7 @@ export function ServicesCard({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-9 w-[200px]">
+              <SelectTrigger className="h-9 w-50">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
@@ -339,6 +382,7 @@ export function ServicesCard({
                 <form action={createService} className="space-y-4">
                   <input type="hidden" name="is_active" value="on" />
                   <ServiceFormFields />
+                  <ServiceAvailabilityFields />
                   <DialogFooter>
                     <Button type="submit">
                       <Save />
@@ -348,23 +392,6 @@ export function ServicesCard({
                 </form>
               </DialogContent>
             </Dialog>
-            <Button
-              variant={showInactive ? "secondary" : "outline"}
-              size="icon"
-              onClick={() => setShowInactive((prev) => !prev)}
-              aria-label={
-                showInactive
-                  ? "Show active services"
-                  : "Show deactivated services"
-              }
-              title={
-                showInactive
-                  ? "Show active services"
-                  : "Show deactivated services"
-              }
-            >
-              {showInactive ? <Eye /> : <EyeOff />}
-            </Button>
           </div>
         </div>
       </div>
@@ -375,22 +402,28 @@ export function ServicesCard({
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border/60">
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Code
                 </TableHead>
-                <TableHead className="w-[28%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[24%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Service
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Duration
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Price
                 </TableHead>
-                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[10%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Queue
+                </TableHead>
+                <TableHead className="w-[10%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Booking
+                </TableHead>
+                <TableHead className="w-[14%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
-                <TableHead className="w-[12%] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[8%] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Actions
                 </TableHead>
               </TableRow>
@@ -399,29 +432,105 @@ export function ServicesCard({
               {filteredServices.map((service) => {
                 const tone = getStatusTone(service.is_active);
                 const isActive = service.is_active;
+                const availability = serviceAvailabilityOverrides[
+                  service.id
+                ] ?? {
+                  queue: Boolean(service.is_active),
+                  booking: service.allow_booking ?? Boolean(service.is_active),
+                };
                 return (
                   <TableRow
                     key={service.id}
                     className="bg-background hover:bg-muted/50"
                   >
-                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
+                    <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
                       {service.service_code || "-"}
                     </TableCell>
-                    <TableCell className="w-[28%] px-4 py-3 font-semibold text-foreground">
-                      {service.name}
+                    <TableCell className="w-[24%] px-4 py-3 font-semibold text-foreground">
+                      <span className="block truncate">{service.name}</span>
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
+                    <TableCell className="w-[10%] px-4 py-3 text-muted-foreground">
                       {formatDuration(service.duration_minutes)}
                     </TableCell>
-                    <TableCell className="w-[16%] px-4 py-3 text-foreground">
-                      {formatPrice(service.base_price)}
+                    <TableCell className="w-[12%] px-4 py-3 text-foreground">
+                      <span className="block truncate">
+                        {formatPrice(service.base_price)}
+                      </span>
                     </TableCell>
-                    <TableCell className="w-[12%] px-4 py-3">
-                      <Badge variant="outline" className={tone.badge}>
-                        {service.is_active ? "Active" : "Deactivated"}
-                      </Badge>
+                    <TableCell className="w-[10%] px-4 py-3 text-center">
+                      <div className="flex justify-center">
+                        <Switch
+                          checked={availability.queue}
+                          onCheckedChange={(checked) =>
+                            setServiceAvailabilityOverrides((current) => ({
+                              ...current,
+                              [service.id]: {
+                                queue: checked,
+                                booking:
+                                  current[service.id]?.booking ??
+                                  availability.booking,
+                              },
+                            }))
+                          }
+                          aria-label={`Toggle queue availability for ${service.name}`}
+                        />
+                      </div>
                     </TableCell>
-                    <TableCell className="w-[12%] px-4 py-3">
+                    <TableCell className="w-[10%] px-4 py-3 text-center">
+                      <div className="flex justify-center">
+                        <Switch
+                          checked={availability.booking}
+                          disabled={isBookingPending}
+                          onCheckedChange={(checked) => {
+                            const previousBooking = availability.booking;
+                            setServiceAvailabilityOverrides((current) => ({
+                              ...current,
+                              [service.id]: {
+                                queue:
+                                  current[service.id]?.queue ??
+                                  availability.queue,
+                                booking: checked,
+                              },
+                            }));
+
+                            startBookingTransition(async () => {
+                              const result = await updateServiceBooking({
+                                id: service.id,
+                                allowBooking: checked,
+                              });
+
+                              if (!result.ok) {
+                                setServiceAvailabilityOverrides((current) => ({
+                                  ...current,
+                                  [service.id]: {
+                                    queue:
+                                      current[service.id]?.queue ??
+                                      availability.queue,
+                                    booking: previousBooking,
+                                  },
+                                }));
+                                toast.error(
+                                  result.message ??
+                                    "Failed to update booking availability.",
+                                );
+                                return;
+                              }
+
+                              toast.success("Booking availability updated.");
+                            });
+                          }}
+                          aria-label={`Toggle booking availability for ${service.name}`}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[14%] px-4 py-3 text-center">
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className={tone.badge}>
+                          {service.is_active ? "Active" : "Deactivated"}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[8%] px-4 py-3 text-right">
                       <div className="flex justify-end">
                         <Dialog>
                           <DialogTrigger asChild>
@@ -454,6 +563,7 @@ export function ServicesCard({
                                 value={service.is_active ? "on" : "off"}
                               />
                               <ServiceFormFields service={service} />
+                              <ServiceAvailabilityFields service={service} />
                             </form>
                             <DialogFooter className="flex-row justify-end">
                               {isActive ? (
@@ -544,7 +654,7 @@ export function ServicesCard({
           </Table>
         </div>
       ) : (
-        <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+        <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
           <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-background">
             <Scissors className="size-8 text-muted-foreground" />
           </div>

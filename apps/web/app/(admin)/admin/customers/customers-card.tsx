@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/table";
 import { Pencil, Search, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 type Customer = {
   id: string;
@@ -82,6 +84,48 @@ export function CustomersCard({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({ status: "all" });
   const [sort, setSort] = useState("joined_desc");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const toastKey = searchParams.get("toast");
+  const searchParamsString = searchParams.toString();
+
+  useEffect(() => {
+    if (!toastKey) {
+      return;
+    }
+
+    const messageMap: Record<
+      string,
+      { type: "success" | "error"; message: string }
+    > = {
+      "customer-update-success": {
+        type: "success",
+        message: "Customer status updated.",
+      },
+      "customer-update-invalid": {
+        type: "error",
+        message: "Invalid customer update input.",
+      },
+      "customer-update-error": {
+        type: "error",
+        message: "Failed to update customer status.",
+      },
+    };
+    const config = messageMap[toastKey];
+    if (config) {
+      if (config.type === "success") {
+        toast.success(config.message, { id: toastKey });
+      } else {
+        toast.error(config.message, { id: toastKey });
+      }
+    }
+
+    const params = new URLSearchParams(searchParamsString);
+    params.delete("toast");
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [toastKey, pathname, router, searchParamsString]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -217,7 +261,7 @@ export function CustomersCard({
                 <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Phone
                 </TableHead>
-                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[12%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
                 </TableHead>
                 <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -253,10 +297,12 @@ export function CustomersCard({
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {customer.phone || "-"}
                     </TableCell>
-                    <TableCell className="w-[12%] px-4 py-3">
-                      <Badge variant="outline" className={tone.badge}>
-                        {customer.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                    <TableCell className="w-[12%] px-4 py-3 text-center">
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className={tone.badge}>
+                          {customer.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3 capitalize text-muted-foreground">
                       {customer.role || "-"}
@@ -264,7 +310,7 @@ export function CustomersCard({
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
                       {formatDate(customer.created_at)}
                     </TableCell>
-                    <TableCell className="w-[10%] px-4 py-3">
+                    <TableCell className="w-[10%] px-4 py-3 text-right">
                       <div className="flex justify-end">
                         <Dialog>
                           <DialogTrigger asChild>
