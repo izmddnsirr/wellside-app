@@ -537,6 +537,18 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
     }, []);
   }, [filteredTickets]);
 
+  const daySalesByKey = useMemo(() => {
+    return filteredTickets.reduce<Record<string, number>>((acc, ticket) => {
+      const status = (ticket.payment_status ?? "").toLowerCase();
+      if (status !== "paid") {
+        return acc;
+      }
+      const dayKey = getDayKey(ticket.created_at);
+      acc[dayKey] = (acc[dayKey] ?? 0) + Number(ticket.total_amount ?? 0);
+      return acc;
+    }, {});
+  }, [filteredTickets]);
+
   const resetFilters = () => {
     setFilters({
       status: "all",
@@ -776,7 +788,10 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
             {groupedTickets.map((group) => (
               <section key={group.dayKey} className="space-y-2">
                 <div className="rounded-lg bg-black px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white dark:bg-white dark:text-black">
-                  {group.dayLabel}
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{group.dayLabel}</span>
+                    <span>{formatMoney(daySalesByKey[group.dayKey] ?? 0)}</span>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   {group.tickets.map((ticket) => {
@@ -1175,7 +1190,12 @@ export const TicketsTable = ({ tickets }: { tickets: TicketRow[] }) => {
                             colSpan={7}
                             className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white dark:text-black"
                           >
-                            {dayGroupLabel}
+                            <div className="flex items-center justify-between gap-3">
+                              <span>{dayGroupLabel}</span>
+                              <span>
+                                {formatMoney(daySalesByKey[currentDayKey] ?? 0)}
+                              </span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : null}

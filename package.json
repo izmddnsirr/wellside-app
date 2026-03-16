@@ -13,6 +13,7 @@
     "start": "npm run start -w web"
   },
   "devDependencies": {
+    "expo-router": "~55.0.5",
     "turbo": "^2.8.17"
   }
 }

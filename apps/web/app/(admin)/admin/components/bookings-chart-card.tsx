@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts";
 import type { TooltipProps } from "recharts";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -225,6 +225,7 @@ export function BookingsChartCard({
   availableYears,
   dataYears,
 }: BookingsChartCardProps) {
+  const [isMobile, setIsMobile] = useState(false);
   const [period, setPeriod] = useState<SalesPeriod>("month");
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
   const [selectedYear, setSelectedYear] = useState(() => {
@@ -285,6 +286,14 @@ export function BookingsChartCard({
         ? `Showing paid ticket sales for ${formatMonthLabel(selectedMonth)}.`
         : `Showing paid ticket sales for ${selectedYear}.`;
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
   const renderTooltipContent = ({
     active,
     payload,
@@ -333,20 +342,20 @@ export function BookingsChartCard({
 
   return (
     <Card className="border-border/60 bg-card pt-0">
-      <CardHeader className="flex items-center gap-2 space-y-0 border-b border-border/60 py-5 sm:flex-row">
+      <CardHeader className="flex flex-col items-start gap-3 space-y-0 border-b border-border/60 py-5 sm:flex-row sm:items-center">
         <div className="grid flex-1 gap-1">
           <CardTitle className="text-foreground">Ticket sales trend</CardTitle>
           <CardDescription className="text-muted-foreground">
             {description}
           </CardDescription>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+        <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           {period === "month" ? (
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 min-w-45 justify-between rounded-lg bg-background"
+                  className="h-9 w-full justify-between rounded-lg bg-background sm:min-w-45 sm:w-auto"
                 >
                   {formatMonthLabel(selectedMonth)}
                 </Button>
@@ -402,7 +411,7 @@ export function BookingsChartCard({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 min-w-30 justify-between bg-background"
+                  className="h-9 w-full justify-between bg-background sm:min-w-30 sm:w-auto"
                 >
                   {selectedYear}
                 </Button>
@@ -467,7 +476,7 @@ export function BookingsChartCard({
             onValueChange={(value) => setPeriod(value as SalesPeriod)}
           >
             <SelectTrigger
-              className="w-40 rounded-lg bg-background"
+              className="w-full rounded-lg bg-background sm:w-40"
               aria-label="Select period"
             >
               <SelectValue placeholder="Select period" />
@@ -495,7 +504,7 @@ export function BookingsChartCard({
           <ChartContainer
             id="bookings-sales-chart"
             config={chartConfig}
-            className="aspect-auto h-62.5 w-full [&_.recharts-surface]:overflow-visible"
+            className="aspect-auto h-55 w-full sm:h-62.5 [&_.recharts-surface]:overflow-visible"
           >
             <BarChart data={chartData}>
               <CartesianGrid vertical={false} />
@@ -515,7 +524,9 @@ export function BookingsChartCard({
                 fill="var(--color-sales)"
                 radius={[5, 5, 5, 5]}
               >
-                <LabelList dataKey="sales" content={renderSalesValuePill} />
+                {!isMobile ? (
+                  <LabelList dataKey="sales" content={renderSalesValuePill} />
+                ) : null}
               </Bar>
             </BarChart>
           </ChartContainer>

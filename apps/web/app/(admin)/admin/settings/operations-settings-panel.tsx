@@ -74,6 +74,24 @@ const formatDateInput = (value: Date | undefined) => {
   return value.toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
 };
 
+const formatTimeLabel12h = (value: string) => {
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return value;
+  }
+
+  const date = new Date(Date.UTC(2000, 0, 1, hour, minute));
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(date);
+};
+
 export function OperationsSettingsPanel({
   weeklySchedule,
   temporaryClosures,
@@ -254,8 +272,8 @@ export function OperationsSettingsPanel({
                 >
                   <div>
                     <p className="text-sm font-semibold">
-                      {window.start_time.slice(0, 5)} -{" "}
-                      {window.end_time.slice(0, 5)}
+                      {formatTimeLabel12h(window.start_time)} -{" "}
+                      {formatTimeLabel12h(window.end_time)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {window.reason || "No reason"}
@@ -311,9 +329,13 @@ export function OperationsSettingsPanel({
                       </span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent
+                    className="w-auto overflow-hidden rounded-2xl border-border/80 p-0 shadow-none"
+                    align="start"
+                  >
                     <Calendar
                       mode="range"
+                      defaultMonth={closureRange?.from}
                       selected={closureRange}
                       onSelect={setClosureRange}
                       numberOfMonths={2}

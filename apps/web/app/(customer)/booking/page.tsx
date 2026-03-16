@@ -198,17 +198,11 @@ export default async function BookingPage({
           <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
             Upcoming
           </p>
-          <div className="border border-border/60 bg-card/85">
-            <div className="p-4">
-              <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border/60 bg-muted/30 p-8 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
-                  <Calendar className="h-5 w-5" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Please sign in to view your booking.
-                </p>
-              </div>
-            </div>
+          <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
+            <Calendar className="h-8 w-8 text-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Please sign in to view your booking.
+            </p>
           </div>
         </section>
       </div>
@@ -277,21 +271,22 @@ export default async function BookingPage({
             </span>
           ) : null}
         </div>
-        <div className="overflow-hidden rounded-3xl border border-border/60 bg-card">
-          {!hasBooking ? (
-            <div className="p-4">
-              <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border/60 bg-muted/30 p-8 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
-                  <Calendar className="h-5 w-5" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {bookingError
-                    ? "Unable to load your upcoming booking."
-                    : "No upcoming bookings yet."}
+        {!hasBooking && !bookingError ? (
+          <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
+            <Calendar className="h-8 w-8 text-foreground" />
+            <p className="text-sm text-muted-foreground">
+              No upcoming bookings yet.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-3xl border border-border/60 bg-card">
+            {!hasBooking ? (
+              <div className="p-5">
+                <p className="text-sm text-destructive">
+                  Unable to load your upcoming booking.
                 </p>
               </div>
-            </div>
-          ) : (
+            ) : (
             <>
               <div className="bg-primary px-6 py-6 text-primary-foreground">
                 <div className="flex items-start justify-between gap-6">
@@ -382,8 +377,9 @@ export default async function BookingPage({
                 </p>
               </div>
             </>
-          )}
-        </div>
+            )}
+          </div>
+        )}
         {hasBooking ? (
           <div className="grid grid-cols-2 gap-3">
             <Button

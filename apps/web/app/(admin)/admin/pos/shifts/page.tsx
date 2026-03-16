@@ -57,7 +57,11 @@ export default async function Page() {
       })) ?? null,
   }));
 
-  const salesByShift = normalizedTickets.reduce<Record<string, number>>(
+  const paidTickets = normalizedTickets.filter(
+    (ticket) => (ticket.payment_status ?? "").toLowerCase() === "paid"
+  );
+
+  const salesByShift = paidTickets.reduce<Record<string, number>>(
     (acc, ticket) => {
       if (!ticket.shift_id) {
         return acc;
@@ -67,10 +71,6 @@ export default async function Page() {
       return acc;
     },
     {}
-  );
-
-  const paidTickets = normalizedTickets.filter(
-    (ticket) => (ticket.payment_status ?? "").toLowerCase() === "paid"
   );
 
   const refundedTickets = normalizedTickets.filter(
