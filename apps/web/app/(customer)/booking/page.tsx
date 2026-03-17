@@ -17,6 +17,7 @@ import {
   sendBookingCancellationEmailTo,
 } from "@/utils/email/booking-cancellation";
 import { redirect } from "next/navigation";
+import { isCustomerBookingEnabled } from "./booking-availability";
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
 const DEFAULT_DIRECTIONS_URL =
@@ -25,6 +26,7 @@ const DEFAULT_WHATSAPP_PHONE = "01112564440";
 
 type BookingSearchParams = {
   error?: string | string[];
+  booking_disabled?: string | string[];
 };
 
 type BookingRecord = {
@@ -170,6 +172,11 @@ export default async function BookingPage({
   searchParams?: Promise<BookingSearchParams>;
 }) {
   const params = (await searchParams) ?? {};
+  const bookingEnabled = await isCustomerBookingEnabled();
+  const bookingDisabledMessage =
+    readParam(params.booking_disabled) === "1" || !bookingEnabled
+      ? "Online booking is currently unavailable. Please walk in to the shop."
+      : null;
   const errorMessage =
     readParam(params.error) === "cancel"
       ? "Unable to cancel booking. Please try again."
@@ -433,18 +440,33 @@ export default async function BookingPage({
           </DialogContent>
         </Dialog>
       ) : null}
+      {bookingDisabledMessage ? (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-700">
+          {bookingDisabledMessage}
+        </div>
+      ) : null}
 
       <section className="space-y-4" style={{ animationDelay: "160ms" }}>
         <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
           Quick Pick
         </p>
-        <Button
-          asChild
-          size="lg"
-          className="h-16 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Link href="/booking/services">Book appointment</Link>
-        </Button>
+        {bookingEnabled ? (
+          <Button
+            asChild
+            size="lg"
+            className="h-16 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Link href="/booking/services">Book appointment</Link>
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            disabled
+            className="h-16 w-full rounded-full text-base font-semibold"
+          >
+            Booking unavailable
+          </Button>
+        )}
       </section>
     </div>
   );

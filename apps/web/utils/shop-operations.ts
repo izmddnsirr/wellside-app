@@ -25,6 +25,10 @@ export type RestWindow = {
   reason: string | null;
 };
 
+export type BookingAvailability = {
+  is_booking_enabled: boolean;
+};
+
 export const WEEKDAY_KEYS: WeekdayKey[] = [
   "monday",
   "tuesday",
@@ -411,19 +415,54 @@ export async function loadRestWindows(supabase: {
   }));
 }
 
+export async function loadBookingAvailability(supabase: {
+  from: (table: string) => {
+    select: (columns: string) => {
+      limit: (value: number) => {
+        maybeSingle: () => Promise<{
+          data: BookingAvailability | null;
+          error: unknown;
+        }>;
+      };
+    };
+  };
+}): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("shop_booking_settings")
+    .select("is_booking_enabled")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (!isMissingRelationError(error)) {
+      console.error("Failed to load booking availability", error);
+    }
+    return true;
+  }
+
+  if (!data) {
+    return true;
+  }
+
+  return Boolean(data.is_booking_enabled);
+}
+
 export async function loadShopOperatingRules(supabase: {
   from: (table: string) => unknown;
 }) {
-  const [weeklySchedule, temporaryClosures, restWindows] = await Promise.all([
+  const [weeklySchedule, temporaryClosures, restWindows, bookingEnabled] =
+    await Promise.all([
     loadWeeklySchedule(supabase as never),
     loadTemporaryClosures(supabase as never),
     loadRestWindows(supabase as never),
+    loadBookingAvailability(supabase as never),
   ]);
 
   return {
     weeklySchedule,
     temporaryClosures,
     restWindows,
+    bookingEnabled,
   };
 }
 

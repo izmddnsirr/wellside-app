@@ -7,6 +7,12 @@ import { WEEKDAY_KEYS } from "@/utils/shop-operations";
 
 const revalidateSettings = () => {
   revalidatePath("/admin/settings");
+  revalidatePath("/booking");
+  revalidatePath("/booking/services");
+  revalidatePath("/booking/barbers");
+  revalidatePath("/booking/time");
+  revalidatePath("/booking/review");
+  revalidatePath("/booking/confirming");
 };
 
 export const saveWeeklySchedule = async (formData: FormData) => {
@@ -133,4 +139,26 @@ export const deleteRestWindow = async (formData: FormData) => {
 
   revalidateSettings();
   redirect("/admin/settings?toast=settings-rest-removed");
+};
+
+export const updateBookingAvailability = async (formData: FormData) => {
+  const supabase = createAdminAuthClient();
+  const enabled = formData.get("enabled") === "1";
+
+  const { error } = await supabase.from("shop_booking_settings").upsert(
+    {
+      id: 1,
+      is_booking_enabled: enabled,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
+
+  if (error) {
+    console.error("Failed to update booking availability", error);
+    redirect("/admin/settings?toast=settings-booking-error");
+  }
+
+  revalidateSettings();
+  redirect("/admin/settings?toast=settings-booking-updated");
 };

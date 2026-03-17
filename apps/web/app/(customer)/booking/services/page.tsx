@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { BookingSummaryCard } from "@/components/customer/booking-summary-card";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { createClient } from "@/utils/supabase/server";
+import { redirectIfCustomerBookingDisabled } from "../booking-availability";
 
 type ServiceRow = {
   id: string;
@@ -71,6 +72,8 @@ export default async function SelectServicesPage({
 }: {
   searchParams?: Promise<BookingSearchParams>;
 }) {
+  await redirectIfCustomerBookingDisabled();
+
   const supabase = await createClient();
   const { data: servicesData, error: servicesError } = await supabase
     .from("services")

@@ -1,9 +1,15 @@
 import { AdminShell } from "../components/admin-shell";
+import { QueueDashboard } from "./queue-dashboard";
+import { getQueueDashboardData } from "@/utils/queue";
 
-export default function Page() {
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  const data = await getQueueDashboardData();
+
   return (
     <AdminShell title="Queue">
-      <div className="px-4 lg:px-6 text-sm text-muted-foreground">Coming soon</div>
+      <QueueDashboard data={data} />
     </AdminShell>
   );
 }

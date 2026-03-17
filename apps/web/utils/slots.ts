@@ -136,7 +136,7 @@ export async function getAvailableSlots(
     rules.weeklySchedule,
     rules.temporaryClosures,
   );
-  if (status.closed) {
+  if (!rules.bookingEnabled || status.closed) {
     return [];
   }
 

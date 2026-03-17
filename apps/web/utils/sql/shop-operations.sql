@@ -28,6 +28,12 @@ create table if not exists public.shop_rest_windows (
   constraint valid_rest_range check (start_time <> end_time)
 );
 
+create table if not exists public.shop_booking_settings (
+  id integer primary key,
+  is_booking_enabled boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+
 insert into public.shop_weekly_schedule (weekday, is_open, is_active)
 values
   ('monday', true, true),
@@ -44,3 +50,7 @@ create index if not exists idx_shop_temporary_closures_active_dates
 
 create index if not exists idx_shop_rest_windows_active_time
   on public.shop_rest_windows (is_active, start_time, end_time);
+
+insert into public.shop_booking_settings (id, is_booking_enabled)
+values (1, true)
+on conflict (id) do nothing;

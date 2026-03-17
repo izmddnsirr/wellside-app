@@ -23,6 +23,7 @@ export default async function SettingsPage() {
           weeklySchedule={operatingRules.weeklySchedule}
           temporaryClosures={operatingRules.temporaryClosures}
           restWindows={operatingRules.restWindows}
+          bookingEnabled={operatingRules.bookingEnabled}
         />
       </div>
     </AdminShell>

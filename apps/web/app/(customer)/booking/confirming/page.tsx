@@ -10,6 +10,7 @@ import {
   hasRestWindowOverlap,
   loadShopOperatingRules,
 } from "@/utils/shop-operations";
+import { redirectIfCustomerBookingDisabled } from "../booking-availability";
 import { ConfirmingBookingClient } from "./confirming-booking-client";
 
 type BookingSearchParams = {
@@ -121,6 +122,8 @@ export default async function ConfirmingBookingPage({
 }: {
   searchParams?: Promise<BookingSearchParams>;
 }) {
+  await redirectIfCustomerBookingDisabled();
+
   const params = (await searchParams) ?? {};
   const serviceId = readParam(params.serviceId) ?? "";
   const barberId = readParam(params.barberId) ?? "";
@@ -154,6 +157,8 @@ export default async function ConfirmingBookingPage({
 
   const confirmBooking = async () => {
     "use server";
+
+    await redirectIfCustomerBookingDisabled();
 
     const supabase = await createClient();
     const {
@@ -208,7 +213,7 @@ export default async function ConfirmingBookingPage({
       operatingRules.temporaryClosures,
     );
 
-    if (shopStatus.closed) {
+    if (!operatingRules.bookingEnabled || shopStatus.closed) {
       redirectWithError("booking");
     }
 

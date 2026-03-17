@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { redirect } from "next/navigation";
+import { redirectIfCustomerBookingDisabled } from "../booking-availability";
 
 type BookingSearchParams = {
   serviceId?: string | string[];
@@ -36,6 +37,8 @@ export default async function ReviewBookingPage({
 }: {
   searchParams?: Promise<BookingSearchParams>;
 }) {
+  await redirectIfCustomerBookingDisabled();
+
   const params = (await searchParams) ?? {};
   const serviceId = readParam(params.serviceId) ?? "";
   const bookingDate = readParam(params.date) ?? "-";

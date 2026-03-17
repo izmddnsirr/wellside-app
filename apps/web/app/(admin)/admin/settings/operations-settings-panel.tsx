@@ -37,6 +37,7 @@ import {
   deleteRestWindow,
   deleteTemporaryClosure,
   saveWeeklySchedule,
+  updateBookingAvailability,
 } from "./actions";
 import { CalendarDays } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -58,6 +59,7 @@ type OperationsSettingsPanelProps = {
   weeklySchedule: WeeklySchedule;
   temporaryClosures: TemporaryClosure[];
   restWindows: RestWindow[];
+  bookingEnabled: boolean;
 };
 
 const formatDateLabel = (value: string) =>
@@ -96,6 +98,7 @@ export function OperationsSettingsPanel({
   weeklySchedule,
   temporaryClosures,
   restWindows,
+  bookingEnabled,
 }: OperationsSettingsPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -168,6 +171,14 @@ export function OperationsSettingsPanel({
         type: "error",
         message: "Failed to update rest window.",
       },
+      "settings-booking-updated": {
+        type: "success",
+        message: "Booking availability updated.",
+      },
+      "settings-booking-error": {
+        type: "error",
+        message: "Failed to update booking availability.",
+      },
     };
 
     const config = messageMap[toastKey];
@@ -187,6 +198,39 @@ export function OperationsSettingsPanel({
 
   return (
     <div className="space-y-6">
+      <Card className="overflow-hidden border-border/70">
+        <CardHeader className="border-b border-border/60">
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle>Customer Booking</CardTitle>
+            <Badge variant={bookingEnabled ? "secondary" : "outline"}>
+              {bookingEnabled ? "Enabled" : "Disabled"}
+            </Badge>
+          </div>
+          <CardDescription>
+            Turn customer online booking on or off instantly.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {bookingEnabled
+                ? "Customers can create new bookings from the app."
+                : "New customer bookings are currently blocked."}
+            </p>
+            <form action={updateBookingAvailability}>
+              <input
+                type="hidden"
+                name="enabled"
+                value={bookingEnabled ? "0" : "1"}
+              />
+              <Button type="submit" variant={bookingEnabled ? "destructive" : "default"}>
+                {bookingEnabled ? "Turn off booking" : "Turn on booking"}
+              </Button>
+            </form>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="overflow-hidden border-border/70">
         <CardHeader className="border-b border-border/60">
           <div className="flex items-center justify-between gap-3">

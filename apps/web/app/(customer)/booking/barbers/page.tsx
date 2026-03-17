@@ -12,6 +12,7 @@ import {
 import { BookingSummaryCard } from "@/components/customer/booking-summary-card";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { createClient } from "@/utils/supabase/server";
+import { redirectIfCustomerBookingDisabled } from "../booking-availability";
 
 type BarberRow = {
   id: string;
@@ -63,6 +64,8 @@ export default async function SelectBarberPage({
 }: {
   searchParams?: Promise<BookingSearchParams>;
 }) {
+  await redirectIfCustomerBookingDisabled();
+
   const supabase = await createClient();
   const { data: barbersData, error: barbersError } = await supabase
     .from("profiles")

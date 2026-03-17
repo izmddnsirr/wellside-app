@@ -1,7 +1,10 @@
 import { createClient } from "@/utils/supabase/server";
+import { redirectIfCustomerBookingDisabled } from "../booking-availability";
 import SelectTimeClient from "./select-time-client";
 
 export default async function SelectTimePage() {
+  await redirectIfCustomerBookingDisabled();
+
   const supabase = await createClient();
   const { data: barbers } = await supabase
     .from("profiles")
