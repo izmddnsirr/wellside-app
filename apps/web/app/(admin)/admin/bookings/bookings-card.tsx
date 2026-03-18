@@ -239,35 +239,52 @@ const getStatusTone = (status: string | null) => {
         badge:
           "bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
         dot: "bg-blue-500",
+        calendarCard:
+          "border-blue-200/90 bg-blue-50/80 text-blue-950 dark:border-blue-900/90 dark:bg-blue-950/40 dark:text-blue-100",
+        calendarAccent: "border-l-blue-500 dark:border-l-blue-400",
       };
     case "in_progress":
       return {
         badge:
           "bg-amber-100 text-amber-900 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800",
         dot: "bg-amber-500",
+        calendarCard:
+          "border-amber-200/90 bg-amber-50/80 text-amber-950 dark:border-amber-900/90 dark:bg-amber-950/40 dark:text-amber-100",
+        calendarAccent: "border-l-amber-500 dark:border-l-amber-400",
       };
     case "completed":
       return {
         badge:
           "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800",
         dot: "bg-emerald-500",
+        calendarCard:
+          "border-emerald-200/90 bg-emerald-50/80 text-emerald-950 dark:border-emerald-900/90 dark:bg-emerald-950/40 dark:text-emerald-100",
+        calendarAccent: "border-l-emerald-500 dark:border-l-emerald-400",
       };
     case "no_show":
       return {
         badge:
           "bg-purple-100 text-purple-900 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
         dot: "bg-purple-500",
+        calendarCard:
+          "border-purple-200/90 bg-purple-50/75 text-purple-950 dark:border-purple-900/90 dark:bg-purple-950/45 dark:text-purple-100",
+        calendarAccent: "border-l-purple-500 dark:border-l-purple-400",
       };
     case "cancelled":
       return {
         badge:
           "bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800",
         dot: "bg-rose-500",
+        calendarCard:
+          "border-rose-200/90 bg-rose-50/75 text-rose-950 dark:border-rose-900/90 dark:bg-rose-950/45 dark:text-rose-100",
+        calendarAccent: "border-l-rose-500 dark:border-l-rose-400",
       };
     default:
       return {
         badge: "bg-muted text-foreground border-border",
         dot: "bg-muted-foreground",
+        calendarCard: "border-border bg-muted/40 text-foreground",
+        calendarAccent: "border-l-muted-foreground",
       };
   }
 };
@@ -631,6 +648,9 @@ export function BookingsCard({
     startOfDay(new Date()),
   );
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
+  const [calendarDialogBookingId, setCalendarDialogBookingId] = useState<
+    string | null
+  >(null);
   const [statusSelections, setStatusSelections] = useState<
     Record<string, string>
   >({});
@@ -831,6 +851,7 @@ export function BookingsCard({
     () => toCalendarDateKey(calendarDate),
     [calendarDate],
   );
+  const todayKey = useMemo(() => toCalendarDateKey(new Date()), []);
 
   const calendarWeekDays = useMemo(() => {
     const weekStart = startOfWeek(calendarDate);
@@ -840,6 +861,21 @@ export function BookingsCard({
       return startOfDay(value);
     });
   }, [calendarDate]);
+  const calendarWeekShopStatus = useMemo(
+    () =>
+      calendarWeekDays.reduce<
+        Record<string, ReturnType<typeof evaluateShopDateStatus>>
+      >((acc, day) => {
+        const dateKey = toCalendarDateKey(day);
+        acc[dateKey] = evaluateShopDateStatus(
+          dateKey,
+          shopWeeklySchedule,
+          shopTemporaryClosures,
+        );
+        return acc;
+      }, {}),
+    [calendarWeekDays, shopTemporaryClosures, shopWeeklySchedule],
+  );
 
   const calendarWeekLabel = useMemo(() => {
     const start = calendarWeekDays[0];
@@ -1079,10 +1115,13 @@ export function BookingsCard({
           barberId,
           startRow,
           endRow,
-          time: formatTimeRange(booking.start_at, booking.end_at),
+          time: formatTime(booking.start_at),
           client: getBookingCustomerName(booking),
           service: booking.service?.name ?? "-",
-          tone: tone.badge,
+          status: formatStatusLabel(booking.status ?? null),
+          statusTone: tone.badge,
+          cardTone: tone.calendarCard,
+          accentTone: tone.calendarAccent,
         };
       });
   }, [
@@ -1285,6 +1324,13 @@ export function BookingsCard({
 
     return !hasBlockedRange;
   };
+  const calendarDialogBooking = useMemo(
+    () =>
+      calendarWeekBookings.find(
+        (booking) => booking.id === calendarDialogBookingId,
+      ) ?? null,
+    [calendarDialogBookingId, calendarWeekBookings],
+  );
 
   const openCreateBookingDialog = (
     barberId: string,
@@ -1647,23 +1693,35 @@ export function BookingsCard({
         </Button>
         <div className="flex flex-1 items-center justify-center gap-3 sm:gap-4">
           {calendarWeekDays.map((day) => {
-            const isActive = toCalendarDateKey(day) === calendarDateKey;
+            const dayKey = toCalendarDateKey(day);
+            const isActive = dayKey === calendarDateKey;
+            const dayStatus = calendarWeekShopStatus[dayKey];
+            const isClosed = Boolean(dayStatus?.closed);
+            const isToday = dayKey === todayKey;
             return (
-              <Button
-                key={toCalendarDateKey(day)}
-                variant={isActive ? "default" : "outline"}
-                className="h-19 w-19 rounded-full border-border/70 p-0 shadow-sm"
-                onClick={() => setCalendarDate(startOfDay(day))}
-              >
-                <span className="flex flex-col items-center leading-tight">
-                  <span className="text-[11px] uppercase tracking-normal">
-                    {malaysiaWeekdayFormatter.format(day)}
+              <div key={dayKey} className="flex flex-col items-center gap-2">
+                <Button
+                  variant={isActive && !isClosed ? "default" : "outline"}
+                  className={`h-19 w-19 rounded-full border-border/70 p-0 shadow-sm ${
+                    isClosed
+                      ? "border-border/50 bg-muted/60 text-muted-foreground"
+                      : ""
+                  }`}
+                  onClick={() => setCalendarDate(startOfDay(day))}
+                >
+                  <span className="flex flex-col items-center leading-tight">
+                    <span className="text-[11px] uppercase tracking-normal">
+                      {malaysiaWeekdayFormatter.format(day)}
+                    </span>
+                    <span className="text-2xl font-semibold">
+                      {malaysiaDayFormatter.format(day)}
+                    </span>
                   </span>
-                  <span className="text-2xl font-semibold">
-                    {malaysiaDayFormatter.format(day)}
-                  </span>
+                </Button>
+                <span className="min-h-4 text-xs text-muted-foreground">
+                  {isToday ? "Today" : isClosed ? "Closed" : ""}
                 </span>
-              </Button>
+              </div>
             );
           })}
         </div>
@@ -2212,6 +2270,180 @@ export function BookingsCard({
       </DialogContent>
     </Dialog>
   ) : null;
+  const calendarBookingDialog = calendarDialogBooking ? (
+    <Dialog
+      open={Boolean(calendarDialogBookingId)}
+      onOpenChange={(open) =>
+        setCalendarDialogBookingId(open ? calendarDialogBooking.id : null)
+      }
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Manage booking</DialogTitle>
+          <DialogDescription>
+            Update status or cancel this booking.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="w-full rounded-xl border border-border bg-muted/40 p-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+            <div className="min-w-0">
+              <p className="text-lg font-semibold leading-tight">
+                {getBookingCustomerName(calendarDialogBooking)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {getBookingCustomerContact(calendarDialogBooking)}
+              </p>
+            </div>
+            <div className="flex justify-start sm:justify-end">
+              <Badge
+                variant="outline"
+                className={`${getStatusTone(calendarDialogBooking.status ?? null).badge} shrink-0`}
+              >
+                {formatStatusLabel(calendarDialogBooking.status ?? null)}
+              </Badge>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Date</p>
+              <p className="font-medium">
+                {formatDate(
+                  calendarDialogBooking.booking_date ??
+                    calendarDialogBooking.start_at,
+                )}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Time</p>
+              <p className="font-medium">
+                {formatTime(calendarDialogBooking.start_at)}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Service</p>
+              <p className="font-medium">
+                {calendarDialogBooking.service?.name ?? "-"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {calendarDialogBooking.service?.duration_minutes
+                  ? `${calendarDialogBooking.service.duration_minutes} min`
+                  : "Duration not set"}{" "}
+                ·{" "}
+                {formatMoney(calendarDialogBooking.service?.base_price ?? null)}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Barber</p>
+              <p className="font-medium">
+                {joinName(
+                  calendarDialogBooking.barber?.first_name ?? null,
+                  calendarDialogBooking.barber?.last_name ?? null,
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
+            <label
+              className="text-sm font-semibold"
+              htmlFor={`calendar-status-${calendarDialogBooking.id}`}
+            >
+              Update status
+            </label>
+            <form
+              id={`calendar-update-booking-${calendarDialogBooking.id}`}
+              action={async (formData) => {
+                await runBookingMutation(
+                  updateBookingStatus,
+                  formData,
+                  "Booking status updated.",
+                  () => setCalendarDialogBookingId(null),
+                );
+              }}
+              className="contents"
+            >
+              <input type="hidden" name="id" value={calendarDialogBooking.id} />
+              <input
+                type="hidden"
+                name="status"
+                value={
+                  statusSelections[calendarDialogBooking.id] ??
+                  calendarDialogBooking.status ??
+                  "scheduled"
+                }
+              />
+              <Select
+                value={
+                  statusSelections[calendarDialogBooking.id] ??
+                  calendarDialogBooking.status ??
+                  "scheduled"
+                }
+                onValueChange={(value) =>
+                  setStatusSelections((prev) => ({
+                    ...prev,
+                    [calendarDialogBooking.id]: value,
+                  }))
+                }
+              >
+                <SelectTrigger
+                  id={`calendar-status-${calendarDialogBooking.id}`}
+                  className={`${statusSelectClass(
+                    statusSelections[calendarDialogBooking.id] ??
+                      calendarDialogBooking.status ??
+                      "scheduled",
+                  )} w-full`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {formatStatusLabel(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </form>
+            <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap sm:justify-end">
+              <Button
+                variant="outline"
+                type="submit"
+                form={`calendar-update-booking-${calendarDialogBooking.id}`}
+              >
+                Update status
+              </Button>
+              {allowCancel && cancelBooking ? (
+                <form
+                  id={`calendar-cancel-booking-${calendarDialogBooking.id}`}
+                  action={async (formData) => {
+                    if (!cancelBooking) {
+                      return;
+                    }
+                    await runBookingMutation(
+                      cancelBooking,
+                      formData,
+                      "Booking cancelled.",
+                      () => setCalendarDialogBookingId(null),
+                    );
+                  }}
+                >
+                  <input
+                    type="hidden"
+                    name="id"
+                    value={calendarDialogBooking.id}
+                  />
+                  <Button variant="destructive" type="submit">
+                    Cancel booking
+                  </Button>
+                </form>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   const calendarView = (
     <div className="rounded-2xl border border-border/60 bg-card">
@@ -2399,10 +2631,11 @@ export function BookingsCard({
                           style={{
                             gridRow: `${event.startRow} / ${event.endRow}`,
                           }}
-                          className="pointer-events-auto flex min-h-full flex-col justify-center gap-1 overflow-hidden rounded-lg border border-zinc-300 bg-zinc-100/95 px-3 py-2 text-[11px] leading-tight text-zinc-700"
+                          className="pointer-events-auto flex min-h-full flex-col justify-between gap-2 overflow-hidden border border-amber-300/90 bg-amber-100/95 px-3 py-2 text-[11px] leading-tight text-amber-900 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.25)]"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="truncate text-xs font-semibold uppercase tracking-wide">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-800">
+                              <CircleOff className="size-3.5 shrink-0" />
                               Unavailable
                             </span>
                             {deleteBarberUnavailability ? (
@@ -2425,7 +2658,7 @@ export function BookingsCard({
                                   type="submit"
                                   size="icon"
                                   variant="ghost"
-                                  className="size-6 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
+                                  className="size-6 text-amber-800 hover:bg-amber-200/70 hover:text-amber-950"
                                 >
                                   <Trash2 className="size-3.5" />
                                 </Button>
@@ -2433,32 +2666,48 @@ export function BookingsCard({
                             ) : null}
                           </div>
                           {event.reason ? (
-                            <span className="truncate text-[10px]">
+                            <span className="text-[11px] font-medium leading-snug text-amber-950">
                               {event.reason}
                             </span>
-                          ) : null}
+                          ) : (
+                            <span className="text-[10px] font-medium uppercase tracking-wide text-amber-700/85">
+                              Barber blocked for this slot
+                            </span>
+                          )}
                         </div>
                       ))}
                     {calendarEvents
                       .filter((event) => event.barberId === barber.id)
                       .map((event) => (
-                        <div
+                        <button
+                          type="button"
                           key={event.id}
                           style={{
                             gridRow: `${event.startRow} / ${event.endRow}`,
                           }}
-                          className={`pointer-events-auto flex min-h-full flex-col gap-2 overflow-hidden rounded-lg border px-3 py-2 text-[11px] leading-tight ${event.tone}`}
+                          className={`pointer-events-auto flex min-h-full cursor-pointer flex-col overflow-hidden border border-l-4 px-3 py-2 text-[11px] leading-normal transition-all hover:shadow-sm ${event.cardTone} ${event.accentTone}`}
+                          onClick={() => setCalendarDialogBookingId(event.id)}
+                          aria-label={`Open booking details for ${event.client}`}
                         >
-                          <span className="truncate font-semibold">
-                            {event.time}
-                          </span>
-                          <span className="truncate text-xs font-semibold">
-                            {event.client}
-                          </span>
-                          <span className="truncate text-[10px] text-muted-foreground">
-                            {event.service}
-                          </span>
-                        </div>
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="truncate text-[12px] font-semibold leading-tight tracking-tight">
+                              {event.time}
+                            </span>
+                            <span
+                              className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase leading-tight ${event.statusTone}`}
+                            >
+                              {event.status}
+                            </span>
+                          </div>
+                          <div className="mt-auto flex items-end justify-between gap-2">
+                            <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold leading-tight">
+                              {event.client}
+                            </span>
+                            <span className="shrink-0 truncate text-right text-[10px] opacity-80">
+                              {event.service}
+                            </span>
+                          </div>
+                        </button>
                       ))}
                   </div>
                 </div>
@@ -2948,6 +3197,7 @@ export function BookingsCard({
           {calendarWeekSelector}
           {createBookingDialog}
           {unavailabilityDialog}
+          {calendarBookingDialog}
           {calendarView}
         </div>
       );
@@ -2988,6 +3238,7 @@ export function BookingsCard({
           {calendarWeekSelector}
           {createBookingDialog}
           {unavailabilityDialog}
+          {calendarBookingDialog}
           {calendarView}
         </TabsContent>
         <TabsContent value="past" className="space-y-3">

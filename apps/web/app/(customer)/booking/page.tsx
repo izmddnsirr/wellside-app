@@ -205,7 +205,7 @@ export default async function BookingPage({
           <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
             Upcoming
           </p>
-          <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
+          <div className="flex min-h-45 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
             <Calendar className="h-8 w-8 text-foreground" />
             <p className="text-sm text-muted-foreground">
               Please sign in to view your booking.
@@ -279,7 +279,7 @@ export default async function BookingPage({
           ) : null}
         </div>
         {!hasBooking && !bookingError ? (
-          <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
+          <div className="flex min-h-45 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
             <Calendar className="h-8 w-8 text-foreground" />
             <p className="text-sm text-muted-foreground">
               No upcoming bookings yet.

@@ -105,7 +105,7 @@ export default async function SelectBarberPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-[1200px]">
+    <div className="mx-auto w-full max-w-xl lg:max-w-300">
       <div className="pb-12">
         <div className="flex flex-col gap-10 lg:flex lg:flex-row lg:items-start lg:gap-12">
           <div className="flex flex-col gap-6 lg:flex-[1.4] lg:min-w-0">
