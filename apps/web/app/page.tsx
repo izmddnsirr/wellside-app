@@ -42,7 +42,7 @@ export default async function CustomerHome() {
   ]);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background font-(--font-body) text-foreground">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       {/* ── HERO + NAV (shared ColorBends background) ──────────────────────── */}
       <div className="relative">
         {/* Defer heavy background animation and keep a static gradient fallback */}
@@ -145,7 +145,7 @@ export default async function CustomerHome() {
             {/* Left copy */}
             <div className="flex h-full flex-col gap-6">
               <div className="space-y-3">
-                <h2 className="max-w-sm font-(--font-display) text-3xl leading-tight lg:text-[2.6rem]">
+                <h2 className="max-w-sm text-3xl leading-tight lg:text-[2.6rem]">
                   Build your perfect appointment.
                 </h2>
                 <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
@@ -196,7 +196,7 @@ export default async function CustomerHome() {
         <div className="rounded-3xl border border-border/60 bg-card p-6 md:p-8">
           <div className="grid gap-7 md:grid-cols-[1.2fr_0.8fr] md:items-center">
             <div className="space-y-3">
-              <h2 className="max-w-[22ch] font-(--font-display) text-3xl leading-tight lg:text-[2.7rem]">
+              <h2 className="max-w-[22ch] text-3xl leading-tight lg:text-[2.7rem]">
                 Tap into Wellside+ and walk in with confidence.
               </h2>
             </div>

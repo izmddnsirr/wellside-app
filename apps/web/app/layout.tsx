@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-(--font-body)">
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

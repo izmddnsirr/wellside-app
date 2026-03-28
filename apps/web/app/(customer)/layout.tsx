@@ -1,21 +1,13 @@
 import * as React from "react";
 import { CustomerNav } from "@/components/customer/customer-nav";
 
-const fontVars = {
-  "--font-display": "\"Sora\", ui-sans-serif, system-ui, sans-serif",
-  "--font-body": "\"Manrope\", ui-sans-serif, system-ui, sans-serif",
-} as React.CSSProperties;
-
 export default function CustomerLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <div
-      className="relative min-h-screen bg-background font-semibold text-foreground"
-      style={fontVars}
-    >
+    <div className="relative min-h-screen bg-background font-semibold text-foreground">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 overflow-hidden"

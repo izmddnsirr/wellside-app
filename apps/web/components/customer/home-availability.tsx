@@ -123,7 +123,7 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="space-y-1">
-          <h2 className="font-(--font-display) text-2xl leading-tight sm:text-[1.75rem]">
+          <h2 className="text-2xl leading-tight sm:text-[1.75rem]">
             Today&apos;s slots
           </h2>
           <p className="text-sm text-foreground/70">
