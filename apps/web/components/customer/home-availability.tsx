@@ -190,7 +190,9 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
               key={slot.start_at}
               className="group flex items-center justify-between rounded-xl border border-border/60 bg-background/65 px-4 py-3.5 text-left transition-colors hover:border-border hover:bg-muted/80 dark:border-white/15 dark:bg-black/25 dark:hover:border-white/25 dark:hover:bg-black/40"
             >
-              <span className="text-lg font-semibold leading-none">{slot.label}</span>
+              <span className="text-lg font-semibold leading-none">
+                {slot.label}
+              </span>
               <span className="text-sm font-semibold text-foreground/65 transition-colors group-hover:text-foreground/95">
                 Book now
               </span>
