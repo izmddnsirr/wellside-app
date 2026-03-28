@@ -183,13 +183,6 @@ const formatTime = (value: string | null) => {
   return `${hour}:${minute}${periodSuffix}`.trim();
 };
 
-const formatTimeRange = (start: string | null, end: string | null) => {
-  if (!start || !end) {
-    return "-";
-  }
-  return `${formatTime(start)} - ${formatTime(end)}`;
-};
-
 const formatMoney = (value: number | null) => {
   if (value === null || Number.isNaN(value)) {
     return "-";

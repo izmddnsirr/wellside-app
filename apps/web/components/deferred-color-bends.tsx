@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
+type IdleCapableWindow = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions,
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
+
 const ColorBends = dynamic(() => import("@/components/ColorBends"), {
   ssr: false,
 });
@@ -11,7 +20,9 @@ export default function DeferredColorBends() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia("(max-width: 767px)").matches) {
+    const currentWindow = window as IdleCapableWindow;
+
+    if (currentWindow.matchMedia("(max-width: 767px)").matches) {
       return;
     }
 
@@ -23,18 +34,23 @@ export default function DeferredColorBends() {
       }
     };
 
-    if ("requestIdleCallback" in window) {
-      const idleId = window.requestIdleCallback(activate, { timeout: 2000 });
+    if (
+      typeof currentWindow.requestIdleCallback === "function" &&
+      typeof currentWindow.cancelIdleCallback === "function"
+    ) {
+      const idleId = currentWindow.requestIdleCallback(activate, {
+        timeout: 2000,
+      });
       return () => {
         cancelled = true;
-        window.cancelIdleCallback(idleId);
+        currentWindow.cancelIdleCallback(idleId);
       };
     }
 
-    const timeoutId = window.setTimeout(activate, 400);
+    const timeoutId = globalThis.setTimeout(activate, 400);
     return () => {
       cancelled = true;
-      window.clearTimeout(timeoutId);
+      globalThis.clearTimeout(timeoutId);
     };
   }, []);
 
