@@ -1,8 +1,23 @@
 import type { Metadata } from "next";
+import { Instrument_Sans, Space_Grotesk } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+
+const displayFont = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+  preload: true,
+  display: "swap",
+});
+
+const bodyFont = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-body",
+  preload: true,
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Wellside+",
@@ -30,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${displayFont.variable} ${bodyFont.variable} font-(--font-body)`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -39,8 +54,8 @@ export default function RootLayout({
         >
           {children}
           <Toaster />
+          <SpeedInsights />
         </ThemeProvider>
-        <SpeedInsights />
       </body>
     </html>
   );

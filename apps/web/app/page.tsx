@@ -1,24 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
-import * as React from "react";
-import { House, MapPin } from "lucide-react";
-import { HomeAvailability } from "@/components/customer/home-availability";
-import { createClient } from "@/utils/supabase/server";
-import ColorBends from "@/components/ColorBends";
-import { redirect } from "next/navigation";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-const fontVars = {
-  "--font-display": '"Space Grotesk", ui-sans-serif, system-ui, sans-serif',
-  "--font-body": '"Instrument Sans", ui-sans-serif, system-ui, sans-serif',
-} as React.CSSProperties;
-
-type Service = {
-  id: string;
-  name: string;
-  base_price: number | null;
-  duration_minutes: number | null;
-};
+import {
+  ArrowUpRight,
+  Instagram,
+  MapPin,
+  MessageCircle,
+  Music2,
+} from "lucide-react";
+import DeferredColorBends from "@/components/deferred-color-bends";
+import { HomeAvailabilitySection } from "@/components/customer/home-availability-section";
+import { HomeHeaderActions } from "@/components/customer/home-header-actions";
+import { TotalBookingsCounter } from "@/components/customer/total-bookings-counter";
+import {
+  getCachedActiveServices,
+  getCachedTotalBookingsCount,
+  type Service,
+} from "@/utils/home-data";
 
 const formatServicePrice = (value: number | null) => {
   if (value === null || Number.isNaN(value)) {
@@ -37,93 +34,20 @@ const formatServiceDuration = (value: number | null) => {
   return `${value} min`;
 };
 
-type BarberOption = {
-  id: string;
-  name: string;
-};
-
 export default async function CustomerHome() {
-  const supabase = await createClient();
-  const logout = async () => {
-    "use server";
-    const authClient = await createClient();
-    await authClient.auth.signOut();
-    redirect("/");
-  };
   const currentYear = new Date().getFullYear();
-  const { data: servicesData } = await supabase
-    .from("services")
-    .select("id, name, base_price, duration_minutes")
-    .eq("is_active", true)
-    .not("base_price", "is", null)
-    .order("created_at", { ascending: false });
-  const services = servicesData ?? [];
-  const { data: barbersData } = await supabase
-    .from("profiles")
-    .select("id, first_name, last_name, display_name")
-    .eq("is_active", true)
-    .eq("role", "barber")
-    .order("display_name");
-  const barbers: BarberOption[] = (barbersData ?? []).map((barber) => {
-    const name =
-      barber.display_name?.trim() ||
-      [barber.first_name, barber.last_name].filter(Boolean).join(" ").trim() ||
-      "Barber";
-
-    return {
-      id: barber.id,
-      name,
-    };
-  });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: userProfile } = user
-    ? await supabase
-        .from("profiles")
-        .select("display_name, first_name, last_name, avatar_url, role")
-        .eq("id", user.id)
-        .maybeSingle()
-    : { data: null };
-  const displayName =
-    userProfile?.display_name?.trim() ||
-    [userProfile?.first_name, userProfile?.last_name]
-      .filter(Boolean)
-      .join(" ")
-      .trim() ||
-    user?.email?.split("@")[0] ||
-    "User";
-  const initials = displayName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part: string) => part[0]?.toUpperCase() ?? "")
-    .join("");
-  const userHomeHref = "/home";
-  const avatarUrl = userProfile?.avatar_url?.trim() || null;
+  const [services, totalBookings] = await Promise.all([
+    getCachedActiveServices(),
+    getCachedTotalBookingsCount(),
+  ]);
 
   return (
-    <div
-      className="min-h-screen overflow-x-hidden bg-background font-(--font-body) text-foreground"
-      style={fontVars}
-    >
+    <div className="min-h-screen overflow-x-hidden bg-background font-(--font-body) text-foreground">
       {/* ── HERO + NAV (shared ColorBends background) ──────────────────────── */}
       <div className="relative">
-        {/* ColorBends full-bleed background */}
-        <div className="pointer-events-none absolute inset-0 z-0">
-          <ColorBends
-            colors={["#ff5c7a", "#8a5cff", "#00ffd1"]}
-            rotation={0}
-            speed={0.2}
-            scale={1}
-            frequency={1}
-            warpStrength={1}
-            mouseInfluence={1}
-            parallax={0.5}
-            noise={0.1}
-            transparent
-            autoRotate={0}
-          />
+        {/* Defer heavy background animation and keep a static gradient fallback */}
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(90%_65%_at_50%_10%,rgba(255,92,122,0.16),transparent),radial-gradient(60%_50%_at_30%_30%,rgba(0,255,209,0.14),transparent),radial-gradient(75%_70%_at_80%_20%,rgba(138,92,255,0.14),transparent)]">
+          <DeferredColorBends />
         </div>
 
         {/* Bottom fade into background */}
@@ -140,6 +64,7 @@ export default async function CustomerHome() {
                 height={44}
                 className="h-8 w-auto dark:hidden sm:h-9"
                 priority
+                sizes="180px"
               />
               <Image
                 src="/wellside-logo-white.png"
@@ -147,71 +72,11 @@ export default async function CustomerHome() {
                 width={180}
                 height={44}
                 className="hidden h-8 w-auto dark:block sm:h-9"
-                priority
+                sizes="180px"
               />
             </div>
             <div className="flex items-center gap-3 text-sm">
-              {user ? (
-                <div className="flex items-center gap-2.5">
-                  <Link
-                    href={userHomeHref}
-                    aria-label="Go to home"
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 bg-white/85 text-black transition-colors hover:border-black/25 hover:bg-white dark:border-white/20 dark:bg-black/70 dark:text-white dark:hover:border-white/30 dark:hover:bg-black/85"
-                  >
-                    <House className="h-4 w-4" />
-                  </Link>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex h-10 list-none items-center gap-1.5 rounded-full border border-black/15 bg-white/85 px-1.5 pr-2.5 text-black backdrop-blur-md backdrop-saturate-150 cursor-pointer select-none transition-colors hover:border-black/25 hover:bg-white dark:border-white/20 dark:bg-black/70 dark:text-white dark:hover:border-white/30 dark:hover:bg-black/85"
-                      >
-                        {avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={avatarUrl}
-                            alt={displayName}
-                            className="h-7 w-7 rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/10 text-xs font-semibold text-black dark:bg-white/15 dark:text-white">
-                            {initials || "U"}
-                          </span>
-                        )}
-                        <span className="max-w-28 truncate text-sm font-semibold text-black sm:max-w-36 dark:text-white">
-                          {displayName}
-                        </span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="end"
-                      className="w-44 rounded-xl border border-border/70 bg-background/95 p-1.5 shadow-xl backdrop-blur-xl dark:border-white/20 dark:bg-background/90"
-                    >
-                      <Link
-                        href={userHomeHref}
-                        className="block rounded-lg px-3 py-2 text-sm font-medium text-foreground/90 transition-colors hover:bg-muted cursor-pointer dark:hover:bg-white/10"
-                      >
-                        Go to home
-                      </Link>
-                      <form action={logout}>
-                        <button
-                          type="submit"
-                          className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-500 transition-colors hover:bg-muted hover:text-red-600 cursor-pointer dark:text-red-300 dark:hover:bg-white/10 dark:hover:text-red-200"
-                        >
-                          Logout
-                        </button>
-                      </form>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="rounded-full border border-border/60 bg-background/70 px-5 py-2 font-semibold text-foreground backdrop-blur-md backdrop-saturate-150 transition-colors hover:bg-muted dark:border-white/25 dark:bg-white/12 dark:hover:bg-white/24"
-                >
-                  Login
-                </Link>
-              )}
+              <HomeHeaderActions />
             </div>
           </div>
         </header>
@@ -220,10 +85,14 @@ export default async function CustomerHome() {
         {/* ── HERO content ────────────────────────────────────────────────── */}
         <section className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-0 pt-10 sm:px-6 sm:pt-12 lg:pt-16">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-5 text-center">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 text-[11px] uppercase tracking-[0.22em] text-foreground/75 backdrop-blur-sm dark:border-white/20 dark:bg-black/30 dark:text-foreground/70">
-              Fresh cuts, calm schedules
-            </div>
-            <h1 className="max-w-[20ch] font-(--font-display) text-4xl leading-[1.08] tracking-tight text-foreground text-balance sm:text-5xl lg:text-6xl">
+            <Link
+              href="/booking"
+              className="inline-flex items-center gap-2.5 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-black/85 dark:bg-white dark:text-black dark:hover:bg-white/90"
+            >
+              Booking Now
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            <h1 className="max-w-[20ch] text-4xl leading-[1.08] tracking-tight font-black text-foreground text-balance sm:text-5xl lg:text-6xl">
               Book a barber that fits your style and your time.
             </h1>
             <p className="max-w-2xl text-base leading-relaxed text-foreground/70 sm:text-lg">
@@ -254,12 +123,16 @@ export default async function CustomerHome() {
                 ))}
               </div>
             )}
+            <p className="pt-2 text-base text-foreground/85 sm:text-xl">
+              <TotalBookingsCounter value={totalBookings} /> appointments have
+              been booked with us. Secure yours today.
+            </p>
           </div>
 
           {/* Availability card */}
           <div className="mx-auto mt-16 w-full max-w-6xl md:mt-20">
             <div className="rounded-3xl border border-border/70 bg-background/70 p-6 backdrop-blur-xl md:p-8 dark:border-white/15 dark:bg-black/35">
-              <HomeAvailability barbers={barbers} />
+              <HomeAvailabilitySection />
             </div>
           </div>
         </section>
@@ -339,8 +212,90 @@ export default async function CustomerHome() {
         </div>
       </section>
 
-      <footer className="mx-auto w-full max-w-6xl px-4 pb-10 text-center text-xs text-muted-foreground sm:px-6">
-        © {currentYear} Wellside+. All rights reserved.
+      <footer className="mt-8 w-full border-t border-border/60 bg-card/80">
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+          <div className="grid gap-6 text-sm md:grid-cols-3 md:items-start">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-foreground/70">
+                Operation Hours
+              </p>
+              <ul className="space-y-1.5 text-foreground">
+                <li className="space-y-0.5">
+                  <span className="font-medium">Mon - Wed</span>
+                  <p className="text-muted-foreground">12:00 PM - 10:00 PM</p>
+                </li>
+                <li className="space-y-0.5">
+                  <span className="font-medium">Thursday</span>
+                  <p className="text-muted-foreground">Closed</p>
+                </li>
+                <li className="space-y-0.5">
+                  <span className="font-medium">Friday</span>
+                  <p className="text-muted-foreground">3:00 PM - 10:00 PM</p>
+                </li>
+                <li className="space-y-0.5">
+                  <span className="font-medium">Sat - Sun</span>
+                  <p className="text-muted-foreground">12:00 PM - 10:00 PM</p>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-foreground/70">
+                Social Media
+              </p>
+              <div className="flex flex-col gap-1.5">
+                <Link
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 font-medium text-foreground transition-colors hover:text-foreground/70"
+                >
+                  <Instagram className="h-4 w-4" aria-hidden="true" />
+                  Instagram
+                </Link>
+                <Link
+                  href="https://tiktok.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 font-medium text-foreground transition-colors hover:text-foreground/70"
+                >
+                  <Music2 className="h-4 w-4" aria-hidden="true" />
+                  TikTok
+                </Link>
+                <Link
+                  href="https://wa.me/601112564440"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 font-medium text-foreground transition-colors hover:text-foreground/70"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  WhatsApp
+                </Link>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase text-foreground/70">
+                Address
+              </p>
+              <ul className="space-y-0.5 leading-7">
+                <li className="font-medium text-foreground">
+                  Wellside Barbershop
+                </li>
+                <li className="text-muted-foreground">24, Jalan Palas 5,</li>
+                <li className="text-muted-foreground">Taman Teratai,</li>
+                <li className="text-muted-foreground">81300 Kulai,</li>
+                <li className="text-muted-foreground">
+                  Johor Darul Ta&apos;zim, Malaysia
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-8 pt-4 text-center text-xs text-muted-foreground">
+            © {currentYear} Wellside+. All rights reserved.
+          </div>
+        </div>
       </footer>
     </div>
   );

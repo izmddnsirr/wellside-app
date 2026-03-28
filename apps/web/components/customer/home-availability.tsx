@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Select,
   SelectContent,
@@ -41,6 +41,7 @@ const getTodayISO = () => {
 
 export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
   const [selectedId, setSelectedId] = useState(barbers[0]?.id ?? "");
+  const [isPendingSelection, startTransition] = useTransition();
   const dateISO = useMemo(() => getTodayISO(), []);
   const slotsCacheRef = useRef(new Map<string, Slot[]>());
   const [slotState, setSlotState] = useState<SlotState>({
@@ -86,25 +87,28 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
       }
     });
 
-    getAvailableSlots(resolvedSelectedId, dateISO)
-      .then((slots) => {
-        if (isActive) {
-          slotsCacheRef.current.set(cacheKey, slots);
-          setSlotState({ slots, isLoading: false, error: null });
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setSlotState({
-            slots: [],
-            isLoading: false,
-            error: "Unable to load available slots right now.",
-          });
-        }
-      });
+    const timeoutId = window.setTimeout(() => {
+      getAvailableSlots(resolvedSelectedId, dateISO)
+        .then((slots) => {
+          if (isActive) {
+            slotsCacheRef.current.set(cacheKey, slots);
+            setSlotState({ slots, isLoading: false, error: null });
+          }
+        })
+        .catch(() => {
+          if (isActive) {
+            setSlotState({
+              slots: [],
+              isLoading: false,
+              error: "Unable to load available slots right now.",
+            });
+          }
+        });
+    }, 0);
 
     return () => {
       isActive = false;
+      window.clearTimeout(timeoutId);
     };
   }, [dateISO, resolvedSelectedId]);
 
@@ -132,7 +136,14 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
             {slotsLabel}
           </span>
           {barbers.length ? (
-            <Select value={resolvedSelectedId} onValueChange={setSelectedId}>
+            <Select
+              value={resolvedSelectedId}
+              onValueChange={(value) => {
+                startTransition(() => {
+                  setSelectedId(value);
+                });
+              }}
+            >
               <SelectTrigger
                 className="h-10 w-full rounded-full border-border/60 bg-background/70 text-sm text-foreground/95 backdrop-blur-md sm:min-w-44 sm:w-auto dark:border-white/20 dark:bg-black/30"
                 size="sm"
@@ -163,6 +174,10 @@ export function HomeAvailability({ barbers }: HomeAvailabilityProps) {
       {effectiveSlotState.isLoading ? (
         <div className="rounded-xl border border-dashed border-border/60 bg-background/65 px-4 py-7 text-center text-sm text-foreground/70 dark:border-white/20 dark:bg-black/25">
           Loading slots...
+        </div>
+      ) : isPendingSelection ? (
+        <div className="rounded-xl border border-dashed border-border/60 bg-background/65 px-4 py-7 text-center text-sm text-foreground/70 dark:border-white/20 dark:bg-black/25">
+          Updating slots...
         </div>
       ) : effectiveSlotState.error ? (
         <div className="rounded-xl border border-dashed border-border/60 bg-background/65 px-4 py-7 text-center text-sm text-foreground/70 dark:border-white/20 dark:bg-black/25">

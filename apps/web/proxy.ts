@@ -44,10 +44,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = request.nextUrl.pathname;
+
   if (!user) {
-    const pathname = request.nextUrl.pathname;
     const isHome = pathname.startsWith("/home");
     return requireAuthRedirect(request, isHome ? "/login" : "/staff");
+  }
+
+  if (pathname.startsWith("/home")) {
+    return response;
   }
 
   const { data: profile, error } = await supabase
@@ -62,7 +67,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return requireAuthRedirect(request, isHome ? "/login" : "/staff");
   }
 
-  const pathname = request.nextUrl.pathname;
   if (pathname.startsWith("/admin") && profile.role !== "admin") {
     return requireAuthRedirect(request, "/staff");
   }
