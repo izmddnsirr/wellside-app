@@ -36,6 +36,7 @@ export type QueueListItem = {
   type: "Booking";
   phone: string | null;
   queueNumber: number | null;
+  startedAt: string | null;
 };
 
 export type QueueDashboardData = {
@@ -97,7 +98,7 @@ const formatQueueTime = (value: string | null) => {
     return "-";
   }
 
-  return malaysiaTimeFormatter.format(parsed);
+  return malaysiaTimeFormatter.format(parsed).toUpperCase();
 };
 
 export const createDailyQueuePin = (date = new Date()) => {
@@ -121,6 +122,7 @@ const toQueueItem = (booking: QueueBookingRow & { queue_number?: number | null }
   type: "Booking",
   phone: booking.walk_in_customer?.phone?.trim() ?? null,
   queueNumber: booking.queue_number ?? null,
+  startedAt: booking.start_at ?? null,
 });
 
 export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {

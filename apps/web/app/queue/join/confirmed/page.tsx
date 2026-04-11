@@ -8,7 +8,7 @@ export default async function QueueConfirmedPage({ searchParams }: PageProps) {
   const waitingAhead = Number(ahead ?? 0);
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] flex flex-col items-center justify-center px-6">
+    <div className="fixed inset-0 bg-[#0d0d0d] flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-8 text-center">
         {/* Logo */}
         {/* eslint-disable-next-line @next/next/no-img-element */}

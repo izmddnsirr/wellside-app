@@ -45,10 +45,9 @@ type SalesChartPoint = {
   totalEwallet: number;
 };
 
-type SalesPeriod = "week" | "month" | "year";
+type SalesPeriod = "month" | "year";
 
 type BookingsChartCardProps = {
-  data: Record<"week", SalesChartPoint[]>;
   monthSeries: Record<string, SalesChartPoint[]>;
   yearSeries: Record<string, SalesChartPoint[]>;
   defaultMonth: string;
@@ -65,7 +64,6 @@ const formatCurrency = (value: number) =>
   }).format(value);
 
 const periodOptions: { value: SalesPeriod; label: string }[] = [
-  { value: "week", label: "Last 7 days" },
   { value: "month", label: "Month" },
   { value: "year", label: "Year" },
 ];
@@ -217,7 +215,6 @@ const renderSalesValuePill = ({
 };
 
 export function BookingsChartCard({
-  data,
   monthSeries,
   yearSeries,
   defaultMonth,
@@ -267,24 +264,23 @@ export function BookingsChartCard({
     yearPageStart + yearsPerPage,
   );
   const chartData = useMemo(() => {
-    if (period === "month") {
-      return monthSeries[selectedMonth] ?? [];
-    }
     if (period === "year") {
       return yearSeries[selectedYear] ?? [];
     }
-    return data[period];
-  }, [data, monthSeries, period, selectedMonth, selectedYear, yearSeries]);
+    return monthSeries[selectedMonth] ?? [];
+  }, [monthSeries, period, selectedMonth, selectedYear, yearSeries]);
   const hasSales = useMemo(
     () => chartData.some((point) => point.sales > 0),
     [chartData],
   );
+  const totalSales = useMemo(
+    () => chartData.reduce((sum, point) => sum + point.sales, 0),
+    [chartData],
+  );
   const description =
-    period === "week"
-      ? "Showing paid ticket sales for the last 7 days."
-      : period === "month"
-        ? `Showing paid ticket sales for ${formatMonthLabel(selectedMonth)}.`
-        : `Showing paid ticket sales for ${selectedYear}.`;
+    period === "month"
+      ? `Showing paid ticket sales for ${formatMonthLabel(selectedMonth)}.`
+      : `Showing paid ticket sales for ${selectedYear}.`;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 640px)");
@@ -342,7 +338,7 @@ export function BookingsChartCard({
 
   return (
     <Card className="border-border/60 bg-card pt-0">
-      <CardHeader className="flex flex-col items-start gap-3 space-y-0 border-b border-border/60 py-5 sm:flex-row sm:items-center">
+      <CardHeader className="flex flex-col items-start gap-3 space-y-0 border-b border-border/60 py-6 -mx-6 px-6 sm:flex-row sm:items-center">
         <div className="grid flex-1 gap-1">
           <CardTitle className="text-foreground">Ticket sales trend</CardTitle>
           <CardDescription className="text-muted-foreground">
@@ -494,8 +490,19 @@ export function BookingsChartCard({
             </SelectContent>
           </Select>
         </div>
+        <div className="hidden sm:flex items-stretch shrink-0 self-stretch -my-6">
+          <div className="w-px bg-border/60" />
+          <div className="flex flex-col items-start justify-center gap-0.5 pl-5">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {period === "month" ? formatMonthLabel(selectedMonth) : selectedYear}
+            </span>
+            <span className="text-2xl font-mono font-bold text-foreground tabular-nums">
+              {formatCurrency(totalSales)}
+            </span>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="pt-4 sm:pt-6">
         {chartData.length === 0 || !hasSales ? (
           <div className="flex h-62.5 items-center justify-center text-sm text-muted-foreground">
             No sales data yet for this period.

@@ -5,15 +5,16 @@ import { useRouter } from "next/navigation";
 import type { QueueListItem } from "@/utils/queue";
 import type { QueueEntry } from "@/utils/queue-entries";
 
-type ServingSlot = {
-  name: string;
+type FifoSlot = {
+  id: string;
   numberLabel: string;
-} | null;
+  name: string;
+  startedAt: string | null;
+};
 
 type TvDisplayProps = {
   checkedInBookings: QueueListItem[];
-  currentlyServing: QueueListItem[];
-  servingEntries: QueueEntry[];
+  fifoServing: FifoSlot[];
   queueEntries: QueueEntry[];
   qrDataUrl: string;
   queueUrl: string;
@@ -38,8 +39,8 @@ function LiveTime({ now }: { now: Date | null }) {
   if (!now) {
     return (
       <div className="flex items-baseline justify-center gap-2 leading-none">
-        <span className="text-3xl font-bold text-white">--:--:--</span>
-        <span className="text-3xl font-bold text-white">--</span>
+        <span className="text-3xl font-mono font-bold text-white">--:--:--</span>
+        <span className="text-3xl font-mono font-bold text-white">--</span>
       </div>
     );
   }
@@ -54,8 +55,8 @@ function LiveTime({ now }: { now: Date | null }) {
 
   return (
     <div className="flex items-baseline justify-center gap-2 leading-none">
-      <span className="text-3xl font-bold text-white">{time}</span>
-      <span className="text-3xl font-bold text-white">{period}</span>
+      <span className="text-3xl font-mono font-bold text-white">{time}</span>
+      <span className="text-3xl font-mono font-bold text-white">{period}</span>
     </div>
   );
 }
@@ -98,10 +99,10 @@ function BookingPanel({ items }: { items: QueueListItem[] }) {
           ) : (
             items.slice(0, 8).map((item) => (
               <tr key={item.id} className="border-b border-white/10">
-                <td className="text-center py-4 text-2xl font-bold text-purple-400">
+                <td className="text-center py-4 text-2xl font-mono font-bold text-purple-400">
                   {item.queueNumber != null ? `B${String(item.queueNumber).padStart(2, "0")}` : "—"}
                 </td>
-                <td className="text-center py-4 text-xl text-white/80 uppercase">{item.timeLabel}</td>
+                <td className="text-center py-4 text-xl font-mono text-white/80 uppercase">{item.timeLabel}</td>
                 <td className="text-center py-4 text-xl text-white/80">{item.barberLabel.split(" ")[0]}</td>
               </tr>
             ))
@@ -134,9 +135,9 @@ function QueuePanel({ items }: { items: QueueEntry[] }) {
           ) : (
             items.slice(0, 8).map((entry) => (
               <tr key={entry.id} className="border-b border-white/10">
-                <td className="text-center py-4 text-2xl font-bold text-amber-400">W{String(entry.queue_number).padStart(2, "0")}</td>
+                <td className="text-center py-4 text-2xl font-mono font-bold text-amber-400">W{String(entry.queue_number).padStart(2, "0")}</td>
                 <td className="text-center py-4 text-xl text-white/80">Walk-In</td>
-                <td className="text-center py-4 text-xl text-white/80 uppercase">
+                <td className="text-center py-4 text-xl font-mono text-white/80 uppercase">
                   {timeFormatter.format(new Date(entry.created_at))}
                 </td>
               </tr>
@@ -148,14 +149,8 @@ function QueuePanel({ items }: { items: QueueEntry[] }) {
   );
 }
 
-function ServingPanel({ items, entries }: { items: QueueListItem[]; entries: QueueEntry[] }) {
-  const bookingSlots = items.map(i => ({ number: `B${String(i.queueNumber).padStart(2, "0")}`, name: i.name }));
-  const walkInSlots = entries.map(e => ({ number: `W${String(e.queue_number).padStart(2, "0")}`, name: e.name }));
-  const all = [...bookingSlots, ...walkInSlots];
-  const slots: ServingSlot[] = Array.from(
-    { length: 3 },
-    (_, i) => all[i] ? { name: all[i].name, serviceLabel: "", ref: "", queueNumber: null, numberLabel: all[i].number } : null,
-  );
+function ServingPanel({ slots }: { slots: FifoSlot[] }) {
+  const displayed = Array.from({ length: 3 }, (_, i) => slots[i] ?? null);
 
   return (
     <div className="flex flex-col h-full">
@@ -163,9 +158,9 @@ function ServingPanel({ items, entries }: { items: QueueListItem[]; entries: Que
         Serving
       </div>
       <div className="grid grid-cols-3 gap-3">
-        {slots.map((slot, i) => (
+        {displayed.map((slot, i) => (
           <div
-            key={i}
+            key={slot?.id ?? i}
             className={`rounded-xl flex flex-col items-center justify-center p-4 h-28 border ${
               slot
                 ? "bg-emerald-500/10 border-emerald-500/30"
@@ -173,7 +168,7 @@ function ServingPanel({ items, entries }: { items: QueueListItem[]; entries: Que
             }`}
           >
             {slot ? (
-              <span className="text-4xl font-bold text-emerald-400 leading-none">
+              <span className="text-4xl font-mono font-bold text-emerald-400 leading-none">
                 {slot.numberLabel}
               </span>
             ) : (
@@ -225,8 +220,7 @@ function FullscreenButton() {
 
 export function TvDisplay({
   checkedInBookings,
-  currentlyServing,
-  servingEntries,
+  fifoServing,
   queueEntries,
   qrDataUrl,
   queueUrl,
@@ -272,7 +266,7 @@ export function TvDisplay({
         {/* Serving + QR */}
         <section className="flex flex-col divide-y divide-white/10">
           <div className="px-8 py-6">
-            <ServingPanel items={currentlyServing} entries={servingEntries} />
+            <ServingPanel slots={fifoServing} />
           </div>
 
           {/* QR Code */}

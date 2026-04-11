@@ -41,11 +41,32 @@ export default async function TvPage({ params }: PageProps) {
 
   const servingEntries = queueEntries.filter(e => e.status === "serving");
 
+  // FIFO: merge booking + walk-in serving slots, sorted by when service started
+  type FifoSlot = { id: string; numberLabel: string; name: string; startedAt: string | null };
+
+  const fifoServing: FifoSlot[] = [
+    ...data.currentlyServing.map(b => ({
+      id: b.id,
+      numberLabel: b.queueNumber != null ? `B${String(b.queueNumber).padStart(2, "0")}` : "B--",
+      name: b.name,
+      startedAt: b.startedAt,
+    })),
+    ...servingEntries.map(e => ({
+      id: e.id,
+      numberLabel: `W${String(e.queue_number).padStart(2, "0")}`,
+      name: e.name,
+      startedAt: e.started_at ?? e.created_at,
+    })),
+  ].sort((a, b) => {
+    if (!a.startedAt) return 1;
+    if (!b.startedAt) return -1;
+    return new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime();
+  });
+
   return (
     <TvDisplay
       checkedInBookings={allBookings}
-      currentlyServing={data.currentlyServing}
-      servingEntries={servingEntries}
+      fifoServing={fifoServing}
       queueEntries={queueEntries}
       qrDataUrl={qrDataUrl}
       queueUrl={queueUrl}

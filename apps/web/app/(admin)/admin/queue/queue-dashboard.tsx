@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import type { QueueDashboardData, QueueListItem } from "@/utils/queue";
 import type { QueueEntry } from "@/utils/queue-entries";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { serveBooking, completeBooking, cancelBooking, checkInBooking, undoCheckIn, undoServeBooking } from "./actions";
 import { serveQueueEntry, completeQueueEntry, removeQueueEntry, undoServeQueueEntry } from "./queue-entry-actions";
 
@@ -46,7 +47,7 @@ function QueueCard({
 
   const displayNumber =
     mode === "upcoming"
-      ? String(index + 1).padStart(2, "0")
+      ? item.timeLabel
       : `B${String(item.queueNumber ?? index + 1).padStart(2, "0")}`;
 
   return (
@@ -54,7 +55,8 @@ function QueueCard({
       {/* Top row: number + badge + status */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-bold text-foreground">{displayNumber}</span>
+          <span className="text-[15px] font-mono font-bold text-foreground">{displayNumber}</span>
+          <div className="w-px h-3.5 bg-border" />
           <TypeBadge type={item.type} />
         </div>
         <span className="text-[11px] text-muted-foreground">{statusLabel}</span>
@@ -166,9 +168,10 @@ function QueueEntryCard({
     <div className="rounded-lg border bg-muted/20 px-4 py-3.5 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-bold text-foreground">
+          <span className="text-[15px] font-mono font-bold text-foreground">
             W{String(entry.queue_number).padStart(2, "0")}
           </span>
+          <div className="w-px h-3.5 bg-border" />
           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
             Walk-in
           </span>
@@ -191,21 +194,12 @@ function QueueEntryCard({
               hour: "numeric",
               minute: "2-digit",
               hour12: true,
-            }).format(new Date(entry.started_at))}
+            }).format(new Date(entry.started_at)).toUpperCase()}
           </p>
         )}
       </div>
 
       <div className="flex items-center gap-2 pt-0.5">
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="h-8 rounded-lg text-[12px]"
-        >
-          <a href={`tel:${entry.phone}`}>Call</a>
-        </Button>
-
         {entry.status === "serving" && (
           <Button
             variant="outline"
@@ -217,6 +211,15 @@ function QueueEntryCard({
             <Undo2 className="size-3.5" />
           </Button>
         )}
+
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-lg text-[12px]"
+        >
+          <a href={`tel:${entry.phone}`}>Call</a>
+        </Button>
 
         {entry.status === "waiting" ? (
           <Button
@@ -268,14 +271,14 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
       {/* TV Access Card */}
-      <Card className="gap-0 rounded-2xl py-0">
+      <Card className="gap-0 rounded-2xl p-0">
         <CardHeader className="gap-0 px-5 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Tv className="size-4 text-muted-foreground shrink-0" />
               <div className="flex items-center gap-3">
                 <p className="text-[12px] text-muted-foreground">PIN</p>
-                <p className="text-[20px] font-semibold leading-none text-foreground">{data.pin}</p>
+                <p className="text-[20px] font-mono font-semibold leading-none text-foreground">{data.pin}</p>
                 <Button
                   type="button"
                   variant="outline"
@@ -302,9 +305,9 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
       </Card>
 
       {/* Queue columns */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 items-start">
         {/* Upcoming Bookings */}
-        <Card className="gap-0 rounded-2xl py-0">
+        <Card className="gap-0 rounded-2xl p-0">
           <CardHeader className="gap-1 px-5 py-4 border-b">
             <CardTitle className="text-[18px] font-semibold text-foreground sm:text-[19px]">
               Upcoming Bookings
@@ -315,7 +318,12 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
           </CardHeader>
           <CardContent className="px-5 py-5 space-y-3">
             {data.upcomingBookings.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">No upcoming bookings</p>
+              <Empty className="border-0 p-4">
+                <EmptyHeader>
+                  <EmptyTitle className="text-[13px] font-medium">No upcoming bookings</EmptyTitle>
+                  <EmptyDescription className="text-[12px]">Scheduled appointments will appear here.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               data.upcomingBookings.slice(0, 10).map((item, i) => (
                 <QueueCard key={item.id} item={item} index={i} mode="upcoming" />
@@ -331,7 +339,7 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
           const totalWaiting = waitingBookings.length + waitingEntries.length;
 
           return (
-            <Card className="gap-0 rounded-2xl py-0">
+            <Card className="gap-0 rounded-2xl p-0">
               <CardHeader className="gap-1 px-5 py-4 border-b">
                 <CardTitle className="text-[18px] font-semibold text-foreground sm:text-[19px]">
                   Queue List
@@ -342,7 +350,12 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
               </CardHeader>
               <CardContent className="px-5 py-5 space-y-3">
                 {totalWaiting === 0 ? (
-                  <p className="text-[13px] text-muted-foreground">No customers waiting</p>
+                  <Empty className="border-0 p-4">
+                    <EmptyHeader>
+                      <EmptyTitle className="text-[13px] font-medium">No customers waiting</EmptyTitle>
+                      <EmptyDescription className="text-[12px]">Walk-ins and checked-in bookings will appear here.</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   <>
                     {waitingBookings.map((item, i) => (
@@ -359,7 +372,7 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
         })()}
 
         {/* Currently Serving */}
-        <Card className="gap-0 rounded-2xl py-0">
+        <Card className="gap-0 rounded-2xl p-0">
           <CardHeader className="gap-1 px-5 py-4 border-b">
             <CardTitle className="text-[18px] font-semibold text-foreground sm:text-[19px]">
               Currently Serving
@@ -369,18 +382,45 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="px-5 py-5 space-y-3">
-            {data.currentlyServing.length === 0 && queueEntries.filter(e => e.status === "serving").length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">No customers being served</p>
-            ) : (
-              <>
-                {data.currentlyServing.slice(0, 10).map((item, i) => (
-                  <QueueCard key={item.id} item={item} index={i} mode="serving" />
-                ))}
-                {queueEntries.filter(e => e.status === "serving").slice(0, 10).map((entry) => (
-                  <QueueEntryCard key={entry.id} entry={entry} />
-                ))}
-              </>
-            )}
+            {(() => {
+              type ServingItem =
+                | { kind: "booking"; item: QueueListItem; sortKey: number }
+                | { kind: "entry"; entry: QueueEntry; sortKey: number };
+
+              const servingBookings: ServingItem[] = data.currentlyServing.map(item => ({
+                kind: "booking",
+                item,
+                sortKey: item.startedAt ? new Date(item.startedAt).getTime() : Infinity,
+              }));
+              const servingEntries: ServingItem[] = queueEntries
+                .filter(e => e.status === "serving")
+                .map(entry => ({
+                  kind: "entry",
+                  entry,
+                  sortKey: entry.started_at ? new Date(entry.started_at).getTime() : new Date(entry.created_at).getTime(),
+                }));
+
+              const all = [...servingBookings, ...servingEntries]
+                .sort((a, b) => a.sortKey - b.sortKey)
+                .slice(0, 10);
+
+              if (all.length === 0) {
+                return (
+                  <Empty className="border-0 p-4">
+                    <EmptyHeader>
+                      <EmptyTitle className="text-[13px] font-medium">No one being served</EmptyTitle>
+                      <EmptyDescription className="text-[12px]">Customers moved to service will appear here.</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                );
+              }
+
+              return all.map((s, i) =>
+                s.kind === "booking"
+                  ? <QueueCard key={s.item.id} item={s.item} index={i} mode="serving" />
+                  : <QueueEntryCard key={s.entry.id} entry={s.entry} />
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

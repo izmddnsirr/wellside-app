@@ -321,24 +321,6 @@ export default async function Page() {
       return [monthValue, series];
     }),
   );
-  const weekSalesData = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(weekStartDate);
-    date.setDate(weekStartDate.getDate() + index);
-    const dateKey = getMalaysiaDateString(date);
-    const summary = rangeSummaryMap.get(dateKey) ?? {
-      sales: 0,
-      totalTicket: 0,
-      totalCash: 0,
-      totalEwallet: 0,
-    };
-    return {
-      date: dateKey,
-      sales: summary.sales,
-      totalTicket: summary.totalTicket,
-      totalCash: summary.totalCash,
-      totalEwallet: summary.totalEwallet,
-    };
-  });
 
   const yearSalesMap = new Map<
     number,
@@ -510,9 +492,6 @@ export default async function Page() {
       </div>
       <div className="px-4 lg:px-6">
         <BookingsChartCard
-          data={{
-            week: weekSalesData,
-          }}
           monthSeries={monthSeries}
           yearSeries={yearSeries}
           defaultMonth={defaultMonthOption}

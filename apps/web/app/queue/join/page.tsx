@@ -8,7 +8,7 @@ export default async function JoinQueuePage({ searchParams }: PageProps) {
   const { error } = await searchParams;
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] flex flex-col items-center justify-center px-6">
+    <div className="fixed inset-0 bg-[#0d0d0d] flex flex-col items-center justify-center px-6 overflow-y-auto">
       <div className="w-full max-w-sm space-y-8">
         {/* Logo */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
