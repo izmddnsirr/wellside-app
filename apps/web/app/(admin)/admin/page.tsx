@@ -84,19 +84,19 @@ type LowStockRow = {
 const quickActions = [
   {
     href: "/admin/pos",
-    label: "Open POS",
+    label: "POS",
     icon: DollarSign,
     featured: true,
   },
   {
     href: "/admin/bookings",
-    label: "View Booking",
+    label: "Queue",
     icon: Clock3,
     featured: false,
   },
   {
     href: "/admin/bookings/calendar",
-    label: "View Calendar",
+    label: "Calendar",
     icon: CalendarDays,
     featured: false,
   },

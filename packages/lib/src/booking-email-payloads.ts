@@ -90,8 +90,10 @@ function buildCommonBookingFields(bookingDetails: BookingEmailDetails) {
   const service = resolveSingle(bookingDetails.service);
 
   const customerName =
-    [customer?.first_name, customer?.last_name].filter(Boolean).join(" ").trim() ||
-    "Customer";
+    [customer?.first_name, customer?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Customer";
   const barberName =
     barber?.display_name?.trim() ||
     [barber?.first_name, barber?.last_name].filter(Boolean).join(" ").trim() ||
@@ -105,7 +107,7 @@ function buildCommonBookingFields(bookingDetails: BookingEmailDetails) {
   const endDate = endAt ? new Date(endAt) : null;
   const bookingDate = startDate
     ? dateFormatter.format(startDate)
-    : bookingDetails.booking_date ?? "-";
+    : (bookingDetails.booking_date ?? "-");
   const bookingTime = startDate
     ? endDate
       ? `${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`
@@ -115,6 +117,7 @@ function buildCommonBookingFields(bookingDetails: BookingEmailDetails) {
 
   return {
     customer,
+    barber,
     customerName,
     barberName,
     services,
@@ -125,7 +128,9 @@ function buildCommonBookingFields(bookingDetails: BookingEmailDetails) {
   };
 }
 
-export function buildBookingConfirmationPayload(bookingDetails: BookingEmailDetails) {
+export function buildBookingConfirmationPayload(
+  bookingDetails: BookingEmailDetails,
+) {
   const common = buildCommonBookingFields(bookingDetails);
 
   return {
@@ -140,6 +145,7 @@ export function buildBookingConfirmationPayload(bookingDetails: BookingEmailDeta
       totalPrice: common.totalPrice,
     } satisfies BookingConfirmationPayload,
     customerEmail: common.customer?.email ?? null,
+    barberEmail: common.barber?.email ?? null,
   };
 }
 

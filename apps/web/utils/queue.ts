@@ -33,13 +33,16 @@ export type QueueListItem = {
   timeLabel: string;
   serviceLabel: string;
   barberLabel: string;
+  type: "Booking";
+  phone: string | null;
+  queueNumber: number | null;
 };
 
 export type QueueDashboardData = {
   pin: string;
   displayUrl: string;
   upcomingBookings: QueueListItem[];
-  waitingCustomers: QueueListItem[];
+  checkedInBookings: QueueListItem[];
   currentlyServing: QueueListItem[];
 };
 
@@ -108,13 +111,16 @@ export const createDailyQueuePin = (date = new Date()) => {
   return String(hash).padStart(6, "0");
 };
 
-const toQueueItem = (booking: QueueBookingRow): QueueListItem => ({
+const toQueueItem = (booking: QueueBookingRow & { queue_number?: number | null }): QueueListItem => ({
   id: booking.id,
   name: getBookingName(booking),
   ref: booking.booking_ref?.trim() || booking.id.slice(0, 8).toUpperCase(),
   timeLabel: formatQueueTime(booking.start_at),
   serviceLabel: booking.service?.name?.trim() || "Service",
   barberLabel: getBarberName(booking),
+  type: "Booking",
+  phone: booking.walk_in_customer?.phone?.trim() ?? null,
+  queueNumber: booking.queue_number ?? null,
 });
 
 export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {
@@ -130,6 +136,7 @@ export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {
       start_at,
       booking_date,
       created_at,
+      queue_number,
       customer:customer_id (first_name, last_name, email),
       walk_in_customer:walk_in_customer_id (name, phone),
       barber:barber_id (first_name, last_name, display_name),
@@ -139,21 +146,18 @@ export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {
   const { data: scheduledData } = await supabase
     .from("bookings")
     .select(bookingSelect)
-    .gte("booking_date", todayDate)
+    .eq("booking_date", todayDate)
     .eq("status", "scheduled")
     .order("start_at", { ascending: true });
 
-  const scheduledBookings = (scheduledData ?? []) as unknown as QueueBookingRow[];
-  const upcomingBookings = scheduledBookings.map(toQueueItem);
-
-  const waitingCustomers = scheduledBookings
-    .filter((booking) => Boolean(booking.walk_in_customer))
-    .map(toQueueItem);
+  const scheduledBookings = (scheduledData ?? []) as unknown as (QueueBookingRow & { queue_number: number | null })[];
+  const upcomingBookings = scheduledBookings.filter((b) => b.queue_number === null).map(toQueueItem);
+  const checkedInBookings = scheduledBookings.filter((b) => b.queue_number !== null).map(toQueueItem);
 
   const { data: servingData } = await supabase
     .from("bookings")
     .select(bookingSelect)
-    .gte("booking_date", todayDate)
+    .eq("booking_date", todayDate)
     .eq("status", "in_progress")
     .order("start_at", { ascending: true });
 
@@ -165,7 +169,7 @@ export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {
     pin,
     displayUrl,
     upcomingBookings,
-    waitingCustomers,
+    checkedInBookings,
     currentlyServing,
   };
 };

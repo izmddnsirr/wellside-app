@@ -11,8 +11,8 @@ type ConfirmingBookingClientProps = {
   confirmAction: () => void;
 };
 
-const GRACE_PERIOD_MS = 10000;
-const PROGRESS_DURATION_MS = 10000;
+const GRACE_PERIOD_MS = 5000;
+const PROGRESS_DURATION_MS = 5000;
 
 type Status = "counting" | "cancelling" | "confirming";
 

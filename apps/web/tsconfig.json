@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@wellside/lib": ["../../packages/lib/src/index.ts"]
     }
   },
   "include": [

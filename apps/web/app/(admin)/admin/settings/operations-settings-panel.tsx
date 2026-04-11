@@ -210,7 +210,7 @@ export function OperationsSettingsPanel({
             Turn customer online booking on or off instantly.
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-5">
+        <CardContent className="">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               {bookingEnabled

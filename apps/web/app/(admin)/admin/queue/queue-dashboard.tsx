@@ -1,15 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { type ComponentType, useState } from "react";
-import {
-  Clock3,
-  Copy,
-  ExternalLink,
-  Tv,
-  UserRound,
-} from "lucide-react";
-
+import { useState, useTransition } from "react";
+import { Copy, ExternalLink, Phone, Trash2, Tv, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,86 +12,252 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { QueueDashboardData, QueueListItem } from "@/utils/queue";
+import type { QueueEntry } from "@/utils/queue-entries";
+import { serveBooking, completeBooking, cancelBooking, checkInBooking, undoCheckIn, undoServeBooking } from "./actions";
+import { serveQueueEntry, completeQueueEntry, removeQueueEntry, undoServeQueueEntry } from "./queue-entry-actions";
 
 type QueueDashboardProps = {
   data: QueueDashboardData;
+  queueEntries: QueueEntry[];
 };
 
-type QueueSectionCardProps = {
-  title: string;
-  subtitle: string;
-  emptyLabel: string;
-  icon: ComponentType<{ className?: string }>;
-  items: QueueListItem[];
-};
 
-function QueueSectionCard({
-  title,
-  subtitle,
-  emptyLabel,
-  icon: Icon,
-  items,
-}: QueueSectionCardProps) {
+function TypeBadge({ type }: { type: QueueListItem["type"] }) {
   return (
-    <Card className="gap-0 rounded-2xl py-0">
-      <CardHeader className="gap-1 px-5 py-4">
-        <CardTitle className="flex items-center gap-2.5 text-[18px] font-semibold text-foreground sm:text-[19px]">
-          <Icon className="size-4.5 text-foreground" />
-          {title}
-        </CardTitle>
-        <CardDescription className="text-[12px] text-muted-foreground sm:text-[13px]">
-          {subtitle}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-5 pb-4 pt-1">
-        {items.length > 0 ? (
-          <div className="space-y-2.5">
-            {items.slice(0, 4).map((item) => (
-              <div
-                key={item.id}
-                className="rounded-xl border bg-muted/20 px-3.5 py-3"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-foreground">
-                      {item.name}
-                    </p>
-                    <p className="mt-0.5 text-[12px] text-muted-foreground">
-                      {item.serviceLabel} · {item.barberLabel}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-[13px] font-semibold text-foreground">
-                      {item.timeLabel}
-                    </p>
-                    <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                      {item.ref}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex min-h-8 items-end">
-            <p className="text-[13px] text-muted-foreground">{emptyLabel}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-500">
+      {type}
+    </span>
   );
 }
 
-export function QueueDashboard({ data }: QueueDashboardProps) {
+function QueueCard({
+  item,
+  index,
+  mode,
+}: {
+  item: QueueListItem;
+  index: number;
+  mode: "upcoming" | "waiting" | "serving";
+}) {
+  const [pending, startTransition] = useTransition();
+
+  const statusLabel =
+    mode === "serving" ? "In Service" : mode === "waiting" ? "Waiting" : "Not arrived";
+
+  const displayNumber =
+    mode === "upcoming"
+      ? String(index + 1).padStart(2, "0")
+      : `B${String(item.queueNumber ?? index + 1).padStart(2, "0")}`;
+
+  return (
+    <div className="rounded-lg border bg-muted/20 px-4 py-3.5 space-y-2.5">
+      {/* Top row: number + badge + status */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[15px] font-bold text-foreground">{displayNumber}</span>
+          <TypeBadge type={item.type} />
+        </div>
+        <span className="text-[11px] text-muted-foreground">{statusLabel}</span>
+      </div>
+
+      {/* Customer info */}
+      <div className="space-y-1">
+        <p className="text-[13px] font-semibold text-foreground">{item.name}</p>
+        {item.phone && (
+          <div className="flex items-center gap-1.5">
+            <Phone className="size-3 text-muted-foreground" />
+            <span className="text-[12px] text-muted-foreground">{item.phone}</span>
+          </div>
+        )}
+        <p className="text-[12px] text-muted-foreground">{item.serviceLabel}</p>
+        <p className="text-[12px] text-muted-foreground">Stylist: {item.barberLabel}</p>
+        <p className="text-[12px] text-muted-foreground">
+          {mode === "serving" ? `Started: ${item.timeLabel}` : item.timeLabel}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-0.5">
+        {item.phone && (
+          <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-[12px]">
+            <a href={`tel:${item.phone}`}>Call</a>
+          </Button>
+        )}
+
+        {mode === "waiting" && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg"
+            disabled={pending}
+            onClick={() => startTransition(() => undoCheckIn(item.id))}
+          >
+            <Undo2 className="size-3.5" />
+          </Button>
+        )}
+
+        {mode === "serving" && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg"
+            disabled={pending}
+            onClick={() => startTransition(() => undoServeBooking(item.id))}
+          >
+            <Undo2 className="size-3.5" />
+          </Button>
+        )}
+
+        {mode === "upcoming" && (
+          <Button
+            size="sm"
+            className="h-8 rounded-lg text-[12px]"
+            disabled={pending}
+            onClick={() => startTransition(() => checkInBooking(item.id))}
+          >
+            Check In
+          </Button>
+        )}
+
+        {mode === "waiting" && (
+          <Button
+            size="sm"
+            className="h-8 rounded-lg text-[12px]"
+            disabled={pending}
+            onClick={() => startTransition(() => serveBooking(item.id))}
+          >
+            Serve
+          </Button>
+        )}
+
+        {mode === "serving" && (
+          <Button
+            size="sm"
+            className="h-8 rounded-lg text-[12px]"
+            disabled={pending}
+            onClick={() => startTransition(() => completeBooking(item.id))}
+          >
+            Complete
+          </Button>
+        )}
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+          disabled={pending}
+          onClick={() => startTransition(() => cancelBooking(item.id))}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function QueueEntryCard({
+  entry,
+}: {
+  entry: QueueEntry;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <div className="rounded-lg border bg-muted/20 px-4 py-3.5 space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[15px] font-bold text-foreground">
+            W{String(entry.queue_number).padStart(2, "0")}
+          </span>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
+            Walk-in
+          </span>
+        </div>
+        <span className="text-[11px] text-muted-foreground">
+          {entry.status === "serving" ? "In Service" : "Waiting"}
+        </span>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-[13px] font-semibold text-foreground">{entry.name}</p>
+        <div className="flex items-center gap-1.5">
+          <Phone className="size-3 text-muted-foreground" />
+          <span className="text-[12px] text-muted-foreground">{entry.phone}</span>
+        </div>
+        {entry.started_at && (
+          <p className="text-[12px] text-muted-foreground">
+            Started: {new Intl.DateTimeFormat("en-MY", {
+              timeZone: "Asia/Kuala_Lumpur",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            }).format(new Date(entry.started_at))}
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 pt-0.5">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-lg text-[12px]"
+        >
+          <a href={`tel:${entry.phone}`}>Call</a>
+        </Button>
+
+        {entry.status === "serving" && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 rounded-lg"
+            disabled={pending}
+            onClick={() => startTransition(() => undoServeQueueEntry(entry.id))}
+          >
+            <Undo2 className="size-3.5" />
+          </Button>
+        )}
+
+        {entry.status === "waiting" ? (
+          <Button
+            size="sm"
+            className="h-8 rounded-lg text-[12px]"
+            disabled={pending}
+            onClick={() => startTransition(() => serveQueueEntry(entry.id))}
+          >
+            Serve
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            className="h-8 rounded-lg text-[12px]"
+            disabled={pending}
+            onClick={() => startTransition(() => completeQueueEntry(entry.id))}
+          >
+            Complete
+          </Button>
+        )}
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+          disabled={pending}
+          onClick={() => startTransition(() => removeQueueEntry(entry.id))}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {
-      const resolvedUrl = data.displayUrl.startsWith("/")
-        ? `${window.location.origin}${data.displayUrl}`
-        : data.displayUrl;
-
-      await navigator.clipboard.writeText(resolvedUrl);
+      await navigator.clipboard.writeText(data.pin);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -108,57 +267,33 @@ export function QueueDashboard({ data }: QueueDashboardProps) {
 
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
+      {/* TV Access Card */}
       <Card className="gap-0 rounded-2xl py-0">
-        <CardHeader className="gap-0 px-5 py-5">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="space-y-1.5">
-                <CardTitle className="flex items-center gap-2.5 text-[18px] font-semibold text-foreground sm:text-[19px]">
-                  <Tv className="size-4.5 text-foreground" />
-                  TV Display Access
-                </CardTitle>
-                <CardDescription className="max-w-2xl text-[12px] text-muted-foreground sm:text-[13px]">
-                  Use this PIN to access the TV display. PIN refreshes daily.
-                </CardDescription>
-              </div>
-
-              <div className="mt-5 space-y-4">
-                <div className="space-y-1">
-                  <p className="text-[12px] text-muted-foreground sm:text-[13px]">
-                    6-Digit PIN
-                  </p>
-                  <p className="text-[28px] font-semibold leading-none tracking-[0.12em] text-foreground sm:text-[32px]">
-                    {data.pin}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-[12px] sm:text-[13px]">
-                  <span className="text-muted-foreground">TV Display URL:</span>
-                  <code className="break-all font-mono text-[12px] text-foreground/80">
-                    {data.displayUrl}
-                  </code>
-                </div>
+        <CardHeader className="gap-0 px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Tv className="size-4 text-muted-foreground shrink-0" />
+              <div className="flex items-center gap-3">
+                <p className="text-[12px] text-muted-foreground">PIN</p>
+                <p className="text-[20px] font-semibold leading-none text-foreground">{data.pin}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-7 rounded-md"
+                  onClick={handleCopy}
+                  aria-label="Copy PIN"
+                >
+                  {copied ? <span className="text-[10px]">✓</span> : <Copy className="size-3" />}
+                </Button>
+                <code className="font-mono text-[12px] text-muted-foreground">{data.displayUrl}</code>
               </div>
             </div>
-
-            <div className="flex items-center gap-2 self-start xl:self-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9 rounded-lg"
-                onClick={handleCopy}
-                aria-label="Copy TV display URL"
-              >
-                <Copy className="size-3.5" />
-              </Button>
-              <Button
-                asChild
-                className="h-9 rounded-lg px-3.5 text-[13px] font-medium"
-              >
+            <div className="flex items-center gap-2 shrink-0">
+              <Button asChild className="h-8 rounded-lg px-3 text-[12px] font-medium">
                 <Link href={data.displayUrl} target="_blank" rel="noreferrer">
                   <ExternalLink className="size-3.5" />
-                  {copied ? "Copied URL" : "Open Display"}
+                  Open Display
                 </Link>
               </Button>
             </div>
@@ -166,28 +301,88 @@ export function QueueDashboard({ data }: QueueDashboardProps) {
         </CardHeader>
       </Card>
 
+      {/* Queue columns */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <QueueSectionCard
-          title="Upcoming Bookings"
-          subtitle={`Scheduled appointments (${data.upcomingBookings.length})`}
-          emptyLabel="No upcoming bookings"
-          icon={Clock3}
-          items={data.upcomingBookings}
-        />
-        <QueueSectionCard
-          title="Queue List"
-          subtitle={`Waiting customers (${data.waitingCustomers.length})`}
-          emptyLabel="No customers waiting"
-          icon={Clock3}
-          items={data.waitingCustomers}
-        />
-        <QueueSectionCard
-          title="Currently Serving"
-          subtitle={`In service (${data.currentlyServing.length})`}
-          emptyLabel="No customers being served"
-          icon={UserRound}
-          items={data.currentlyServing}
-        />
+        {/* Upcoming Bookings */}
+        <Card className="gap-0 rounded-2xl py-0">
+          <CardHeader className="gap-1 px-5 py-4 border-b">
+            <CardTitle className="text-[18px] font-semibold text-foreground sm:text-[19px]">
+              Upcoming Bookings
+            </CardTitle>
+            <CardDescription className="text-[12px] text-muted-foreground sm:text-[13px]">
+              Scheduled appointments ({data.upcomingBookings.length})
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-5 py-5 space-y-3">
+            {data.upcomingBookings.length === 0 ? (
+              <p className="text-[13px] text-muted-foreground">No upcoming bookings</p>
+            ) : (
+              data.upcomingBookings.slice(0, 10).map((item, i) => (
+                <QueueCard key={item.id} item={item} index={i} mode="upcoming" />
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Queue List */}
+        {(() => {
+          const waitingBookings = data.checkedInBookings.slice().sort((a, b) => (a.queueNumber ?? 0) - (b.queueNumber ?? 0));
+          const waitingEntries = queueEntries.filter((e) => e.status === "waiting").slice().sort((a, b) => a.queue_number - b.queue_number);
+          const totalWaiting = waitingBookings.length + waitingEntries.length;
+
+          return (
+            <Card className="gap-0 rounded-2xl py-0">
+              <CardHeader className="gap-1 px-5 py-4 border-b">
+                <CardTitle className="text-[18px] font-semibold text-foreground sm:text-[19px]">
+                  Queue List
+                </CardTitle>
+                <CardDescription className="text-[12px] text-muted-foreground sm:text-[13px]">
+                  Waiting customers ({totalWaiting})
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-5 py-5 space-y-3">
+                {totalWaiting === 0 ? (
+                  <p className="text-[13px] text-muted-foreground">No customers waiting</p>
+                ) : (
+                  <>
+                    {waitingBookings.map((item, i) => (
+                      <QueueCard key={item.id} item={item} index={i} mode="waiting" />
+                    ))}
+                    {waitingEntries.map((entry) => (
+                      <QueueEntryCard key={entry.id} entry={entry} />
+                    ))}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Currently Serving */}
+        <Card className="gap-0 rounded-2xl py-0">
+          <CardHeader className="gap-1 px-5 py-4 border-b">
+            <CardTitle className="text-[18px] font-semibold text-foreground sm:text-[19px]">
+              Currently Serving
+            </CardTitle>
+            <CardDescription className="text-[12px] text-muted-foreground sm:text-[13px]">
+              In service ({data.currentlyServing.length + queueEntries.filter(e => e.status === "serving").length})
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-5 py-5 space-y-3">
+            {data.currentlyServing.length === 0 && queueEntries.filter(e => e.status === "serving").length === 0 ? (
+              <p className="text-[13px] text-muted-foreground">No customers being served</p>
+            ) : (
+              <>
+                {data.currentlyServing.slice(0, 10).map((item, i) => (
+                  <QueueCard key={item.id} item={item} index={i} mode="serving" />
+                ))}
+                {queueEntries.filter(e => e.status === "serving").slice(0, 10).map((entry) => (
+                  <QueueEntryCard key={entry.id} entry={entry} />
+                ))}
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
