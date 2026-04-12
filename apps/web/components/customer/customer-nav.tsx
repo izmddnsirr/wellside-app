@@ -38,7 +38,7 @@ const bookingBackSteps = [
   { match: "/booking/services", back: "/booking" },
 ];
 
-const spring = { type: "spring", stiffness: 400, damping: 30 };
+const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 export function CustomerNav() {
   const pathname = usePathname();

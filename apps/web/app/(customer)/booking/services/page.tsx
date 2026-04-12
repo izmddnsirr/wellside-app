@@ -87,7 +87,6 @@ async function ServicesList({ params }: { params: BookingSearchParams }) {
   const serviceName = readParam(params.service);
   const serviceDuration = readParam(params.duration);
   const servicePrice = readParam(params.price);
-  const totalPrice = readParam(params.total);
   const bookingDate = readParam(params.date);
   const bookingTime = readParam(params.time);
   const barberName = readParam(params.barber);
