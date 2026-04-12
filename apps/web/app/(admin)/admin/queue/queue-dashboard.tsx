@@ -58,6 +58,12 @@ function QueueCard({
           <span className="text-[15px] font-mono font-bold text-foreground">{displayNumber}</span>
           <div className="w-px h-3.5 bg-border" />
           <TypeBadge type={item.type} />
+          {mode !== "upcoming" && (
+            <>
+              <div className="w-px h-3.5 bg-border" />
+              <span className="text-[11px] font-mono text-muted-foreground">{item.timeLabel}</span>
+            </>
+          )}
         </div>
         <span className="text-[11px] text-muted-foreground">{statusLabel}</span>
       </div>
@@ -73,19 +79,10 @@ function QueueCard({
         )}
         <p className="text-[12px] text-muted-foreground">{item.serviceLabel}</p>
         <p className="text-[12px] text-muted-foreground">Stylist: {item.barberLabel}</p>
-        <p className="text-[12px] text-muted-foreground">
-          {mode === "serving" ? `Started: ${item.timeLabel}` : item.timeLabel}
-        </p>
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2 pt-0.5">
-        {item.phone && (
-          <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-[12px]">
-            <a href={`tel:${item.phone}`}>Call</a>
-          </Button>
-        )}
-
         {mode === "waiting" && (
           <Button
             variant="outline"
@@ -107,6 +104,12 @@ function QueueCard({
             onClick={() => startTransition(() => undoServeBooking(item.id))}
           >
             <Undo2 className="size-3.5" />
+          </Button>
+        )}
+
+        {item.phone && (
+          <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-[12px]">
+            <a href={`tel:${item.phone}`}>Call</a>
           </Button>
         )}
 
@@ -174,6 +177,15 @@ function QueueEntryCard({
           <div className="w-px h-3.5 bg-border" />
           <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500">
             Walk-in
+          </span>
+          <div className="w-px h-3.5 bg-border" />
+          <span className="text-[11px] font-mono text-muted-foreground">
+            {new Intl.DateTimeFormat("en-MY", {
+              timeZone: "Asia/Kuala_Lumpur",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            }).format(new Date(entry.created_at)).toUpperCase()}
           </span>
         </div>
         <span className="text-[11px] text-muted-foreground">

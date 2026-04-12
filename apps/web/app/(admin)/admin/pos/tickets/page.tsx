@@ -1,8 +1,12 @@
+import { Suspense } from "react";
 import { AdminShell } from "../../components/admin-shell";
+
+export const revalidate = 30;
+import { Skeleton } from "@/components/ui/skeleton";
 import { createAdminClient } from "@/utils/supabase/server";
 import { TicketsTableClient } from "./tickets-table-client";
 
-export default async function Page() {
+async function TicketsContent() {
   const supabase = await createAdminClient();
   const { data: tickets, error } = await supabase
     .from("tickets")
@@ -48,14 +52,36 @@ export default async function Page() {
       })) ?? null,
   }));
 
+  if (errorMessage) {
+    return <p className="text-sm text-red-600">{errorMessage}</p>;
+  }
+
+  return <TicketsTableClient tickets={normalizedTickets} />;
+}
+
+function TicketsSkeleton() {
+  return (
+    <div className="space-y-3 rounded-xl border border-border/60 p-4">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-9 w-32" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
   return (
     <AdminShell title="Ticket history">
       <div className="px-4 lg:px-6">
-        {errorMessage ? (
-          <p className="text-sm text-red-600">{errorMessage}</p>
-        ) : (
-          <TicketsTableClient tickets={normalizedTickets} />
-        )}
+        <Suspense fallback={<TicketsSkeleton />}>
+          <TicketsContent />
+        </Suspense>
       </div>
     </AdminShell>
   );

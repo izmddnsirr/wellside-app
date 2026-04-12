@@ -1,10 +1,12 @@
+import { Suspense } from "react";
 import { AdminShell } from "../components/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ProductsCard } from "./products-card";
 import { createAdminClient } from "@/utils/supabase/server";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const createProduct = async (formData: FormData) => {
   "use server";
@@ -125,7 +127,7 @@ const reactivateProduct = async (formData: FormData) => {
   redirect("/admin/products?toast=product-reactivated");
 };
 
-export default async function Page() {
+async function ProductsContent() {
   const supabase = await createAdminClient();
   const { data: products, error } = await supabase
     .from("products")
@@ -138,18 +140,40 @@ export default async function Page() {
     : null;
 
   return (
-    <AdminShell
-      title="Products"
-    >
+    <ProductsCard
+      products={products ?? []}
+      errorMessage={errorMessage}
+      createProduct={createProduct}
+      updateProduct={updateProduct}
+      archiveProduct={archiveProduct}
+      reactivateProduct={reactivateProduct}
+    />
+  );
+}
+
+function ProductsSkeleton() {
+  return (
+    <div className="space-y-3 rounded-xl border border-border/60 p-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <AdminShell title="Products">
       <div className="px-4 lg:px-6">
-        <ProductsCard
-          products={products ?? []}
-          errorMessage={errorMessage}
-          createProduct={createProduct}
-          updateProduct={updateProduct}
-          archiveProduct={archiveProduct}
-          reactivateProduct={reactivateProduct}
-        />
+        <Suspense fallback={<ProductsSkeleton />}>
+          <ProductsContent />
+        </Suspense>
       </div>
     </AdminShell>
   );

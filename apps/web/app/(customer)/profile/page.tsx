@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   Calendar,
   Clock,
@@ -5,6 +6,7 @@ import {
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -78,7 +80,7 @@ const logout = async () => {
   redirect("/login");
 };
 
-export default async function ProfilePage() {
+async function ProfileContent() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -143,49 +145,18 @@ export default async function ProfilePage() {
   }`.toUpperCase();
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-10">
-      <header className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
-            Profile
-          </h1>
-          <p className="text-sm text-muted-foreground lg:text-base">
-            Customize your profile
-          </p>
-        </div>
-        <form action={logout}>
-          <Button
-            type="submit"
-            variant="outline"
-            className="rounded-full border-border bg-background px-4 py-2 text-sm font-semibold text-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Log out
-          </Button>
-        </form>
-      </header>
-
+    <>
       <section className="rounded-3xl bg-primary p-5 text-primary-foreground">
         <div className="flex items-center gap-5">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-foreground/10 text-primary-foreground">
             <span className="text-2xl font-semibold">{initials || "?"}</span>
           </div>
           <div className="flex-1">
-            <p className="text-xl font-semibold">
-              {fullName || "Your Profile"}
-            </p>
+            <p className="text-xl font-semibold">{fullName || "Your Profile"}</p>
             <p className="mt-1 text-base text-primary-foreground/70">
               {profile.email ?? "—"}
             </p>
           </div>
-          {/* <Button
-            type="button"
-            variant="secondary"
-            className="rounded-full bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
-            disabled
-          >
-            Edit
-          </Button> */}
         </div>
       </section>
 
@@ -198,7 +169,6 @@ export default async function ProfilePage() {
             {completedVisits} visits
           </span>
         </div>
-
         <div className="rounded-3xl bg-primary p-5 text-primary-foreground">
           <div className="flex items-center justify-between">
             <div>
@@ -211,7 +181,6 @@ export default async function ProfilePage() {
               <Clock className="h-5 w-5 text-primary-foreground/70" />
             </div>
           </div>
-
           <div className="mt-5 space-y-3">
             {history.length === 0 ? (
               <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/5 px-6 py-10 text-center">
@@ -231,9 +200,7 @@ export default async function ProfilePage() {
                   Number.isNaN(startDate.getTime()) ||
                   Number.isNaN(endDate.getTime())
                     ? "Time unavailable"
-                    : `${timeFormatter.format(
-                        startDate
-                      )} - ${timeFormatter.format(endDate)}`;
+                    : `${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`;
 
                 return (
                   <div
@@ -241,9 +208,7 @@ export default async function ProfilePage() {
                     className="rounded-2xl border border-border bg-background px-4 py-3 text-foreground"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-base font-semibold">
-                        {item.serviceName}
-                      </p>
+                      <p className="text-base font-semibold">{item.serviceName}</p>
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
                           item.status === "cancelled"
@@ -275,6 +240,67 @@ export default async function ProfilePage() {
           </div>
         </div>
       </section>
+    </>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <>
+      <div className="rounded-3xl bg-primary/20 p-5">
+        <div className="flex items-center gap-5">
+          <Skeleton className="h-16 w-16 rounded-full shrink-0" />
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+        <div className="rounded-3xl bg-primary/20 p-5 space-y-3">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-56" />
+          <div className="mt-5 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-10">
+      <header className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
+            Profile
+          </h1>
+          <p className="text-sm text-muted-foreground lg:text-base">
+            Customize your profile
+          </p>
+        </div>
+        <form action={logout}>
+          <Button
+            type="submit"
+            variant="outline"
+            className="rounded-full border-border bg-background px-4 py-2 text-sm font-semibold text-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            Log out
+          </Button>
+        </form>
+      </header>
+      <Suspense fallback={<ProfileSkeleton />}>
+        <ProfileContent />
+      </Suspense>
     </div>
   );
 }

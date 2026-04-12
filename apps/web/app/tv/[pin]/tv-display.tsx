@@ -149,8 +149,29 @@ function QueuePanel({ items }: { items: QueueEntry[] }) {
   );
 }
 
+const SERVING_DURATION_MS = 45 * 60 * 1000;
+
+function formatCountdown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 function ServingPanel({ slots }: { slots: FifoSlot[] }) {
-  const displayed = Array.from({ length: 3 }, (_, i) => slots[i] ?? null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const activeSlots = slots.filter((slot) => {
+    if (!slot.startedAt) return true;
+    return now - new Date(slot.startedAt).getTime() < SERVING_DURATION_MS;
+  });
+
+  const displayed = Array.from({ length: 3 }, (_, i) => activeSlots[i] ?? null);
 
   return (
     <div className="flex flex-col h-full">
@@ -158,24 +179,49 @@ function ServingPanel({ slots }: { slots: FifoSlot[] }) {
         Serving
       </div>
       <div className="grid grid-cols-3 gap-3">
-        {displayed.map((slot, i) => (
-          <div
-            key={slot?.id ?? i}
-            className={`rounded-xl flex flex-col items-center justify-center p-4 h-28 border ${
-              slot
-                ? "bg-emerald-500/10 border-emerald-500/30"
-                : "bg-white/5 border-white/10"
-            }`}
-          >
-            {slot ? (
-              <span className="text-4xl font-mono font-bold text-emerald-400 leading-none">
-                {slot.numberLabel}
-              </span>
-            ) : (
-              <span className="text-3xl font-bold text-white/20">—</span>
-            )}
-          </div>
-        ))}
+        {displayed.map((slot, i) => {
+          const remaining =
+            slot?.startedAt != null
+              ? Math.max(0, SERVING_DURATION_MS - (now - new Date(slot.startedAt).getTime()))
+              : null;
+          const isUrgent = remaining !== null && remaining < 5 * 60 * 1000;
+
+          return (
+            <div
+              key={slot?.id ?? i}
+              className={`rounded-xl flex flex-col items-center justify-center p-4 h-28 border ${
+                slot
+                  ? isUrgent
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-emerald-500/10 border-emerald-500/30"
+                  : "bg-white/5 border-white/10"
+              }`}
+            >
+              {slot ? (
+                <>
+                  <span
+                    className={`text-4xl font-mono font-bold leading-none ${
+                      isUrgent ? "text-red-400" : "text-emerald-400"
+                    }`}
+                  >
+                    {slot.numberLabel}
+                  </span>
+                  {remaining !== null && (
+                    <span
+                      className={`text-base font-mono mt-2 tabular-nums ${
+                        isUrgent ? "text-red-400" : "text-emerald-300/70"
+                      }`}
+                    >
+                      {formatCountdown(remaining)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-3xl font-bold text-white/20">—</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

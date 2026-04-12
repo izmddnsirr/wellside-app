@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { Calendar, CalendarCheck, Clock, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogFooter,
@@ -166,13 +168,14 @@ const cancelBooking = async (formData: FormData) => {
   redirect("/booking");
 };
 
-export default async function BookingPage({
-  searchParams,
-}: {
-  searchParams?: Promise<BookingSearchParams>;
-}) {
-  const params = (await searchParams) ?? {};
-  const bookingEnabled = await isCustomerBookingEnabled();
+async function BookingContent({ params }: { params: BookingSearchParams }) {
+  const supabase = await createClient();
+
+  const [bookingEnabled, { data: { user }, error: userError }] = await Promise.all([
+    isCustomerBookingEnabled(),
+    supabase.auth.getUser(),
+  ]);
+
   const bookingDisabledMessage =
     readParam(params.booking_disabled) === "1" || !bookingEnabled
       ? "Online booking is currently unavailable. Please walk in to the shop."
@@ -182,25 +185,9 @@ export default async function BookingPage({
       ? "Unable to cancel booking. Please try again."
       : null;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
   if (userError || !user) {
     return (
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
-        <header className="space-y-2">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
-              Booking
-            </h1>
-            <p className="text-sm text-muted-foreground lg:text-base">
-              Choose your chair now
-            </p>
-          </div>
-        </header>
+      <>
         <section className="space-y-4" style={{ animationDelay: "80ms" }}>
           <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
             Upcoming
@@ -212,7 +199,7 @@ export default async function BookingPage({
             </p>
           </div>
         </section>
-      </div>
+      </>
     );
   }
 
@@ -250,17 +237,7 @@ export default async function BookingPage({
     booking?.status === "in_progress" ? "IN PROGRESS" : "SCHEDULED";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
-      <header className="space-y-2">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
-            Booking
-          </h1>
-          <p className="text-sm text-muted-foreground lg:text-base">
-            Choose your chair now
-          </p>
-        </div>
-      </header>
+    <>
       <section className="space-y-4" style={{ animationDelay: "80ms" }}>
         <div className="flex items-center justify-between">
           <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
@@ -348,9 +325,7 @@ export default async function BookingPage({
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>
-                        Cancel this booking?
-                      </DialogTitle>
+                      <DialogTitle>Cancel this booking?</DialogTitle>
                       <DialogDescription>
                         You can cancel up to 2 hours before your appointment.
                         After that, please contact your barber.
@@ -368,10 +343,7 @@ export default async function BookingPage({
                           name="booking_id"
                           value={booking?.id}
                         />
-                        <Button
-                          type="submit"
-                          variant="destructive"
-                        >
+                        <Button type="submit" variant="destructive">
                           Yes, cancel
                         </Button>
                       </form>
@@ -425,12 +397,8 @@ export default async function BookingPage({
         <Dialog defaultOpen>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                Unable to cancel booking
-              </DialogTitle>
-              <DialogDescription>
-                {errorMessage}
-              </DialogDescription>
+              <DialogTitle>Unable to cancel booking</DialogTitle>
+              <DialogDescription>{errorMessage}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <DialogClose asChild>
@@ -445,7 +413,6 @@ export default async function BookingPage({
           {bookingDisabledMessage}
         </div>
       ) : null}
-
       <section className="space-y-4" style={{ animationDelay: "160ms" }}>
         <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
           Quick Pick
@@ -468,6 +435,56 @@ export default async function BookingPage({
           </Button>
         )}
       </section>
+    </>
+  );
+}
+
+function BookingContentSkeleton() {
+  return (
+    <>
+      <section className="space-y-4">
+        <Skeleton className="h-3 w-20" />
+        <div className="overflow-hidden rounded-3xl border border-border/60">
+          <div className="bg-primary/20 px-6 py-6 space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <div className="px-6 py-6 space-y-4">
+            <Skeleton className="h-11 w-full rounded-full" />
+          </div>
+        </div>
+      </section>
+      <section className="space-y-4">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-16 w-full rounded-full" />
+      </section>
+    </>
+  );
+}
+
+export default async function BookingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<BookingSearchParams>;
+}) {
+  const params = (await searchParams) ?? {};
+
+  return (
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+      <header className="space-y-2">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
+            Booking
+          </h1>
+          <p className="text-sm text-muted-foreground lg:text-base">
+            Choose your chair now
+          </p>
+        </div>
+      </header>
+      <Suspense fallback={<BookingContentSkeleton />}>
+        <BookingContent params={params} />
+      </Suspense>
     </div>
   );
 }

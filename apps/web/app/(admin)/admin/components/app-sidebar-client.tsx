@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Banknote,
+  Bell,
   Calendar,
   FileText,
   Folder,
@@ -92,6 +93,11 @@ const data = {
           title: "Report",
           url: "/admin/report",
           icon: FileText, // TODO: verify icon match
+        },
+        {
+          title: "Notifications",
+          url: "/admin/notifications",
+          icon: Bell,
         },
         {
           title: "Settings",

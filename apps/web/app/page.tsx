@@ -54,7 +54,7 @@ export default async function CustomerHome() {
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-48 bg-linear-to-t from-background to-transparent" />
 
         {/* ── HEADER ──────────────────────────────────────────────────────── */}
-        <header className="fixed top-0 z-30 w-full border-b border-border/70 bg-background/80 shadow-[0_8px_30px_rgba(0,0,0,0.14)] backdrop-blur-xl backdrop-saturate-150 supports-backdrop-filter:bg-background/70 dark:border-white/15 dark:bg-background/35 dark:shadow-[0_8px_30px_rgba(0,0,0,0.18)] dark:supports-backdrop-filter:bg-background/25">
+        <header className="fixed top-0 z-30 w-full border-b border-border/70 bg-background/80 shadow-[0_8px_30px_rgba(0,0,0,0.14)] backdrop-blur-xl backdrop-saturate-150 supports-backdrop-filter:bg-background/70 dark:border-white/10 dark:bg-background/75 dark:shadow-[0_8px_30px_rgba(0,0,0,0.28)] dark:supports-backdrop-filter:bg-background/65">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 sm:py-5">
             <div className="flex items-center">
               <Image
@@ -62,16 +62,8 @@ export default async function CustomerHome() {
                 alt="Wellside+"
                 width={180}
                 height={44}
-                className="h-8 w-auto dark:hidden sm:h-9"
+                className="h-8 w-auto theme-invert sm:h-9"
                 priority
-                sizes="180px"
-              />
-              <Image
-                src="/wellside-logo-white.png"
-                alt="Wellside+"
-                width={180}
-                height={44}
-                className="hidden h-8 w-auto dark:block sm:h-9"
                 sizes="180px"
               />
             </div>

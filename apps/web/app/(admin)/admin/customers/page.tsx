@@ -1,5 +1,9 @@
+import { Suspense } from "react";
 import { AdminShell } from "../components/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { revalidatePath } from "next/cache";
+
+export const revalidate = 60;
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/server";
 import { CustomersCard } from "./customers-card";
@@ -29,7 +33,7 @@ const updateCustomerStatus = async (formData: FormData) => {
   redirect("/admin/customers?toast=customer-update-success");
 };
 
-export default async function Page() {
+async function CustomersContent() {
   const supabase = await createAdminClient();
   const { data: customers, error } = await supabase
     .from("profiles")
@@ -42,13 +46,37 @@ export default async function Page() {
     : null;
 
   return (
+    <CustomersCard
+      customers={customers ?? []}
+      errorMessage={errorMessage}
+      updateCustomerStatus={updateCustomerStatus}
+    />
+  );
+}
+
+function CustomersSkeleton() {
+  return (
+    <div className="space-y-3 rounded-xl border border-border/60 p-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
     <AdminShell title="Customers">
       <div className="px-4 lg:px-6">
-        <CustomersCard
-          customers={customers ?? []}
-          errorMessage={errorMessage}
-          updateCustomerStatus={updateCustomerStatus}
-        />
+        <Suspense fallback={<CustomersSkeleton />}>
+          <CustomersContent />
+        </Suspense>
       </div>
     </AdminShell>
   );

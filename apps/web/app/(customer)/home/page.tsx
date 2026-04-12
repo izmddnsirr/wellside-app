@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   Calendar,
   CalendarCheck,
@@ -7,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/server";
 
 type BookingRecord = {
@@ -33,7 +35,7 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-export default async function HomePage() {
+async function HomeContent() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -84,7 +86,7 @@ export default async function HomePage() {
   const serviceName = upcoming?.service?.name ?? "Service";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+    <>
       <header className="space-y-2">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
@@ -215,22 +217,54 @@ export default async function HomePage() {
               </div>
               <div className="text-sm text-muted-foreground">Bookings</div>
             </div>
-            {/* <Link
-              href="/ai"
-              className="flex flex-col gap-3 rounded-3xl border border-transparent bg-primary px-4 py-4 text-primary-foreground"
-            >
-              <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-primary-foreground/70">
-                <Sparkles className="h-3.5 w-3.5" />
-                Try AI
-              </div>
-              <div className="mt-3 text-base font-semibold leading-none text-primary-foreground">
-                Suggest
-              </div>
-              <div className="text-sm text-primary-foreground/70">New look</div>
-            </Link> */}
           </section>
         </div>
       </div>
+    </>
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <>
+      <header className="space-y-2">
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-4 w-32" />
+      </header>
+      <div className="flex flex-col gap-6">
+        <div className="overflow-hidden rounded-3xl border border-border/60">
+          <div className="bg-primary/20 px-6 py-5 space-y-3">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <div className="px-6 py-5">
+            <Skeleton className="h-11 w-full rounded-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-3xl border border-border/60 bg-card px-4 py-4 space-y-3">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="rounded-3xl border border-border/60 bg-card px-4 py-4 space-y-3">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-5 w-10" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+      <Suspense fallback={<HomeSkeleton />}>
+        <HomeContent />
+      </Suspense>
     </div>
   );
 }

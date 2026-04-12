@@ -1,5 +1,9 @@
+import { Suspense } from "react";
 import { AdminShell } from "../components/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { revalidatePath } from "next/cache";
+
+export const revalidate = 60;
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/server";
 import { createAdminAuthClient } from "@/utils/supabase/admin";
@@ -213,7 +217,7 @@ const moveBarberToCustomer = async (formData: FormData) => {
   redirect("/admin/barbers?toast=barber-demoted");
 };
 
-export default async function Page() {
+async function BarbersContent() {
   const supabase = await createAdminClient();
   const { data: barbers, error } = await supabase
     .from("profiles")
@@ -227,16 +231,38 @@ export default async function Page() {
     : null;
 
   return (
-    <AdminShell
-      title="Barbers"
-    >
+    <BarbersCard
+      barbers={barbers ?? []}
+      errorMessage={errorMessage}
+      createBarber={createBarber}
+      moveBarberToCustomer={moveBarberToCustomer}
+    />
+  );
+}
+
+function BarbersSkeleton() {
+  return (
+    <div className="space-y-3 rounded-xl border border-border/60 p-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <AdminShell title="Barbers">
       <div className="px-4 lg:px-6">
-        <BarbersCard
-          barbers={barbers ?? []}
-          errorMessage={errorMessage}
-          createBarber={createBarber}
-          moveBarberToCustomer={moveBarberToCustomer}
-        />
+        <Suspense fallback={<BarbersSkeleton />}>
+          <BarbersContent />
+        </Suspense>
       </div>
     </AdminShell>
   );

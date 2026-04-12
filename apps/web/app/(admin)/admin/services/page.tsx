@@ -1,10 +1,12 @@
+import { Suspense } from "react";
 import { AdminShell } from "../components/admin-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ServicesCard } from "./services-card";
 import { createAdminClient } from "@/utils/supabase/server";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const createService = async (formData: FormData) => {
   "use server";
@@ -153,7 +155,7 @@ const reactivateService = async (formData: FormData) => {
   redirect("/admin/services?toast=service-reactivated");
 };
 
-export default async function Page() {
+async function ServicesContent() {
   const supabase = await createAdminClient();
   const { data: services, error } = await supabase
     .from("services")
@@ -166,17 +168,41 @@ export default async function Page() {
     : null;
 
   return (
+    <ServicesCard
+      services={services ?? []}
+      errorMessage={errorMessage}
+      createService={createService}
+      updateService={updateService}
+      updateServiceBooking={updateServiceBooking}
+      archiveService={archiveService}
+      reactivateService={reactivateService}
+    />
+  );
+}
+
+function ServicesSkeleton() {
+  return (
+    <div className="space-y-3 rounded-xl border border-border/60 p-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
     <AdminShell title="Services">
       <div className="px-4 lg:px-6">
-        <ServicesCard
-          services={services ?? []}
-          errorMessage={errorMessage}
-          createService={createService}
-          updateService={updateService}
-          updateServiceBooking={updateServiceBooking}
-          archiveService={archiveService}
-          reactivateService={reactivateService}
-        />
+        <Suspense fallback={<ServicesSkeleton />}>
+          <ServicesContent />
+        </Suspense>
       </div>
     </AdminShell>
   );

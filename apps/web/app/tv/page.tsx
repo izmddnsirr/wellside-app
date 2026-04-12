@@ -1,19 +1,32 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 function TvAccessForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(searchParams.get("error") === "invalid");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (pin.length !== 6) return;
     setError(false);
-    router.push(`/tv/${pin}`);
+    setLoading(true);
+
+    const res = await fetch("/tv/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    });
+
+    if (res.ok) {
+      window.location.href = "/tv/display";
+    } else {
+      setError(true);
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,7 +42,7 @@ function TvAccessForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label htmlFor="pin" className="text-[13px] font-medium text-foreground">
+              <label htmlFor="pin" className="text-[13px] font-medium text-foreground pb-1 block">
                 6-Digit PIN
               </label>
               <input
@@ -54,10 +67,10 @@ function TvAccessForm() {
 
             <button
               type="submit"
-              disabled={pin.length !== 6}
+              disabled={pin.length !== 6 || loading}
               className="w-full rounded-lg bg-foreground text-background text-[14px] font-medium py-2.5 hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Access Display
+              {loading ? "Verifying…" : "Access Display"}
             </button>
           </form>
         </div>

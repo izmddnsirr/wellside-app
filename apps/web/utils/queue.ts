@@ -11,6 +11,7 @@ type QueueBookingRow = {
     first_name?: string | null;
     last_name?: string | null;
     email?: string | null;
+    phone?: string | null;
   } | null;
   walk_in_customer: {
     name?: string | null;
@@ -120,7 +121,7 @@ const toQueueItem = (booking: QueueBookingRow & { queue_number?: number | null }
   serviceLabel: booking.service?.name?.trim() || "Service",
   barberLabel: getBarberName(booking),
   type: "Booking",
-  phone: booking.walk_in_customer?.phone?.trim() ?? null,
+  phone: booking.walk_in_customer?.phone?.trim() ?? booking.customer?.phone?.trim() ?? null,
   queueNumber: booking.queue_number ?? null,
   startedAt: booking.start_at ?? null,
 });
@@ -129,7 +130,7 @@ export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {
   const supabase = await createAdminClient();
   const todayDate = getMalaysiaDateString(new Date());
   const pin = createDailyQueuePin();
-  const displayUrl = `/tv/${pin}`;
+  const displayUrl = `/tv/display`;
 
   const bookingSelect = `
       id,
@@ -139,7 +140,7 @@ export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {
       booking_date,
       created_at,
       queue_number,
-      customer:customer_id (first_name, last_name, email),
+      customer:customer_id (first_name, last_name, email, phone),
       walk_in_customer:walk_in_customer_id (name, phone),
       barber:barber_id (first_name, last_name, display_name),
       service:service_id (name)

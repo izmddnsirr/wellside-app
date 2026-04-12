@@ -14,14 +14,17 @@ type SidebarProps = ComponentProps<typeof Sidebar>;
 
 export async function AppSidebar(props: SidebarProps) {
   const supabase = await createAdminClient();
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
 
-  const { count: activeBookingsCount } = await supabase
-    .from("bookings")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["scheduled", "in_progress"]);
+  const [
+    { data: { user: authUser } },
+    { count: activeBookingsCount },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["scheduled", "in_progress"]),
+  ]);
 
   if (!authUser) {
     return (

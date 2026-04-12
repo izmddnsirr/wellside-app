@@ -12,6 +12,7 @@ import {
   hasRestWindowOverlap,
   loadShopOperatingRules,
 } from "@/utils/shop-operations";
+import { sendPushToUser } from "@/utils/push";
 import { allowedStatuses } from "./constants";
 
 const malaysiaDateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -439,6 +440,7 @@ export const updateBookingStatus = async (formData: FormData) => {
             .select(
               `
               id,
+              customer_id,
               booking_ref,
               start_at,
               end_at,
@@ -453,6 +455,16 @@ export const updateBookingStatus = async (formData: FormData) => {
         ).data
       : null;
 
+  // For non-cancel statuses, fetch customer_id for push notification
+  const customerId: string | null =
+    bookingDetails?.customer_id ??
+    (await supabase
+      .from("bookings")
+      .select("customer_id")
+      .eq("id", id)
+      .single()
+      .then(({ data }) => data?.customer_id ?? null));
+
   const { error } = await supabase.rpc("admin_update_booking_status", {
     p_booking_id: id,
     p_status: status,
@@ -461,6 +473,29 @@ export const updateBookingStatus = async (formData: FormData) => {
   if (error) {
     console.error("Failed to update booking status", error);
     return { ok: false, error: "Failed to update booking status." } satisfies BookingMutationResult;
+  }
+
+  // Push notification based on new status
+  if (customerId) {
+    const pushMessages: Record<string, { title: string; body: string }> = {
+      in_progress: {
+        title: "Your appointment has started",
+        body: "Head over — your barber is ready for you.",
+      },
+      completed: {
+        title: "All done!",
+        body: "Thanks for visiting Wellside. See you next time.",
+      },
+      cancelled: {
+        title: "Booking cancelled",
+        body: "Your booking has been cancelled by the shop.",
+      },
+    };
+
+    const msg = pushMessages[status];
+    if (msg) {
+      void sendPushToUser(customerId, msg.title, msg.body, { bookingId: id, status });
+    }
   }
 
   if (status === "cancelled" && bookingDetails) {
@@ -526,6 +561,7 @@ export const cancelBooking = async (formData: FormData) => {
     .select(
       `
       id,
+      customer_id,
       booking_ref,
       start_at,
       end_at,
@@ -548,6 +584,16 @@ export const cancelBooking = async (formData: FormData) => {
   }
 
   if (bookingDetails) {
+    // Push notification to customer
+    if (bookingDetails.customer_id) {
+      void sendPushToUser(
+        bookingDetails.customer_id,
+        "Booking cancelled",
+        "Your booking has been cancelled by the shop.",
+        { bookingId: id, status: "cancelled" },
+      );
+    }
+
     try {
       const payload = buildBookingCancellationPayload(bookingDetails);
       if (!payload) {

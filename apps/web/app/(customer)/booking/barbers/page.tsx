@@ -1,5 +1,9 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export const revalidate = 60;
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -59,13 +63,7 @@ const buildQuery = (params: Record<string, string | undefined>) => {
   return query ? `?${query}` : "";
 };
 
-export default async function SelectBarberPage({
-  searchParams,
-}: {
-  searchParams?: Promise<BookingSearchParams>;
-}) {
-  await redirectIfCustomerBookingDisabled();
-
+async function BarbersList({ params }: { params: BookingSearchParams }) {
   const supabase = await createClient();
   const { data: barbersData, error: barbersError } = await supabase
     .from("profiles")
@@ -80,7 +78,6 @@ export default async function SelectBarberPage({
       barber.display_name?.trim() ||
       [barber.first_name, barber.last_name].filter(Boolean).join(" ").trim() ||
       "Barber";
-
     return {
       id: barber.id,
       name,
@@ -88,6 +85,133 @@ export default async function SelectBarberPage({
       initials: buildInitials(name) || "B",
     };
   });
+
+  const serviceName = readParam(params.service);
+  const serviceDuration = readParam(params.duration);
+  const servicePrice = readParam(params.price);
+  const totalPrice = readParam(params.total);
+  const bookingDate = readParam(params.date);
+  const bookingTime = readParam(params.time);
+  const barberName = readParam(params.barber);
+  const barberId = readParam(params.barberId);
+  const serviceId = readParam(params.serviceId);
+
+  return (
+    <section className="" style={{ animationDelay: "80ms" }}>
+      <div className="space-y-4">
+        {barbersError ? (
+          <p className="text-sm text-destructive">
+            Unable to load barbers right now.
+          </p>
+        ) : null}
+        {!barbersError && barbers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No barbers available right now.
+          </p>
+        ) : null}
+        {barbers.map((barber) => {
+          const selectionQuery = buildQuery({
+            serviceId,
+            service: serviceName,
+            duration: serviceDuration,
+            price: servicePrice,
+            total: totalPrice ?? servicePrice,
+            date: bookingDate,
+            time: bookingTime,
+            barber: barber.name,
+            barberId: barber.id,
+          });
+          const isSelected = barberId
+            ? barberId === barber.id
+            : barberName === barber.name;
+          const cardClassName = `text-card-foreground flex flex-col gap-6 rounded-3xl border bg-card/85 transition hover:border-border focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+            isSelected
+              ? "border-primary ring-1 ring-primary/10"
+              : "border-border/60"
+          }`;
+
+          return (
+            <div key={barber.name}>
+              <Link
+                href={`/booking/time${selectionQuery}`}
+                className="block lg:hidden"
+                aria-label={`Select ${barber.name}`}
+              >
+                <div className={cardClassName}>
+                  <div className="px-3 flex items-center gap-5 py-3">
+                    <Badge
+                      variant="secondary"
+                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
+                    >
+                      {barber.initials}
+                    </Badge>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-foreground">
+                        {barber.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {barber.level}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+              <Link
+                href={`/booking/barbers${selectionQuery}`}
+                className="hidden lg:block"
+                aria-label={`Select ${barber.name}`}
+              >
+                <div className={cardClassName}>
+                  <div className="px-3 flex items-center gap-5 py-3">
+                    <Badge
+                      variant="secondary"
+                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
+                    >
+                      {barber.initials}
+                    </Badge>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold text-foreground">
+                        {barber.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {barber.level}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function BarbersListSkeleton() {
+  return (
+    <section className="space-y-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="rounded-3xl border border-border/60 bg-card/85 px-3 py-3">
+          <div className="flex items-center gap-5">
+            <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+export default async function SelectBarberPage({
+  searchParams,
+}: {
+  searchParams?: Promise<BookingSearchParams>;
+}) {
+  await redirectIfCustomerBookingDisabled();
 
   const params = (await searchParams) ?? {};
   const serviceName = readParam(params.service);
@@ -154,94 +278,9 @@ export default async function SelectBarberPage({
               </div>
             </header>
 
-            <section className="" style={{ animationDelay: "80ms" }}>
-              <div className="space-y-4">
-                {barbersError ? (
-                  <p className="text-sm text-destructive">
-                    Unable to load barbers right now.
-                  </p>
-                ) : null}
-                {!barbersError && barbers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No barbers available right now.
-                  </p>
-                ) : null}
-                {barbers.map((barber) => {
-                  const selectionQuery = buildQuery({
-                    serviceId,
-                    service: serviceName,
-                    duration: serviceDuration,
-                    price: servicePrice,
-                    total: totalPrice ?? servicePrice,
-                    date: bookingDate,
-                    time: bookingTime,
-                    barber: barber.name,
-                    barberId: barber.id,
-                  });
-                  const isSelected = barberId
-                    ? barberId === barber.id
-                    : barberName === barber.name;
-                  const cardClassName = `text-card-foreground flex flex-col gap-6 rounded-3xl border bg-card/85 transition hover:border-border focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-                    isSelected
-                      ? "border-primary ring-1 ring-primary/10"
-                      : "border-border/60"
-                  }`;
-
-                  return (
-                    <div key={barber.name}>
-                      <Link
-                        href={`/booking/time${selectionQuery}`}
-                        className="block lg:hidden"
-                        aria-label={`Select ${barber.name}`}
-                      >
-                        <div className={cardClassName}>
-                          <div className="px-3 flex items-center gap-5 py-3">
-                            <Badge
-                              variant="secondary"
-                              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
-                            >
-                              {barber.initials}
-                            </Badge>
-                            <div className="space-y-1">
-                              <p className="text-base font-semibold text-foreground">
-                                {barber.name}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {barber.level}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                      <Link
-                        href={`/booking/barbers${selectionQuery}`}
-                        className="hidden lg:block"
-                        aria-label={`Select ${barber.name}`}
-                      >
-                        <div className={cardClassName}>
-                          <div className="px-3 flex items-center gap-5 py-3">
-                            <Badge
-                              variant="secondary"
-                              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
-                            >
-                              {barber.initials}
-                            </Badge>
-                            <div className="space-y-1">
-                              <p className="text-base font-semibold text-foreground">
-                                {barber.name}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {barber.level}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+            <Suspense fallback={<BarbersListSkeleton />}>
+              <BarbersList params={params} />
+            </Suspense>
           </div>
 
           <aside className="hidden lg:block lg:flex-1 lg:self-start">

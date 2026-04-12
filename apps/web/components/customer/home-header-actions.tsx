@@ -123,7 +123,7 @@ export function HomeHeaderActions() {
       <Link
         href="/home"
         aria-label="Go to home"
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 bg-white/85 text-black transition-colors hover:border-black/25 hover:bg-white dark:border-white/20 dark:bg-black/70 dark:text-white dark:hover:border-white/30 dark:hover:bg-black/85"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground backdrop-blur-md transition-colors hover:bg-muted"
       >
         <House className="h-4 w-4" />
       </Link>
@@ -131,7 +131,7 @@ export function HomeHeaderActions() {
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-black/15 bg-white/85 px-1.5 pr-2.5 text-black backdrop-blur-md backdrop-saturate-150 transition-colors hover:border-black/25 hover:bg-white dark:border-white/20 dark:bg-black/70 dark:text-white dark:hover:border-white/30 dark:hover:bg-black/85"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-1.5 pr-2.5 backdrop-blur-md transition-colors hover:bg-muted"
             aria-label="Open account menu"
           >
             {userState.avatarUrl ? (
@@ -144,11 +144,11 @@ export function HomeHeaderActions() {
                 decoding="async"
               />
             ) : (
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/10 text-xs font-semibold text-black dark:bg-white/15 dark:text-white">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
                 {initials || "U"}
               </span>
             )}
-            <span className="max-w-28 truncate text-sm font-semibold text-black sm:max-w-36 dark:text-white">
+            <span className="max-w-28 truncate text-sm font-semibold text-foreground sm:max-w-36">
               {userState.displayName}
             </span>
           </button>
