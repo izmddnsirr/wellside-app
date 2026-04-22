@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const revalidate = 60;
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,

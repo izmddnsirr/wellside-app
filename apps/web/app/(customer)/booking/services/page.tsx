@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
-export const revalidate = 60;
 import {
   Breadcrumb,
   BreadcrumbItem,
