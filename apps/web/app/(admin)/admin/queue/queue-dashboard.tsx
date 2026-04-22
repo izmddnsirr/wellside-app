@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Copy, ExternalLink, Phone, Trash2, Tv, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -268,7 +269,14 @@ function QueueEntryCard({
 }
 
 export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
+  const router = useRouter();
+  const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    refreshRef.current = setInterval(() => router.refresh(), 5_000);
+    return () => { if (refreshRef.current) clearInterval(refreshRef.current); };
+  }, [router]);
 
   const handleCopy = async () => {
     try {

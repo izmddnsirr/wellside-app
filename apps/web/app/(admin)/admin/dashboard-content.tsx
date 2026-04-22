@@ -5,11 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { createAdminClient } from "@/utils/supabase/server";
-import { CalendarDays, Clock3, DollarSign } from "lucide-react";
-import Link from "next/link";
 import { BookingsChartCard } from "./components/bookings-chart-card";
 
 const getMalaysiaDateString = (date: Date) => {
@@ -74,26 +70,7 @@ type LowStockRow = {
   stock_qty: number | null;
 };
 
-const quickActions = [
-  {
-    href: "/admin/pos",
-    label: "POS",
-    icon: DollarSign,
-    featured: true,
-  },
-  {
-    href: "/admin/bookings",
-    label: "Queue",
-    icon: Clock3,
-    featured: false,
-  },
-  {
-    href: "/admin/bookings/calendar",
-    label: "Calendar",
-    icon: CalendarDays,
-    featured: false,
-  },
-] as const;
+
 
 export async function DashboardContent() {
   const supabase = await createAdminClient();
@@ -108,6 +85,13 @@ export async function DashboardContent() {
   ).padStart(2, "0")}`;
   const monthStartTimestamp = `${monthStart}T00:00:00+08:00`;
   const monthEndTimestamp = `${monthEnd}T23:59:59.999+08:00`;
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  const prevMonthStart = `${prevYear}-${pad2(prevMonth)}-01`;
+  const prevMonthLastDay = new Date(prevYear, prevMonth, 0).getDate();
+  const prevMonthEnd = `${prevYear}-${pad2(prevMonth)}-${pad2(prevMonthLastDay)}`;
+  const prevMonthStartTimestamp = `${prevMonthStart}T00:00:00+08:00`;
+  const prevMonthEndTimestamp = `${prevMonthEnd}T23:59:59.999+08:00`;
   const rangeStartMonth = `${year}-01`;
   const defaultMonth = monthStart.slice(0, 7);
   const rangeStartTimestamp = `${rangeStartMonth}-01T00:00:00+08:00`;
@@ -125,6 +109,9 @@ export async function DashboardContent() {
     { count: activeBarbersCount },
     { data: todayPaymentsData },
     { data: lowStockProductsData },
+    { count: prevMonthBookingsCount },
+    { count: prevMonthTicketsCount },
+    { data: prevMonthSalesData },
   ] = await Promise.all([
     supabase
       .from("bookings")
@@ -185,6 +172,22 @@ export async function DashboardContent() {
       .lte("stock_qty", 5)
       .order("stock_qty", { ascending: true })
       .limit(5),
+    supabase
+      .from("bookings")
+      .select("*", { count: "exact", head: true })
+      .gte("booking_date", prevMonthStart)
+      .lte("booking_date", prevMonthEnd),
+    supabase
+      .from("tickets")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", prevMonthStartTimestamp)
+      .lte("created_at", prevMonthEndTimestamp),
+    supabase
+      .from("tickets")
+      .select("total_amount")
+      .eq("payment_status", "paid")
+      .gte("paid_at", prevMonthStartTimestamp)
+      .lte("paid_at", prevMonthEndTimestamp),
   ]);
 
   const totalBookingsToday = bookingsCount ?? 0;
@@ -192,6 +195,16 @@ export async function DashboardContent() {
 
   const salesTickets = (salesMonthData ?? []) as unknown as TicketRow[];
   const rangeTickets = (salesRangeData ?? []) as unknown as SalesSummaryRow[];
+  const prevMonthSales = ((prevMonthSalesData ?? []) as { total_amount: number | null }[])
+    .reduce((sum, t) => sum + (t.total_amount ?? 0), 0);
+  const prevBookings = prevMonthBookingsCount ?? 0;
+  const prevTickets = prevMonthTicketsCount ?? 0;
+
+  const calcDelta = (current: number, previous: number) => {
+    if (previous === 0) return null;
+    const diff = ((current - previous) / previous) * 100;
+    return { pct: Math.abs(diff).toFixed(1), up: diff >= 0 };
+  };
   const todayPayments = (todayPaymentsData ?? []) as TodayPaymentRow[];
   const todayBarberBookings = (todayBarberBookingsData ?? []) as TodayBarberBookingRow[];
   const lowStockProducts = (lowStockProductsData ?? []) as LowStockRow[];
@@ -407,81 +420,32 @@ export async function DashboardContent() {
 
   return (
     <>
-      <div className="grid gap-4 px-5 lg:px-6 md:grid-cols-3">
-        {quickActions.map((action) => {
-          const Icon = action.icon;
 
-          return (
-            <Link
-              key={action.href}
-              href={action.href}
-              className={cn(
-                buttonVariants({ variant: action.featured ? "default" : "outline" }),
-                "h-13 justify-center rounded-xl px-6 text-base font-semibold shadow-none",
-                action.featured
-                  ? "bg-foreground text-background hover:bg-foreground/90"
-                  : "border-border/80 bg-background text-foreground hover:bg-accent/40",
-              )}
-            >
-              <Icon className="size-5 shrink-0" />
-              <span className="leading-none">{action.label}</span>
-            </Link>
-          );
-        })}
-      </div>
       <div className="grid gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-border/60 bg-card">
-          <CardHeader>
-            <CardDescription className="text-muted-foreground">
-              Total bookings
-            </CardDescription>
-            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
-              {totalBookingsToday}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Based on bookings for today.
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card">
-          <CardHeader>
-            <CardDescription className="text-muted-foreground">
-              Total tickets today
-            </CardDescription>
-            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
-              {totalTicketsToday}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Based on tickets created today.
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card">
-          <CardHeader>
-            <CardDescription className="text-muted-foreground">
-              Total sales today
-            </CardDescription>
-            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
-              {formatCurrency(totalSalesToday)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Based on paid tickets today.
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card">
-          <CardHeader>
-            <CardDescription className="text-muted-foreground">
-              Total sales this month
-            </CardDescription>
-            <CardTitle className="font-mono text-3xl text-foreground tabular-nums">
-              {formatCurrency(totalSalesThisMonth)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Based on paid tickets this month.
-          </CardContent>
-        </Card>
+        {[
+          { label: "Total bookings", value: totalBookingsToday, display: String(totalBookingsToday), description: "Based on bookings for today.", delta: calcDelta(totalBookingsToday, prevBookings) },
+          { label: "Total tickets today", value: totalTicketsToday, display: String(totalTicketsToday), description: "Based on tickets created today.", delta: calcDelta(totalTicketsToday, prevTickets) },
+          { label: "Total sales today", value: totalSalesToday, display: formatCurrency(totalSalesToday), description: "Based on paid tickets today.", delta: calcDelta(totalSalesThisMonth, prevMonthSales) },
+          { label: "Total sales this month", value: totalSalesThisMonth, display: formatCurrency(totalSalesThisMonth), description: "Based on paid tickets this month.", delta: calcDelta(totalSalesThisMonth, prevMonthSales) },
+        ].map((card) => (
+          <Card key={card.label} className="border-border/60 bg-card">
+            <CardHeader>
+              <CardDescription className="text-muted-foreground">{card.label}</CardDescription>
+              <CardTitle className="font-mono text-3xl text-foreground tabular-nums">{card.display}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 pt-0">
+              {card.delta && (
+                <div className={`flex items-center gap-1 text-xs font-medium ${card.delta.up ? "text-emerald-500" : "text-red-500"}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={`size-3.5 ${card.delta.up ? "" : "rotate-180"}`}>
+                    <path fillRule="evenodd" d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z" clipRule="evenodd" />
+                  </svg>
+                  {card.delta.pct}%
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">{card.description}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
       <div className="px-4 lg:px-6">
         <BookingsChartCard

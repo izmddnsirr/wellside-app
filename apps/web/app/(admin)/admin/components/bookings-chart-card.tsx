@@ -178,39 +178,23 @@ const renderSalesValuePill = ({
   }
 
   const text = numericValue.toLocaleString("en-MY");
-  const charWidth = 7;
-  const horizontalPadding = 8;
   const pillHeight = 20;
-  const pillRadius = 10;
-  const gapFromBar = 8;
-  const pillWidth = text.length * charWidth + horizontalPadding * 2;
-  const pillX = xNumber + widthNumber / 2 - pillWidth / 2;
+  const gapFromBar = 2;
   const pillY = yNumber - pillHeight - gapFromBar;
 
   return (
-    <g>
-      <rect
-        x={pillX}
-        y={pillY}
-        width={pillWidth}
-        height={pillHeight}
-        rx={pillRadius}
-        ry={pillRadius}
-        fill="var(--background)"
-        stroke="var(--border)"
-      />
-      <text
-        x={xNumber + widthNumber / 2}
-        y={pillY + pillHeight / 2}
-        fill="var(--foreground)"
-        fontSize={11}
-        fontWeight={600}
-        dominantBaseline="central"
-        textAnchor="middle"
-      >
-        {text}
-      </text>
-    </g>
+    <text
+      x={xNumber + widthNumber / 2}
+      y={pillY + pillHeight / 2}
+      fill="var(--foreground)"
+      fontSize={11}
+      fontWeight={600}
+      fontFamily="'JetBrains Mono', monospace"
+      dominantBaseline="central"
+      textAnchor="middle"
+    >
+      {text}
+    </text>
   );
 };
 

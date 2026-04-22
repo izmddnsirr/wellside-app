@@ -253,14 +253,6 @@ export const createBooking = async (formData: FormData) => {
 
     if (existingWalkIn?.id) {
       walkInCustomerId = existingWalkIn.id;
-      const { error: updateWalkInError } = await supabase
-        .from("walk_in_customers")
-        .update({ name: walkInName })
-        .eq("id", existingWalkIn.id);
-
-      if (updateWalkInError) {
-        console.error("Failed to update walk-in customer", updateWalkInError);
-      }
     } else {
       const { data: createdWalkIn, error: createWalkInError } = await supabase
         .from("walk_in_customers")
@@ -404,6 +396,7 @@ export const createBooking = async (formData: FormData) => {
   const { error } = await supabase.from("bookings").insert({
     customer_id: resolvedCustomerId,
     walk_in_customer_id: walkInCustomerId,
+    walk_in_name: walkInName ?? null,
     barber_id: barberId,
     service_id: serviceId,
     start_at: startAt,

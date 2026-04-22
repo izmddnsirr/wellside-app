@@ -58,7 +58,7 @@ function CalendarSkeleton() {
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-9 w-32" />
       </div>
-      <Skeleton className="h-[520px] w-full" />
+      <Skeleton className="h-130 w-full" />
     </div>
   );
 }

@@ -7,6 +7,7 @@ type QueueBookingRow = {
   start_at: string | null;
   booking_date: string | null;
   created_at: string | null;
+  walk_in_name: string | null;
   customer: {
     first_name?: string | null;
     last_name?: string | null;
@@ -74,6 +75,7 @@ const getBookingName = (booking: QueueBookingRow) => {
     .trim();
 
   return (
+    booking.walk_in_name?.trim() ||
     booking.walk_in_customer?.name?.trim() ||
     customerName ||
     booking.customer?.email?.trim() ||
@@ -140,6 +142,7 @@ export const getQueueDashboardData = async (): Promise<QueueDashboardData> => {
       booking_date,
       created_at,
       queue_number,
+      walk_in_name,
       customer:customer_id (first_name, last_name, email, phone),
       walk_in_customer:walk_in_customer_id (name, phone),
       barber:barber_id (first_name, last_name, display_name),

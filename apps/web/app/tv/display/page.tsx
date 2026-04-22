@@ -46,7 +46,7 @@ export default async function TvDisplayPage() {
       id: b.id,
       numberLabel: b.queueNumber != null ? `B${String(b.queueNumber).padStart(2, "0")}` : "B--",
       name: b.name,
-      startedAt: b.startedAt,
+      startedAt: null,
     })),
     ...servingEntries.map((e) => ({
       id: e.id,

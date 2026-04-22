@@ -199,7 +199,7 @@ export function OperationsSettingsPanel({
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden border-border/70">
-        <CardHeader className="border-b border-border/60">
+        <CardHeader className="border-b border-border/60 pb-6">
           <div className="flex items-center justify-between gap-3">
             <CardTitle>Customer Booking</CardTitle>
             <Badge variant={bookingEnabled ? "secondary" : "outline"}>
@@ -232,7 +232,7 @@ export function OperationsSettingsPanel({
       </Card>
 
       <Card className="overflow-hidden border-border/70">
-        <CardHeader className="border-b border-border/60">
+        <CardHeader className="border-b border-border/60 pb-6">
           <div className="flex items-center justify-between gap-3">
             <CardTitle>Weekly Schedule</CardTitle>
             <Badge variant="outline">Fixed rules</Badge>
@@ -241,7 +241,7 @@ export function OperationsSettingsPanel({
             Set fixed open/closed days for the whole shop.
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-5">
+        <CardContent className="pt-0">
           <form action={saveWeeklySchedule} className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {WEEKDAY_KEYS.map((weekday) => (
@@ -269,7 +269,7 @@ export function OperationsSettingsPanel({
       </Card>
 
       <Card className="overflow-hidden border-border/70">
-        <CardHeader className="border-b border-border/60">
+        <CardHeader className="border-b border-border/60 pb-6">
           <div className="flex items-center justify-between gap-3">
             <CardTitle>Rest Time</CardTitle>
             <Badge variant="secondary">{restWindows.length} windows</Badge>
@@ -278,7 +278,7 @@ export function OperationsSettingsPanel({
             Configure rest windows to block booking slots automatically.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 pt-5">
+        <CardContent className="space-y-4 pt-0">
           <form
             action={addRestWindow}
             className="grid gap-3 rounded-xl border border-border/60 bg-muted/10 p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1.5fr_auto] xl:items-end"
@@ -341,7 +341,7 @@ export function OperationsSettingsPanel({
       </Card>
 
       <Card className="overflow-hidden border-border/70">
-        <CardHeader className="border-b border-border/60">
+        <CardHeader className="border-b border-border/60 pb-6">
           <div className="flex items-center justify-between gap-3">
             <CardTitle>Temporary Closures</CardTitle>
             <Badge variant="secondary">
@@ -352,7 +352,7 @@ export function OperationsSettingsPanel({
             Add date-range closures (Raya, renovation, public holiday, etc).
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 pt-5">
+        <CardContent className="space-y-4 pt-0">
           <form
             action={addTemporaryClosure}
             className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-4 md:p-5"

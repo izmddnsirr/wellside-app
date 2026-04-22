@@ -41,6 +41,7 @@ export const getBookings = async () => {
           end_at,
           booking_date,
           created_at,
+          walk_in_name,
           customer:customer_id (first_name, last_name, email, phone),
           walk_in_customer:walk_in_customer_id (name, phone),
           barber:barber_id (first_name, last_name),

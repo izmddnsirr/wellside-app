@@ -1040,7 +1040,7 @@ export function TransactionsClient() {
                             <p className="text-xs text-muted-foreground">
                               Tickets
                             </p>
-                            <p className="font-semibold">
+                            <p className="font-mono font-semibold tabular-nums">
                               {displayedShiftMetrics.ticketCount}
                             </p>
                           </div>
@@ -1048,7 +1048,7 @@ export function TransactionsClient() {
                             <p className="text-xs text-muted-foreground">
                               Paid sales
                             </p>
-                            <p className="font-semibold">
+                            <p className="font-mono font-semibold tabular-nums">
                               {formatMoney(displayedShiftMetrics.paidSales)}
                             </p>
                           </div>
@@ -1058,7 +1058,7 @@ export function TransactionsClient() {
                             <p className="text-xs text-muted-foreground">
                               Cash sales
                             </p>
-                            <p className="font-semibold">
+                            <p className="font-mono font-semibold tabular-nums">
                               {formatMoney(displayedShiftMetrics.cashSales)}
                             </p>
                           </div>
@@ -1066,7 +1066,7 @@ export function TransactionsClient() {
                             <p className="text-xs text-muted-foreground">
                               E-wallet sales
                             </p>
-                            <p className="font-semibold">
+                            <p className="font-mono font-semibold tabular-nums">
                               {formatMoney(displayedShiftMetrics.ewalletSales)}
                             </p>
                           </div>
@@ -1113,7 +1113,17 @@ export function TransactionsClient() {
               <div className="grid gap-5 md:grid-cols-[1.4fr_0.9fr]">
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-border bg-card p-4">
-                    <h3 className="text-sm font-semibold">Catalog</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
+                        <Scissors className="size-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold">Catalog</h3>
+                        <p className="text-xs text-muted-foreground">
+                          {services.length + products.length} items
+                        </p>
+                      </div>
+                    </div>
                     <div className="mt-4 space-y-4">
                       <div>
                         <p className="text-xs font-semibold text-muted-foreground">
@@ -1159,7 +1169,7 @@ export function TransactionsClient() {
                                     {service.basePrice === null ? (
                                       <p>Custom</p>
                                     ) : (
-                                      <span>
+                                      <span className="font-mono tabular-nums">
                                         {formatMoney(service.basePrice)}
                                       </span>
                                     )}
@@ -1218,7 +1228,7 @@ export function TransactionsClient() {
                                     {product.basePrice === null ? (
                                       <p>Custom</p>
                                     ) : (
-                                      <span>
+                                      <span className="font-mono tabular-nums">
                                         {formatMoney(product.basePrice)}
                                       </span>
                                     )}
@@ -1289,7 +1299,7 @@ export function TransactionsClient() {
                               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 <span>{entry.item.code}</span>
                                 <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-                                <span className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground">
+                                <span className="rounded-full bg-background/80 px-2 py-0.5 text-[11px] font-mono text-muted-foreground tabular-nums">
                                   {formatMoney(entry.unitPrice)}
                                 </span>
                               </div>
@@ -1309,7 +1319,7 @@ export function TransactionsClient() {
                               >
                                 -
                               </Button>
-                              <span className="min-w-5 text-center text-sm font-medium text-foreground">
+                              <span className="min-w-5 text-center text-sm font-mono font-medium text-foreground tabular-nums">
                                 {entry.qty}
                               </span>
                               <Button
@@ -1344,11 +1354,11 @@ export function TransactionsClient() {
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center justify-between text-muted-foreground">
                         <span>Subtotal</span>
-                        <span>{formatMoney(subtotal)}</span>
+                        <span className="font-mono tabular-nums">{formatMoney(subtotal)}</span>
                       </div>
                       <div className="flex items-center justify-between font-semibold">
                         <span>Total</span>
-                        <span>{formatMoney(subtotal)}</span>
+                        <span className="font-mono tabular-nums">{formatMoney(subtotal)}</span>
                       </div>
                     </div>
                     <div className="mt-5 rounded-xl border border-border bg-muted/20 p-4">
@@ -1358,9 +1368,6 @@ export function TransactionsClient() {
                       <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:items-end">
                         <div className="grid gap-3">
                           <div>
-                            <Label htmlFor="barber-id" className="text-xs">
-                              Optional barber
-                            </Label>
                             {barbersLoading ? (
                               <p className="mt-2 text-xs text-muted-foreground">
                                 Loading barbers...
@@ -1371,23 +1378,18 @@ export function TransactionsClient() {
                               </p>
                             ) : (
                               <Select
-                                value={selectedBarberId ?? "none"}
+                                value={selectedBarberId ?? ""}
                                 onValueChange={(value) =>
-                                  setSelectedBarberId(
-                                    value === "none" ? null : value,
-                                  )
+                                  setSelectedBarberId(value || null)
                                 }
                               >
                                 <SelectTrigger
                                   id="barber-id"
                                   className="mt-2 h-10 min-h-10 w-full overflow-hidden text-ellipsis whitespace-nowrap bg-background"
                                 >
-                                  <SelectValue placeholder="No barber selected" />
+                                  <SelectValue placeholder="Select barber" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="none">
-                                    No barber
-                                  </SelectItem>
                                   {barbers.length === 0 ? (
                                     <SelectItem value="no-barbers" disabled>
                                       No active barbers
@@ -1425,7 +1427,8 @@ export function TransactionsClient() {
                             disabled={
                               cartItemCount === 0 ||
                               ticketLoading ||
-                              !activeShift
+                              !activeShift ||
+                              !selectedBarberId
                             }
                             onClick={handleOpenCheckout}
                           >
@@ -1456,7 +1459,7 @@ export function TransactionsClient() {
                                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                                     Total
                                   </p>
-                                  <p className="mt-1 text-3xl font-semibold leading-none">
+                                  <p className="mt-1 font-mono text-3xl font-semibold leading-none tabular-nums">
                                     {formatMoney(subtotal)}
                                   </p>
                                 </div>
@@ -1466,7 +1469,7 @@ export function TransactionsClient() {
                                       Balance
                                     </p>
                                     <p
-                                      className={`mt-1 text-3xl font-semibold leading-none ${
+                                      className={`mt-1 font-mono text-3xl font-semibold leading-none tabular-nums ${
                                         changeDue < 0
                                           ? "text-red-400"
                                           : changeDue > 0
@@ -1563,7 +1566,7 @@ export function TransactionsClient() {
                                                 ? "default"
                                                 : "outline"
                                             }
-                                            className="h-11 w-full text-sm font-semibold"
+                                            className="h-11 w-full font-mono text-sm font-semibold tabular-nums"
                                             onClick={() =>
                                               applyCashPreset(preset)
                                             }
@@ -1578,7 +1581,7 @@ export function TransactionsClient() {
                                         id="cash-received"
                                         className="flex min-h-63 items-center justify-center rounded-2xl border border-border/60 bg-muted/30 px-6 text-center"
                                       >
-                                        <p className="text-4xl font-semibold leading-none">
+                                        <p className="font-mono text-4xl font-semibold leading-none tabular-nums">
                                           RM{" "}
                                           {(
                                             parseInt(cashReceived || "0", 10) /

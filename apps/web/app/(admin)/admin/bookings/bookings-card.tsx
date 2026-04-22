@@ -74,6 +74,7 @@ export type BookingRow = {
   end_at: string;
   booking_date: string | null;
   created_at: string;
+  walk_in_name: string | null;
   customer: {
     first_name: string | null;
     last_name: string | null;
@@ -205,7 +206,7 @@ const getBookingCustomerName = (booking: BookingRow) => {
   if (existingName !== "-") {
     return existingName;
   }
-  return booking.walk_in_customer?.name?.trim() || "Walk-in";
+  return booking.walk_in_name?.trim() || booking.walk_in_customer?.name?.trim() || "Walk-in";
 };
 
 const getBookingCustomerContact = (booking: BookingRow) =>
@@ -746,6 +747,7 @@ export function BookingsCard({
         customerName,
         booking.customer?.email,
         booking.customer?.phone,
+        booking.walk_in_name,
         booking.walk_in_customer?.name,
         booking.walk_in_customer?.phone,
         barberName,
