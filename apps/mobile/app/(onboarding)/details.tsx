@@ -129,7 +129,7 @@ export default function DetailsScreen() {
 
   return (
     <View
-      className="flex-1 px-5 bg-slate-50"
+      className="flex-1 px-5 bg-neutral-50"
       style={{ paddingTop: insets.top }}
     >
       <KeyboardAvoidingView
@@ -145,20 +145,20 @@ export default function DetailsScreen() {
           <View>
             {/* Top Header */}
             <View className="mt-3">
-              <Text className="text-3xl mt-1 font-semibold text-slate-900">
+              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 Enter Details.
               </Text>
-              <Text className="text-slate-600 text-base mt-1 mb-6">
+              <Text className="text-neutral-500 text-base mt-1 mb-6">
                 Register now to book your seat.
               </Text>
             </View>
 
             {/* FULL NAME */}
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               First Name
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your first name"
               autoCapitalize="words"
               value={firstName}
@@ -166,11 +166,11 @@ export default function DetailsScreen() {
             />
 
             {/* FULL NAME */}
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Last Name
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your last name"
               autoCapitalize="words"
               value={lastName}
@@ -178,11 +178,11 @@ export default function DetailsScreen() {
             />
 
             {/* PHONE NUMBER */}
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Phone Number
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your phone number"
               keyboardType="number-pad"
               autoCapitalize="none"
@@ -198,7 +198,7 @@ export default function DetailsScreen() {
             <Pressable
               onPress={onRegister}
               disabled={isSubmitting}
-              className={`bg-slate-900 p-4 mt-2 rounded-full active:opacity-80 mb-6 ${
+              className={`bg-neutral-900 p-4 mt-2 rounded-full active:opacity-80 mb-6 ${
                 isSubmitting ? "opacity-60" : ""
               }`}
             >
@@ -209,11 +209,11 @@ export default function DetailsScreen() {
 
             {/* Login Link */}
             {/* <View className="flex-row justify-center mb-4">
-              <Text className="text-base text-slate-600">
+              <Text className="text-base text-neutral-500">
                 Already have an account?{" "}
               </Text>
               <Pressable onPress={() => router.replace("/(auth)/login")}>
-                <Text className="text-base font-semibold text-slate-900">
+                <Text className="text-base font-semibold text-neutral-900">
                   Login
                 </Text>
               </Pressable>

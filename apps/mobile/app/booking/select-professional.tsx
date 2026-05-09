@@ -93,7 +93,7 @@ export default function SelectProfessionalScreen() {
   }, [barbers]);
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -107,7 +107,7 @@ export default function SelectProfessionalScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="arrow-back" size={22} color="#0f172a" />
+            <Ionicons name="arrow-back" size={22} color="#171717" />
           </Pressable>
           <Pressable
             onPress={() => {
@@ -117,22 +117,22 @@ export default function SelectProfessionalScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="close" size={24} color="#0f172a" />
+            <Ionicons name="close" size={24} color="#171717" />
           </Pressable>
         </View>
 
         <View className="px-5 pt-2">
-          <Text className="text-3xl font-semibold text-slate-900">
+          <Text className="text-3xl font-semibold text-neutral-900">
             Select barbers
           </Text>
-          <Text className="mt-1 text-base text-slate-600">
+          <Text className="mt-1 text-base text-neutral-500">
             Choose your preferred barber.
           </Text>
         </View>
 
         <View className="px-5 pt-6 flex-row flex-wrap justify-between">
           {isLoading ? (
-            <Text className="mt-2 text-sm text-slate-600">
+            <Text className="mt-2 text-sm text-neutral-500">
               Loading barbers...
             </Text>
           ) : null}
@@ -140,7 +140,7 @@ export default function SelectProfessionalScreen() {
             <Text className="mt-2 text-sm text-red-500">{errorMessage}</Text>
           ) : null}
           {!isLoading && !errorMessage && barbers.length === 0 ? (
-            <Text className="mt-2 text-sm text-slate-600">
+            <Text className="mt-2 text-sm text-neutral-500">
               No barbers available right now.
             </Text>
           ) : null}
@@ -151,7 +151,7 @@ export default function SelectProfessionalScreen() {
                 setBarber({ id: pro.id, displayName: pro.name });
                 router.push("/booking/select-time");
               }}
-              className="mb-4 w-[48%] items-center rounded-3xl border border-slate-200 bg-white p-5"
+              className="mb-4 w-[48%] items-center rounded-3xl border border-neutral-200 bg-white p-5"
             >
               <View className="items-center">
                 {pro.avatarUrl ? (
@@ -160,8 +160,8 @@ export default function SelectProfessionalScreen() {
                     className="h-16 w-16 rounded-full"
                   />
                 ) : (
-                  <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-200">
-                    <Text className="text-base font-semibold text-slate-900">
+                  <View className="h-16 w-16 items-center justify-center rounded-full bg-neutral-200">
+                    <Text className="text-base font-semibold text-neutral-900">
                       {pro.name
                         .split(" ")
                         .map((part) => part[0])
@@ -172,11 +172,11 @@ export default function SelectProfessionalScreen() {
                 )}
               </View>
 
-              <Text className="mt-4 text-center text-base font-semibold text-slate-900">
+              <Text className="mt-4 text-center text-base font-semibold text-neutral-900">
                 {pro.name}
               </Text>
               {pro.level ? (
-                <Text className="mt-1 text-center text-sm text-slate-600">
+                <Text className="mt-1 text-center text-sm text-neutral-500">
                   {pro.level}
                 </Text>
               ) : null}

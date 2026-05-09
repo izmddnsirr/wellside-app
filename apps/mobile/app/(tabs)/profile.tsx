@@ -227,7 +227,7 @@ export default function ProfileScreen() {
   );
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -237,30 +237,30 @@ export default function ProfileScreen() {
         {/* Greeting Section */}
         <View className="mx-5 mt-3 flex-row justify-between items-center">
           <View>
-            <Text className="text-3xl mt-1 font-semibold text-slate-900">
+            <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Profile
             </Text>
-            <Text className="text-slate-600 text-base mt-1">
+            <Text className="text-neutral-500 text-base mt-1">
               Customized your profile
             </Text>
           </View>
           <TouchableOpacity
             onPress={onLogout}
-            className="bg-white px-4 py-3 rounded-full flex-row items-center border border-slate-200"
+            className="bg-white px-4 py-3 rounded-full flex-row items-center border border-neutral-200"
           >
-            <Ionicons name="log-out-outline" size={16} color="#0f172a" />
-            <Text className="font-semibold text-slate-900 ml-2">Log out</Text>
+            <Ionicons name="log-out-outline" size={16} color="#171717" />
+            <Text className="font-semibold text-neutral-900 ml-2">Log out</Text>
           </TouchableOpacity>
         </View>
 
         {/* Card */}
-        <View className="bg-slate-900 mx-5 mt-6 rounded-3xl p-5 flex-row items-center">
-          <View className="w-16 h-16 rounded-full bg-slate-200 mr-5 overflow-hidden justify-center items-center">
+        <View className="bg-neutral-900 mx-5 mt-6 rounded-3xl p-5 flex-row items-center">
+          <View className="w-16 h-16 rounded-full bg-neutral-200 mr-5 overflow-hidden justify-center items-center">
             {/* Replace the source URI with user profile image path if available */}
             {isLoading ? (
-              <ActivityIndicator size="small" color="#111827" />
+              <ActivityIndicator size="small" color="#171717" />
             ) : (
-              <Text className="text-2xl text-slate-900 font-semibold text-center">
+              <Text className="text-2xl text-neutral-900 font-semibold text-center">
                 {initials || "?"}
               </Text>
             )}
@@ -271,7 +271,7 @@ export default function ProfileScreen() {
             <Text className="text-white font-semibold text-xl">
               {isLoading ? "Loading..." : fullName || "Your Profile"}
             </Text>
-            <Text className="text-slate-200 text-base mt-1">
+            <Text className="text-neutral-200 text-base mt-1">
               {isLoading ? "Fetching details" : profile?.email || "—"}
             </Text>
           </View>
@@ -279,43 +279,43 @@ export default function ProfileScreen() {
             onPress={() => router.push("/profile-edit")}
             className="bg-white px-4 py-2 rounded-full active:opacity-80"
           >
-            <Text className="font-semibold text-slate-900">Edit</Text>
+            <Text className="font-semibold text-neutral-900">Edit</Text>
           </TouchableOpacity>
         </View>
 
         {/* History */}
         <View className="mx-5 mt-6">
           <View className="flex-row items-center justify-between">
-            <Text className="text-xs font-semibold tracking-[0.2em] text-slate-500">
+            <Text className="text-lg font-semibold text-neutral-900">
               Booking History
             </Text>
-            <View className="rounded-full border border-slate-200 bg-white px-3 py-1">
-              <Text className="text-xs font-semibold text-slate-700">
+            <View className="rounded-full border border-neutral-200 bg-white px-3 py-1">
+              <Text className="text-xs font-semibold text-neutral-700">
                 {completedVisits} visits
               </Text>
             </View>
           </View>
 
-          <View className="mt-4 rounded-3xl bg-slate-900 p-5">
+          <View className="mt-4 rounded-3xl bg-neutral-900 p-5">
             <View className="flex-row items-center justify-between">
               <View>
                 <Text className="text-white text-xl font-semibold">
                   Recent visits
                 </Text>
-                <Text className="text-slate-300 text-sm mt-1">
+                <Text className="text-neutral-300 text-sm mt-1">
                   Track your appointments history
                 </Text>
               </View>
               <View className="h-10 w-10 rounded-full bg-white/10 items-center justify-center">
-                <Ionicons name="time-outline" size={18} color="#e2e8f0" />
+                <Ionicons name="time-outline" size={18} color="#e5e5e5" />
               </View>
             </View>
 
             <View className="mt-5">
               {isHistoryLoading ? (
-                <View className="items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 px-6 py-8">
-                  <ActivityIndicator size="small" color="#e2e8f0" />
-                  <Text className="text-slate-300 text-sm mt-3">
+                <View className="items-center justify-center rounded-2xl border border-neutral-700 bg-neutral-800 px-6 py-8">
+                  <ActivityIndicator size="small" color="#e5e5e5" />
+                  <Text className="text-neutral-300 text-sm mt-3">
                     Loading your visits
                   </Text>
                 </View>
@@ -326,9 +326,9 @@ export default function ProfileScreen() {
                 </View>
               ) : null}
               {!isHistoryLoading && !historyError && history.length === 0 ? (
-                <View className="items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 px-6 py-10">
-                  <Ionicons name="calendar-outline" size={32} color="#e2e8f0" />
-                  <Text className="mt-3 text-sm text-slate-300 text-center">
+                <View className="items-center justify-center rounded-2xl border border-neutral-700 bg-neutral-800 px-6 py-10">
+                  <Ionicons name="calendar-outline" size={32} color="#e5e5e5" />
+                  <Text className="mt-3 text-sm text-neutral-300 text-center">
                     No visits yet. Your next booking will show up here.
                   </Text>
                 </View>
@@ -351,12 +351,12 @@ export default function ProfileScreen() {
                     return (
                       <View
                         key={item.id}
-                        className={`rounded-2xl border border-slate-200 bg-white px-4 py-3 ${
+                        className={`rounded-2xl border border-neutral-200 bg-white px-4 py-3 ${
                           index === history.length - 1 ? "" : "mb-3"
                         }`}
                       >
                         <View className="flex-row items-center justify-between">
-                          <Text className="text-base font-semibold text-slate-900">
+                          <Text className="text-base font-semibold text-neutral-900">
                             {item.serviceName}
                           </Text>
                           <View
@@ -381,14 +381,14 @@ export default function ProfileScreen() {
                             </Text>
                           </View>
                         </View>
-                        <Text className="text-sm text-slate-600 mt-1">
+                        <Text className="text-sm text-neutral-500 mt-1">
                           {dateLabel} · {timeLabel}
                         </Text>
                         <View className="mt-2 flex-row items-center justify-between">
-                          <Text className="text-sm text-slate-500">
+                          <Text className="text-sm text-neutral-500">
                             {item.barberName}
                           </Text>
-                          <Text className="text-sm font-semibold text-slate-900">
+                          <Text className="text-sm font-semibold text-neutral-900">
                             {item.basePrice ? `RM${item.basePrice}` : "RM0"}
                           </Text>
                         </View>

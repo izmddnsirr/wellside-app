@@ -287,7 +287,7 @@ export default function SelectTimeScreen() {
   }, [dateOptions, selectedDate, setDate]);
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -301,7 +301,7 @@ export default function SelectTimeScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="arrow-back" size={22} color="#0f172a" />
+            <Ionicons name="arrow-back" size={22} color="#171717" />
           </Pressable>
           <Pressable
             onPress={() => {
@@ -311,15 +311,15 @@ export default function SelectTimeScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="close" size={24} color="#0f172a" />
+            <Ionicons name="close" size={24} color="#171717" />
           </Pressable>
         </View>
 
         <View className="px-5 pt-2">
-          <Text className="text-3xl font-semibold text-slate-900">
+          <Text className="text-3xl font-semibold text-neutral-900">
             Select time
           </Text>
-          <Text className="mt-1 text-base text-slate-600">
+          <Text className="mt-1 text-base text-neutral-500">
             Pick a slot that fits your day.
           </Text>
         </View>
@@ -327,10 +327,10 @@ export default function SelectTimeScreen() {
         <View className="px-5 mt-5 flex-row items-center justify-between">
           <Pressable
             onPress={() => setIsBarberModalVisible(true)}
-            className="flex-row items-center rounded-full border border-slate-200 bg-white px-4 py-3"
+            className="flex-row items-center rounded-full border border-neutral-200 bg-white px-4 py-3"
           >
-            <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-slate-200">
-              <Text className="text-xs font-semibold text-slate-900">
+            <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-neutral-200">
+              <Text className="text-xs font-semibold text-neutral-900">
                 {barberName
                   .split(" ")
                   .map((part) => part[0])
@@ -338,13 +338,13 @@ export default function SelectTimeScreen() {
                   .join("")}
               </Text>
             </View>
-            <Text className="text-sm font-semibold text-slate-900">
+            <Text className="text-sm font-semibold text-neutral-900">
               {barberName}
             </Text>
             <Ionicons
               name="chevron-down"
               size={16}
-              color="#0f172a"
+              color="#171717"
               style={{ marginLeft: 8 }}
             />
           </Pressable>
@@ -352,7 +352,7 @@ export default function SelectTimeScreen() {
         </View>
 
         <View className="px-5 mt-6">
-          <Text className="text-base font-semibold text-slate-900">
+          <Text className="text-base font-semibold text-neutral-900">
             {monthYearLabel}
           </Text>
         </View>
@@ -383,13 +383,13 @@ export default function SelectTimeScreen() {
                   <View
                     className={`h-20 w-20 items-center justify-center rounded-full border ${
                       isSelected
-                        ? "border-transparent bg-slate-900"
-                        : "border-slate-200 bg-white"
+                        ? "border-transparent bg-neutral-900"
+                        : "border-neutral-200 bg-white"
                     }`}
                   >
                     <Text
                       className={`text-lg font-semibold ${
-                        isSelected ? "text-white" : "text-slate-900"
+                        isSelected ? "text-white" : "text-neutral-900"
                       }`}
                     >
                       {option.label}
@@ -397,7 +397,7 @@ export default function SelectTimeScreen() {
                   </View>
                   <Text
                     className={`mt-2 text-sm ${
-                      isSelected ? "text-slate-900" : "text-slate-600"
+                      isSelected ? "text-neutral-900" : "text-neutral-500"
                     }`}
                   >
                     {isClosed ? "Closed" : option.detail}
@@ -410,7 +410,7 @@ export default function SelectTimeScreen() {
 
         <View className="px-5 mt-6">
           {isLoadingSlots ? (
-            <Text className="text-sm text-slate-600">
+            <Text className="text-sm text-neutral-500">
               Loading available slots...
             </Text>
           ) : null}
@@ -421,7 +421,7 @@ export default function SelectTimeScreen() {
             <Text className="text-sm text-red-500">{selectedDateClosure.reason}</Text>
           ) : null}
           {!isLoadingSlots && !slotError && timeSlots.length === 0 ? (
-            <Text className="text-sm text-slate-600">No available slots.</Text>
+            <Text className="text-sm text-neutral-500">No available slots.</Text>
           ) : null}
           {timeSlots.map((slot) => {
             const isSelected = slot.label === selectedSlot?.label;
@@ -438,13 +438,13 @@ export default function SelectTimeScreen() {
                 }}
                 className={`mb-4 rounded-3xl border px-4 py-5 ${
                   isSelected
-                    ? "border-slate-900 bg-slate-900"
-                    : "border-slate-200 bg-white"
+                    ? "border-neutral-900 bg-neutral-900"
+                    : "border-neutral-200 bg-white"
                 }`}
               >
                 <Text
                   className={`text-base font-semibold ${
-                    isSelected ? "text-white" : "text-slate-900"
+                    isSelected ? "text-white" : "text-neutral-900"
                   }`}
                 >
                   {slot.label}
@@ -460,22 +460,22 @@ export default function SelectTimeScreen() {
         animationType="slide"
         onRequestClose={() => setIsBarberModalVisible(false)}
       >
-        <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+        <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
           <View className="flex-row items-center justify-between px-5 pt-3">
             <Pressable
               onPress={() => setIsBarberModalVisible(false)}
               className="h-10 w-10 items-center justify-center"
               hitSlop={10}
             >
-              <Ionicons name="close" size={24} color="#0f172a" />
+              <Ionicons name="close" size={24} color="#171717" />
             </Pressable>
           </View>
 
           <View className="px-5 pt-2">
-            <Text className="text-3xl font-semibold text-slate-900">
+            <Text className="text-3xl font-semibold text-neutral-900">
               Select barber
             </Text>
-            <Text className="mt-1 text-base text-slate-600">
+            <Text className="mt-1 text-base text-neutral-500">
               Switch to another barber.
             </Text>
           </View>
@@ -486,7 +486,7 @@ export default function SelectTimeScreen() {
           >
             <View className="px-5 pt-6 flex-row flex-wrap justify-between">
               {isLoadingBarbers ? (
-                <Text className="mt-2 text-sm text-slate-600">
+                <Text className="mt-2 text-sm text-neutral-500">
                   Loading barbers...
                 </Text>
               ) : null}
@@ -494,7 +494,7 @@ export default function SelectTimeScreen() {
                 <Text className="mt-2 text-sm text-red-500">{barberError}</Text>
               ) : null}
               {!isLoadingBarbers && !barberError && barbers.length === 0 ? (
-                <Text className="mt-2 text-sm text-slate-600">
+                <Text className="mt-2 text-sm text-neutral-500">
                   No barbers available right now.
                 </Text>
               ) : null}
@@ -505,7 +505,7 @@ export default function SelectTimeScreen() {
                     setBarber({ id: pro.id, displayName: pro.name });
                     setIsBarberModalVisible(false);
                   }}
-                  className="mb-4 w-[48%] items-center rounded-3xl border border-slate-200 bg-white p-5"
+                  className="mb-4 w-[48%] items-center rounded-3xl border border-neutral-200 bg-white p-5"
                 >
                   <View className="items-center">
                     {pro.avatarUrl ? (
@@ -514,8 +514,8 @@ export default function SelectTimeScreen() {
                         className="h-16 w-16 rounded-full"
                       />
                     ) : (
-                      <View className="h-16 w-16 items-center justify-center rounded-full bg-slate-200">
-                        <Text className="text-base font-semibold text-slate-900">
+                      <View className="h-16 w-16 items-center justify-center rounded-full bg-neutral-200">
+                        <Text className="text-base font-semibold text-neutral-900">
                           {pro.name
                             .split(" ")
                             .map((part) => part[0])
@@ -525,7 +525,7 @@ export default function SelectTimeScreen() {
                       </View>
                     )}
                   </View>
-                  <Text className="mt-4 text-center text-base font-semibold text-slate-900">
+                  <Text className="mt-4 text-center text-base font-semibold text-neutral-900">
                     {pro.name}
                   </Text>
                 </Pressable>

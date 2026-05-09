@@ -61,7 +61,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View className="flex-1 px-5 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 px-5 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -74,19 +74,19 @@ export default function ForgotPasswordScreen() {
         >
           <View>
             <View className="mt-3">
-              <Text className="text-3xl mt-1 font-semibold text-slate-900">
+              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 Reset password.
               </Text>
-              <Text className="text-slate-600 text-base mt-1">
+              <Text className="text-neutral-500 text-base mt-1">
                 Enter your email to receive a reset link.
               </Text>
             </View>
 
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em] mt-6">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3 mt-6">
               Email
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -101,7 +101,7 @@ export default function ForgotPasswordScreen() {
             <Pressable
               onPress={onSendReset}
               disabled={isSubmitting}
-              className={`bg-slate-900 p-4 mt-2 rounded-full active:opacity-80 mb-6 ${
+              className={`bg-neutral-900 p-4 mt-2 rounded-full active:opacity-80 mb-6 ${
                 isSubmitting ? "opacity-60" : ""
               }`}
             >
@@ -114,7 +114,7 @@ export default function ForgotPasswordScreen() {
               onPress={() => router.back()}
               className="items-center"
             >
-              <Text className="text-sm font-semibold text-slate-900">
+              <Text className="text-sm font-semibold text-neutral-900">
                 Back to login
               </Text>
             </Pressable>

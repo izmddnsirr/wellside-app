@@ -114,7 +114,7 @@ export default function LoginScreen() {
 
   return (
     <View
-      className="flex-1 px-5 bg-slate-50"
+      className="flex-1 px-5 bg-neutral-50"
       style={{ paddingTop: insets.top }}
     >
       <KeyboardAvoidingView
@@ -130,20 +130,20 @@ export default function LoginScreen() {
           <View>
             {/*  */}
             <View className="mt-3">
-              <Text className="text-3xl mt-1 font-semibold text-slate-900">
+              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 Welcome back.
               </Text>
-              <Text className="text-slate-600 text-base mt-1 mb-6">
+              <Text className="text-neutral-500 text-base mt-1 mb-6">
                 Sign in with email and password.
               </Text>
             </View>
 
             {/* Email */}
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Email
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -154,18 +154,18 @@ export default function LoginScreen() {
 
             {/* Password */}
             <View className="mb-3 flex-row items-center justify-between">
-              <Text className="text-xs font-semibold text-slate-600 tracking-[0.2em]">
+              <Text className="text-xs font-semibold text-neutral-500">
                 Password
               </Text>
               <Pressable onPress={() => router.push("/(auth)/forgot-password")}>
-                <Text className="text-xs font-semibold text-slate-900">
+                <Text className="text-xs font-semibold text-neutral-900">
                   Forgot password?
                 </Text>
               </Pressable>
             </View>
             <View className="relative mb-6">
               <TextInput
-                className="bg-white border border-slate-200 rounded-3xl p-5 pr-12 text-base leading-5 text-slate-900"
+                className="bg-white border border-neutral-200 rounded-3xl p-5 pr-12 text-base leading-5 text-neutral-900"
                 placeholder="Enter your password"
                 keyboardType="default"
                 secureTextEntry={!isPasswordVisible}
@@ -186,7 +186,7 @@ export default function LoginScreen() {
                 <Ionicons
                   name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
                   size={22}
-                  color="#0f172a"
+                  color="#171717"
                 />
               </Pressable>
             </View>
@@ -199,7 +199,7 @@ export default function LoginScreen() {
             <Pressable
               onPress={onLogin}
               disabled={isSubmitting}
-              className={`bg-slate-900 p-4 mt-2 rounded-full active:opacity-80 mb-6 ${
+              className={`bg-neutral-900 p-4 mt-2 rounded-full active:opacity-80 mb-6 ${
                 isSubmitting ? "opacity-60" : ""
               }`}
             >
@@ -212,11 +212,11 @@ export default function LoginScreen() {
 
           {/* Register Link */}
           <View className="flex-row justify-center">
-            <Text className="text-base text-slate-600">
+            <Text className="text-base text-neutral-500">
               Don&apos;t have an account?{" "}
             </Text>
             <Pressable onPress={() => router.push("/(auth)/register")}>
-              <Text className="text-base font-semibold text-slate-900">
+              <Text className="text-base font-semibold text-neutral-900">
                 Register
               </Text>
             </Pressable>

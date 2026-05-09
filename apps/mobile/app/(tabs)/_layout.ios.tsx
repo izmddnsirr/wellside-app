@@ -1,37 +1,37 @@
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 
 export default function TabLayout() {
   return (
     <NativeTabs
       iconColor={{
-        default: "#94A3B8",
-        selected: "#334155",
+        default: "#a3a3a3",
+        selected: "#262626",
       }}
-      tintColor="#334155"
+      tintColor="#262626"
     >
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label hidden>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
+        <Label hidden>Home</Label>
+        <Icon sf="house.fill" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="booking">
-        <NativeTabs.Trigger.Label hidden>Book</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="calendar" md="calendar_month" />
+        <Label hidden>Book</Label>
+        <Icon sf="calendar" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="ai">
-        <NativeTabs.Trigger.Label hidden>AI</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
+        <Label hidden>AI</Label>
+        <Icon sf="sparkles" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="notification">
-        <NativeTabs.Trigger.Label hidden>Alerts</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="bell.fill" md="notifications" />
+        <Label hidden>Alerts</Label>
+        <Icon sf="bell.fill" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Label hidden>Profile</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="person.fill" md="person" />
+        <Label hidden>Profile</Label>
+        <Icon sf="person.fill" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

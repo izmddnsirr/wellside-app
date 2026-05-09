@@ -60,9 +60,9 @@ function TvAccessForm() {
                 }}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-center text-[15px] tracking-[0.3em] font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              {error && (
+              {/* {error && (
                 <p className="text-[12px] text-destructive">Invalid PIN. Please try again.</p>
-              )}
+              )} */}
             </div>
 
             <button

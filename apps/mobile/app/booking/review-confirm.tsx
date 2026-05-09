@@ -118,7 +118,7 @@ export default function ReviewConfirmScreen() {
   };
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 140 }}
@@ -129,7 +129,7 @@ export default function ReviewConfirmScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="arrow-back" size={22} color="#0f172a" />
+            <Ionicons name="arrow-back" size={22} color="#171717" />
           </Pressable>
           <Pressable
             onPress={() => {
@@ -139,98 +139,98 @@ export default function ReviewConfirmScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="close" size={24} color="#0f172a" />
+            <Ionicons name="close" size={24} color="#171717" />
           </Pressable>
         </View>
 
         <View className="px-5 pt-2">
-          <Text className="text-3xl font-semibold text-slate-900">
+          <Text className="text-3xl font-semibold text-neutral-900">
             Review and confirm
           </Text>
         </View>
 
         <View className="mt-6 px-5">
-          <View className="rounded-3xl border border-slate-200 bg-white overflow-hidden">
+          <View className="rounded-3xl border border-neutral-200 bg-white overflow-hidden">
             <View className="relative">
-              <View className="bg-slate-900 px-5 py-4">
-                <Text className="text-xs font-semibold tracking-[0.2em] text-slate-300">
+              <View className="bg-neutral-900 px-5 py-4">
+                <Text className="text-xs font-semibold text-neutral-300">
                   Booking Details
                 </Text>
                 <Text className="mt-2 text-lg font-semibold text-white">
                   {dateLabel}
                 </Text>
-                <Text className="mt-1 text-sm text-slate-300">
+                <Text className="mt-1 text-sm text-neutral-300">
                   {slotLabel}
                 </Text>
               </View>
 
               <View className="px-5 py-4">
-                <Text className="text-xs font-semibold text-slate-500 tracking-[0.2em]">
+                <Text className="text-xs font-semibold text-neutral-500">
                   Appointment
                 </Text>
                 <View className="mt-3 flex-row items-center">
-                  <View className="h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-                    <Ionicons name="calendar-outline" size={16} color="#0f172a" />
+                  <View className="h-8 w-8 items-center justify-center rounded-full bg-neutral-100">
+                    <Ionicons name="calendar-outline" size={16} color="#171717" />
                   </View>
-                  <Text className="ml-3 text-base font-semibold text-slate-900">
+                  <Text className="ml-3 text-base font-semibold text-neutral-900">
                     {dateLabel}
                   </Text>
                 </View>
                 <View className="mt-3 flex-row items-center">
-                  <View className="h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-                    <Ionicons name="time-outline" size={16} color="#0f172a" />
+                  <View className="h-8 w-8 items-center justify-center rounded-full bg-neutral-100">
+                    <Ionicons name="time-outline" size={16} color="#171717" />
                   </View>
-                  <Text className="ml-3 text-base font-semibold text-slate-900">
+                  <Text className="ml-3 text-base font-semibold text-neutral-900">
                     {slotLabel}
                   </Text>
                 </View>
                 <View className="mt-3 flex-row items-center">
-                  <View className="h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-                    <Ionicons name="person-outline" size={16} color="#0f172a" />
+                  <View className="h-8 w-8 items-center justify-center rounded-full bg-neutral-100">
+                    <Ionicons name="person-outline" size={16} color="#171717" />
                   </View>
-                  <Text className="ml-3 text-base font-semibold text-slate-900">
+                  <Text className="ml-3 text-base font-semibold text-neutral-900">
                     {barberName}
                   </Text>
                 </View>
               </View>
 
               <View className="relative">
-                <View className="h-px border-t border-dashed border-slate-200" />
-                <View className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-slate-200 bg-slate-50" />
-                <View className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-slate-200 bg-slate-50" />
+                <View className="h-px border-t border-dashed border-neutral-200" />
+                <View className="absolute -left-3 -top-3 h-6 w-6 rounded-full border border-neutral-200 bg-neutral-50" />
+                <View className="absolute -right-3 -top-3 h-6 w-6 rounded-full border border-neutral-200 bg-neutral-50" />
               </View>
 
               <View className="px-5 py-4">
-                <Text className="text-xs font-semibold text-slate-500 tracking-[0.2em]">
+                <Text className="text-xs font-semibold text-neutral-500">
                   Service
                 </Text>
                 <View className="mt-3 flex-row items-start justify-between">
                   <View className="flex-1 pr-4">
-                    <Text className="text-base font-semibold text-slate-900">
+                    <Text className="text-base font-semibold text-neutral-900">
                       {selectedService?.name ?? "Service not selected"}
                     </Text>
-                    <Text className="mt-1 text-sm text-slate-600">
+                    <Text className="mt-1 text-sm text-neutral-500">
                       {duration}
                     </Text>
                   </View>
-                  <Text className="text-base font-semibold text-slate-900">
+                  <Text className="text-base font-semibold text-neutral-900">
                     RM {subtotal}
                   </Text>
                 </View>
               </View>
 
-              <View className="h-px bg-slate-200" />
+              <View className="h-px bg-neutral-200" />
 
               <View className="px-5 py-4">
-                <Text className="text-xs font-semibold text-slate-500 tracking-[0.2em]">
+                <Text className="text-xs font-semibold text-neutral-500">
                   Summary
                 </Text>
                 
                 <View className="mt-3 flex-row items-center justify-between">
-                  <Text className="text-lg font-semibold text-slate-900">
+                  <Text className="text-lg font-semibold text-neutral-900">
                     Total
                   </Text>
-                  <Text className="text-lg font-semibold text-slate-900">
+                  <Text className="text-lg font-semibold text-neutral-900">
                     MYR {total}
                   </Text>
                 </View>
@@ -248,15 +248,15 @@ export default function ReviewConfirmScreen() {
       </ScrollView>
 
       <View
-        className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white px-5 py-4"
+        className="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white px-5 py-4"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-base font-semibold text-slate-900">
+            <Text className="text-base font-semibold text-neutral-900">
               MYR {total}
             </Text>
-            <Text className="mt-1 text-sm text-slate-600">
+            <Text className="mt-1 text-sm text-neutral-500">
               {selectedService ? "1 service" : "No service"} · {duration}
             </Text>
           </View>
@@ -265,8 +265,8 @@ export default function ReviewConfirmScreen() {
             disabled={!canConfirm || isSubmitting}
             className={`rounded-full px-8 py-4 mb-2 ${
               !canConfirm || isSubmitting
-                ? "bg-slate-200"
-                : "bg-slate-900"
+                ? "bg-neutral-200"
+                : "bg-neutral-900"
             }`}
           >
             {isSubmitting ? (

@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../../utils/supabase";
+import { loadBookingAvailability } from "../../utils/shop-operations";
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
 const DEFAULT_DIRECTIONS_QUERY =
@@ -50,6 +51,19 @@ type UpcomingBooking = {
   status: "scheduled" | "in_progress";
 };
 
+type ServicePreview = {
+  id: string;
+  name: string;
+  basePrice: number | null;
+  durationMinutes: number | null;
+};
+
+type ProfessionalPreview = {
+  id: string;
+  name: string;
+  level: string | null;
+};
+
 export default function BookingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -58,6 +72,9 @@ export default function BookingScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [services, setServices] = useState<ServicePreview[]>([]);
+  const [professionals, setProfessionals] = useState<ProfessionalPreview[]>([]);
+  const [bookingEnabled, setBookingEnabled] = useState(true);
 
   const fetchUpcoming = useCallback(async () => {
     setIsLoading(true);
@@ -67,9 +84,60 @@ export default function BookingScreen() {
     if (authError || !authData.user) {
       setIsLoading(false);
       setUpcoming(null);
+      setServices([]);
+      setProfessionals([]);
+      setBookingEnabled(true);
       setErrorMessage("Please sign in to view your booking.");
       return;
     }
+
+    const [
+      isBookingEnabled,
+      { data: servicesData },
+      { data: barbersData },
+    ] = await Promise.all([
+      loadBookingAvailability(supabase as never),
+      supabase
+        .from("services")
+        .select("id,name,base_price,duration_minutes")
+        .eq("is_active", true)
+        .eq("allow_booking", true)
+        .order("service_code", { ascending: true })
+        .order("name", { ascending: true })
+        .limit(3),
+      supabase
+        .from("profiles")
+        .select("id,display_name,first_name,last_name,barber_level")
+        .eq("is_active", true)
+        .eq("role", "barber")
+        .order("display_name")
+        .limit(4),
+    ]);
+
+    setBookingEnabled(isBookingEnabled);
+
+    setServices(
+      (servicesData ?? []).map((service) => ({
+        id: service.id,
+        name: service.name,
+        basePrice: service.base_price ?? null,
+        durationMinutes: service.duration_minutes ?? null,
+      })),
+    );
+
+    setProfessionals(
+      (barbersData ?? []).map((barber) => ({
+        id: barber.id,
+        name:
+          barber.display_name?.trim() ||
+          [barber.first_name, barber.last_name]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
+          "Barber",
+        level: barber.barber_level?.trim() || null,
+      })),
+    );
 
     const { data: bookingData, error: bookingError } = await supabase
       .from("bookings")
@@ -275,9 +343,7 @@ export default function BookingScreen() {
     if (Number.isNaN(start.getTime())) {
       return "";
     }
-    return `${dayFormatter.format(start)}, ${dateFormatter
-      .format(start)
-      .toUpperCase()}`.toUpperCase();
+    return `${dayFormatter.format(start)}, ${dateFormatter.format(start)}`;
   }, [upcoming]);
 
   const openWhatsApp = useCallback(
@@ -323,21 +389,21 @@ export default function BookingScreen() {
   }, [openWhatsApp]);
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
       >
         {/* Greeting Section */}
         <View className="mx-5 mt-3 flex-row justify-between items-center">
           <View>
-            <Text className="text-3xl mt-1 font-semibold text-slate-900">
+            <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Booking
             </Text>
-            <Text className="text-slate-600 text-base mt-1">
+            <Text className="text-neutral-500 text-base mt-1">
               Choose your chair now
             </Text>
           </View>
@@ -346,7 +412,7 @@ export default function BookingScreen() {
         {/* Upcoming */}
         <View className="mx-5 mt-6">
           <View className="flex-row items-center justify-between">
-            <Text className="text-xs font-semibold tracking-[0.2em] text-slate-500">
+            <Text className="text-lg font-semibold text-neutral-900">
               Upcoming
             </Text>
             {upcoming ? (
@@ -364,26 +430,26 @@ export default function BookingScreen() {
                       : "text-blue-700"
                   }`}
                 >
-                  {upcoming.status === "in_progress"
-                    ? "IN PROGRESS"
-                    : "SCHEDULED"}
+                        {upcoming.status === "in_progress"
+                          ? "In progress"
+                          : "Scheduled"}
                 </Text>
               </View>
             ) : null}
           </View>
 
           {!isLoading && !errorMessage && !upcoming ? (
-            <View className="mt-4 min-h-[180px] items-center justify-center border border-dashed border-slate-300 rounded-3xl p-6 bg-slate-100">
-              <Ionicons name="calendar-outline" size={32} color="#0f172a" />
-              <Text className="mt-3 text-sm text-slate-700 text-center">
+            <View className="mt-4 min-h-[180px] items-center justify-center border border-dashed border-neutral-300 rounded-3xl p-6 bg-neutral-100">
+              <Ionicons name="calendar-outline" size={32} color="#171717" />
+              <Text className="mt-3 text-sm text-neutral-700 text-center">
                 No upcoming bookings yet.
               </Text>
             </View>
           ) : (
-            <View className="mt-4 rounded-3xl border border-slate-200 bg-white overflow-hidden min-h-[180px]">
+            <View className="mt-4 rounded-3xl border border-neutral-200 bg-white overflow-hidden min-h-[180px]">
               {isLoading ? (
                 <View className="flex-1 items-center justify-center p-6">
-                  <ActivityIndicator size="small" color="#111827" />
+                  <ActivityIndicator size="small" color="#171717" />
                 </View>
               ) : null}
               {errorMessage ? (
@@ -393,16 +459,16 @@ export default function BookingScreen() {
               ) : null}
               {!isLoading && !errorMessage && upcoming ? (
                 <>
-                  <View className="bg-slate-900 px-5 py-5">
+                  <View className="bg-neutral-900 px-5 py-5">
                     <View className="flex-row items-start justify-between">
                       <View style={{ flex: 1, paddingRight: 12 }}>
-                        <Text className="text-slate-300 text-xs tracking-[0.2em]">
+                        <Text className="text-neutral-300 text-xs">
                           {dayLabel}
                         </Text>
                         <Text className="text-white text-2xl font-semibold mt-2">
                           {timeLabel}
                         </Text>
-                        <Text className="text-slate-300 mt-1">
+                        <Text className="text-neutral-300 mt-1">
                           {upcoming.serviceName} · {upcoming.barberName}
                         </Text>
                       </View>
@@ -410,7 +476,7 @@ export default function BookingScreen() {
                         <Ionicons
                           name="calendar-outline"
                           size={18}
-                          color="#e2e8f0"
+                          color="#e5e5e5"
                         />
                       </View>
                     </View>
@@ -418,18 +484,18 @@ export default function BookingScreen() {
                   <View className="p-5">
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center">
-                        <View className="h-9 w-9 rounded-full bg-slate-100 items-center justify-center">
+                        <View className="h-9 w-9 rounded-full bg-neutral-100 items-center justify-center">
                           <Ionicons
                             name="time-outline"
                             size={16}
-                            color="#0f172a"
+                            color="#171717"
                           />
                         </View>
                         <View className="ml-3">
-                          <Text className="text-xs text-slate-500 tracking-[0.2em]">
+                          <Text className="text-xs text-neutral-500">
                             Duration
                           </Text>
-                          <Text className="text-sm font-semibold text-slate-900">
+                          <Text className="text-sm font-semibold text-neutral-900">
                             {upcoming.durationMinutes
                               ? `${upcoming.durationMinutes} min`
                               : "N/A"}
@@ -437,18 +503,18 @@ export default function BookingScreen() {
                         </View>
                       </View>
                       <View className="flex-row items-center">
-                        <View className="h-9 w-9 rounded-full bg-slate-100 items-center justify-center">
+                        <View className="h-9 w-9 rounded-full bg-neutral-100 items-center justify-center">
                           <Ionicons
                             name="cash-outline"
                             size={16}
-                            color="#0f172a"
+                            color="#171717"
                           />
                         </View>
                         <View className="ml-3">
-                          <Text className="text-xs text-slate-500 tracking-[0.2em]">
+                          <Text className="text-xs text-neutral-500">
                             Total
                           </Text>
-                          <Text className="text-sm font-semibold text-slate-900">
+                          <Text className="text-sm font-semibold text-neutral-900">
                             {upcoming.basePrice
                               ? `RM${upcoming.basePrice}`
                               : "RM0"}
@@ -467,7 +533,7 @@ export default function BookingScreen() {
                         {isCancelling ? "Cancelling..." : "Cancel booking"}
                       </Text>
                     </TouchableOpacity>
-                    <Text className="mt-3 text-xs text-slate-600 text-center">
+                    <Text className="mt-3 text-xs text-neutral-500 text-center">
                       You can cancel up to 2 hours before your appointment.
                       After that, please contact your barber.
                     </Text>
@@ -480,19 +546,19 @@ export default function BookingScreen() {
             <View className="mt-4 flex-row gap-3">
               <TouchableOpacity
                 onPress={onPressDirections}
-                className="flex-1 flex-row items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3"
+                className="flex-1 flex-row items-center justify-center rounded-full border border-neutral-200 bg-white px-4 py-3"
               >
-                <Ionicons name="navigate-outline" size={16} color="#0f172a" />
-                <Text className="ml-2 text-sm font-semibold text-slate-700">
+                <Ionicons name="navigate-outline" size={16} color="#171717" />
+                <Text className="ml-2 text-sm font-semibold text-neutral-700">
                   Get direction
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={onPressContact}
-                className="flex-1 flex-row items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3"
+                className="flex-1 flex-row items-center justify-center rounded-full border border-neutral-200 bg-white px-4 py-3"
               >
-                <Ionicons name="call-outline" size={16} color="#0f172a" />
-                <Text className="ml-2 text-sm font-semibold text-slate-700">
+                <Ionicons name="call-outline" size={16} color="#171717" />
+                <Text className="ml-2 text-sm font-semibold text-neutral-700">
                   Contact
                 </Text>
               </TouchableOpacity>
@@ -500,19 +566,160 @@ export default function BookingScreen() {
           ) : null}
         </View>
 
-        {/* Quick Pick */}
-        <Text className="text-xs font-semibold tracking-[0.2em] text-slate-600 mx-5 mt-6">
-          Quick Pick
-        </Text>
+        {/* New appointment */}
+        <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white p-4">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 pr-4">
+              <Text className="text-lg font-semibold text-neutral-900">
+                New appointment
+              </Text>
+              <Text className="mt-1 text-sm text-neutral-500">
+                Pick a service, barber, and time that works for you.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/booking/select-service")}
+              disabled={!bookingEnabled}
+              className={`rounded-full px-4 py-2.5 ${
+                bookingEnabled ? "bg-neutral-900" : "bg-neutral-200"
+              }`}
+            >
+              <Text
+                className={`text-sm font-semibold ${
+                  bookingEnabled ? "text-white" : "text-neutral-500"
+                }`}
+              >
+                {bookingEnabled ? "Book now" : "Paused"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {!bookingEnabled ? (
+            <View className="mt-4 rounded-2xl bg-amber-50 p-3">
+              <Text className="text-sm leading-5 text-amber-800">
+                Online booking is currently paused. Please contact the shop for
+                urgent changes.
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
-        <TouchableOpacity
-          onPress={() => router.push("/booking/select-service")}
-          className="mx-5 mt-5 mb-10 bg-slate-900 rounded-full py-4 active:opacity-80"
-        >
-          <Text className="text-center text-white font-semibold text-lg">
-            Book appointment
+        {/* Services */}
+        <View className="mx-5 mt-6">
+          <Text className="text-lg font-semibold text-neutral-900">
+            Services
           </Text>
-        </TouchableOpacity>
+          <View className="mt-3 gap-3">
+            {services.length ? (
+              services.map((service) => (
+                <TouchableOpacity
+                  key={service.id}
+                  onPress={() => {
+                    if (bookingEnabled) {
+                      router.push("/booking/select-service");
+                    }
+                  }}
+                  disabled={!bookingEnabled}
+                  className={`rounded-3xl border border-neutral-200 bg-white p-4 ${
+                    !bookingEnabled ? "opacity-60" : ""
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View>
+                      <Text className="font-semibold text-neutral-900">
+                        {service.name}
+                      </Text>
+                      <Text className="mt-1 text-sm text-neutral-500">
+                        {service.durationMinutes
+                          ? `${service.durationMinutes} min`
+                          : "Duration unavailable"}
+                      </Text>
+                    </View>
+                    <Text className="font-semibold text-neutral-900">
+                      {service.basePrice ? `RM${service.basePrice}` : ""}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View className="rounded-3xl border border-neutral-200 bg-white p-4">
+                <Text className="text-sm text-neutral-500">
+                  Services will appear here when available.
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Professionals */}
+        <View className="mx-5 mt-6">
+          <Text className="text-lg font-semibold text-neutral-900">
+            Professionals
+          </Text>
+          <View className="mt-3 flex-row flex-wrap justify-between">
+            {professionals.length ? (
+              professionals.map((professional) => (
+                <TouchableOpacity
+                  key={professional.id}
+                  onPress={() => {
+                    if (bookingEnabled) {
+                      router.push("/booking/select-service");
+                    }
+                  }}
+                  disabled={!bookingEnabled}
+                  className={`mb-3 w-[48%] rounded-3xl border border-neutral-200 bg-white p-4 ${
+                    !bookingEnabled ? "opacity-60" : ""
+                  }`}
+                >
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                    <Text className="text-sm font-semibold text-neutral-900">
+                      {professional.name
+                        .split(" ")
+                        .map((part) => part[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </Text>
+                  </View>
+                  <Text className="mt-3 font-semibold text-neutral-900">
+                    {professional.name}
+                  </Text>
+                  {professional.level ? (
+                    <Text className="mt-1 text-sm text-neutral-500">
+                      {professional.level}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View className="w-full rounded-3xl border border-neutral-200 bg-white p-4">
+                <Text className="text-sm text-neutral-500">
+                  Professionals will appear here when available.
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Booking note */}
+        <View className="mx-5 mt-3 rounded-3xl border border-neutral-200 bg-white p-4">
+          <View className="flex-row items-start">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color="#525252"
+              />
+            </View>
+            <View className="ml-3 flex-1">
+              <Text className="font-semibold text-neutral-900">
+                Booking note
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-neutral-500">
+                Please arrive 5 minutes before your slot. For late changes,
+                contact the shop directly.
+              </Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );

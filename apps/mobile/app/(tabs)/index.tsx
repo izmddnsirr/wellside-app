@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -25,6 +25,13 @@ type UpcomingBooking = {
   status: "scheduled" | "in_progress";
 };
 
+type PopularService = {
+  id: string;
+  name: string;
+  price: number | null;
+  durationMinutes: number | null;
+};
+
 const TIME_ZONE = "Asia/Kuala_Lumpur";
 const dayFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
@@ -44,17 +51,12 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const galleryScrollRef = useRef<ScrollView | null>(null);
-  const galleryMetrics = useRef({
-    contentWidth: 0,
-    containerWidth: 0,
-    offset: 0,
-  });
   const [profile, setProfile] = useState<Profile | null>(null);
   const [upcoming, setUpcoming] = useState<UpcomingBooking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalBookings, setTotalBookings] = useState(0);
+  const [popularServices, setPopularServices] = useState<PopularService[]>([]);
 
   const fetchHome = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
@@ -62,6 +64,7 @@ export default function HomeScreen() {
       setProfile(null);
       setUpcoming(null);
       setTotalBookings(0);
+      setPopularServices([]);
       return;
     }
 
@@ -89,6 +92,21 @@ export default function HomeScreen() {
       .select("id", { count: "exact", head: true })
       .eq("customer_id", authData.user.id);
     setTotalBookings(bookingCount ?? 0);
+
+    const { data: servicesData } = await supabase
+      .from("services")
+      .select("id,name,price,duration_minutes")
+      .order("name", { ascending: true })
+      .limit(3);
+
+    setPopularServices(
+      (servicesData ?? []).map((service) => ({
+        id: service.id,
+        name: service.name,
+        price: service.price ?? null,
+        durationMinutes: service.duration_minutes ?? null,
+      })),
+    );
 
     if (!bookingData) {
       setUpcoming(null);
@@ -172,62 +190,50 @@ export default function HomeScreen() {
     return timeFormatter.format(date);
   }, [upcoming]);
 
-  useFocusEffect(
-    useCallback(() => {
-      const intervalId = setInterval(() => {
-        const { contentWidth, containerWidth, offset } = galleryMetrics.current;
-        if (!galleryScrollRef.current || contentWidth <= containerWidth) {
-          return;
-        }
-        const maxOffset = contentWidth - containerWidth;
-        const nextOffset = offset + 160 > maxOffset ? 0 : offset + 160;
-        galleryMetrics.current.offset = nextOffset;
-        galleryScrollRef.current.scrollTo({ x: nextOffset, animated: true });
-      }, 3000);
-
-      return () => clearInterval(intervalId);
-    }, []),
-  );
+  const todayLabel = useMemo(() => {
+    const now = new Date();
+    return `${dayFormatter.format(now)}, ${dateFormatter.format(now)}`;
+  }, []);
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <StatusBar style="dark" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
       >
         <View className="mx-5 mt-3 flex-row items-center justify-between">
           <View>
             <View className="flex-row items-center">
-              <Text className="text-3xl mt-1 font-semibold text-slate-900">
+              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 Hi{profile?.first_name ? `, ${profile.first_name}` : ""}
               </Text>
               {isLoading ? (
                 <ActivityIndicator className="ml-3" size="small" />
               ) : null}
             </View>
-            <Text className="text-slate-600 text-base mt-1">
+            <Text className="text-neutral-500 text-base mt-1">
               Clean lines. Calm day.
             </Text>
           </View>
         </View>
 
-        <View className="mx-5 mt-6 rounded-3xl border border-slate-200 bg-white overflow-hidden relative">
-          <View className="absolute -left-3 top-24 h-6 w-6 rounded-full bg-slate-50 border border-slate-200" />
-          <View className="absolute -right-3 top-24 h-6 w-6 rounded-full bg-slate-50 border border-slate-200" />
+        <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white overflow-hidden relative">
+          <View className="absolute -left-3 top-24 h-6 w-6 rounded-full bg-neutral-50 border border-neutral-200" />
+          <View className="absolute -right-3 top-24 h-6 w-6 rounded-full bg-neutral-50 border border-neutral-200" />
           {isLoading ? (
             <View className="p-6 items-center justify-center">
-              <ActivityIndicator size="small" color="#0f172a" />
+              <ActivityIndicator size="small" color="#171717" />
             </View>
           ) : null}
           {!isLoading ? (
             <>
-              <View className="bg-slate-900 px-6 py-5">
+              <View className="bg-neutral-900 px-6 py-5">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-slate-200 text-[11px] tracking-[0.2em]">
+                  <Text className="text-neutral-200 text-[11px]">
                     Upcoming
                   </Text>
                   {upcoming ? (
@@ -257,7 +263,7 @@ export default function HomeScreen() {
                     <Text className="mt-3 text-3xl font-semibold text-white">
                       {dayLabel}
                     </Text>
-                    <Text className="text-lg text-slate-200">
+                    <Text className="text-lg text-neutral-200">
                       {timeLabel} · {upcoming.serviceName}
                     </Text>
                   </>
@@ -266,7 +272,7 @@ export default function HomeScreen() {
                     <Text className="mt-3 text-2xl font-semibold text-white">
                       No upcoming booking
                     </Text>
-                    <Text className="text-base text-slate-200 mt-2">
+                    <Text className="text-base text-neutral-200 mt-2">
                       Book a slot to see it here.
                     </Text>
                   </>
@@ -280,13 +286,13 @@ export default function HomeScreen() {
                         <Ionicons
                           name="cut-outline"
                           size={14}
-                          color="#64748b"
+                          color="#737373"
                         />
-                        <Text className="ml-2 text-xs text-slate-500 tracking-[0.2em]">
+                        <Text className="ml-2 text-xs text-neutral-500">
                           Service
                         </Text>
                       </View>
-                      <Text className="mt-1 text-base font-semibold text-slate-900">
+                      <Text className="mt-1 text-base font-semibold text-neutral-900">
                         {upcoming.serviceName}
                       </Text>
                     </View>
@@ -295,27 +301,27 @@ export default function HomeScreen() {
                         <Ionicons
                           name="person-outline"
                           size={14}
-                          color="#64748b"
+                          color="#737373"
                         />
-                        <Text className="ml-2 text-xs text-slate-500 tracking-[0.2em] text-right">
+                        <Text className="ml-2 text-xs text-neutral-500 text-right">
                           Barber
                         </Text>
                       </View>
-                      <Text className="mt-1 text-base font-semibold text-slate-900 text-right">
+                      <Text className="mt-1 text-base font-semibold text-neutral-900 text-right">
                         {upcoming.barberName}
                       </Text>
                     </View>
                   </View>
                   <TouchableOpacity
                     onPress={() => router.push("/(tabs)/booking")}
-                    className="mt-5 border border-slate-200 bg-slate-50 px-5 py-3 rounded-full w-full flex-row items-center justify-center"
+                    className="mt-5 border border-neutral-200 bg-neutral-50 px-5 py-3 rounded-full w-full flex-row items-center justify-center"
                   >
                     <Ionicons
                       name="calendar-outline"
                       size={16}
-                      color="#0f172a"
+                      color="#171717"
                     />
-                    <Text className="font-semibold text-slate-900 text-center ml-2">
+                    <Text className="font-semibold text-neutral-900 text-center ml-2">
                       Manage booking
                     </Text>
                   </TouchableOpacity>
@@ -324,14 +330,14 @@ export default function HomeScreen() {
                 <View className="p-6">
                   <TouchableOpacity
                     onPress={() => router.push("/(tabs)/booking")}
-                    className="bg-slate-900 px-5 py-3 rounded-full w-full flex-row items-center justify-center"
+                    className="bg-neutral-900 px-5 py-3 rounded-full w-full flex-row items-center justify-center"
                   >
                     <Ionicons
                       name="calendar-outline"
                       size={16}
-                      color="#f8fafc"
+                      color="#fafafa"
                     />
-                    <Text className="font-semibold text-slate-50 text-center ml-2">
+                    <Text className="font-semibold text-neutral-50 text-center ml-2">
                       Start booking
                     </Text>
                   </TouchableOpacity>
@@ -341,80 +347,138 @@ export default function HomeScreen() {
           ) : null}
         </View>
 
-        <View className="mx-5 mt-5 flex-row justify-between">
-          <View className="w-[31%] rounded-3xl bg-white border border-slate-200 p-4">
-            <View className="flex-row items-center">
-              <Ionicons name="time-outline" size={12} color="#64748b" />
-              <Text className="ml-2 text-[11px] tracking-[0.2em] text-slate-600">
-                Next
+        <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white p-4">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-lg font-semibold text-neutral-900">
+                Available today
+              </Text>
+              <Text className="mt-1 text-sm text-neutral-500">
+                {todayLabel}
               </Text>
             </View>
-            <Text className="mt-2 text-base font-semibold text-slate-900">
-              {upcoming ? timeLabel : "None"}
-            </Text>
-            <Text className="mt-1 text-xs text-slate-500">
-              {upcoming ? dayLabel : "Book now"}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/ai")}
-            className="w-[31%] rounded-3xl bg-slate-900 border border-slate-900 p-4"
-          >
-            <View className="flex-row items-center">
-              <Ionicons name="sparkles-outline" size={12} color="#e2e8f0" />
-              <Text className="ml-2 text-[11px] tracking-[0.2em] text-slate-200">
-                Try AI
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/booking")}
+              className="rounded-full bg-neutral-900 px-4 py-2.5"
+            >
+              <Text className="text-sm font-semibold text-white">
+                View times
               </Text>
-            </View>
-            <Text className="mt-2 text-base font-semibold text-white">
-              Suggest
-            </Text>
-            <Text className="mt-1 text-xs text-slate-300">New look</Text>
-          </TouchableOpacity>
-          <View className="w-[31%] rounded-3xl bg-white border border-slate-200 p-4">
-            <View className="flex-row items-center">
-              <Ionicons name="receipt-outline" size={12} color="#64748b" />
-              <Text className="ml-2 text-[11px] tracking-[0.2em] text-slate-600">
-                Total
-              </Text>
-            </View>
-            <Text className="mt-2 text-base font-semibold text-slate-900">
-              {totalBookings}
-            </Text>
-            <Text className="mt-1 text-xs text-slate-500">Bookings</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* <Text className="mx-5 mt-6 text-[11px] tracking-[0.2em] text-slate-600 font-semibold">
-          Gallery
-        </Text>
-        <ScrollView
-          ref={galleryScrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mt-4"
-          contentContainerStyle={{ paddingLeft: 18, paddingRight: 12 }}
-          onContentSizeChange={(width) => {
-            galleryMetrics.current.contentWidth = width;
-          }}
-          onLayout={(event) => {
-            galleryMetrics.current.containerWidth =
-              event.nativeEvent.layout.width;
-          }}
-          onScroll={(event) => {
-            galleryMetrics.current.offset = event.nativeEvent.contentOffset.x;
-          }}
-          scrollEventThrottle={16}
-        >
-          {["bg-slate-200", "bg-slate-300", "bg-slate-100", "bg-slate-200"].map(
-            (bgClass, index) => (
-              <View
-                key={`${bgClass}-${index}`}
-                className={`mr-4 h-40 w-32 rounded-3xl ${bgClass}`}
-              />
-            )
-          )}
-        </ScrollView> */}
+        <View className="mx-5 mt-6">
+          <Text className="text-lg font-semibold text-neutral-900">
+            Quick actions
+          </Text>
+          <View className="mt-3 flex-row gap-3">
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/booking")}
+              className="flex-1 rounded-3xl border border-neutral-200 bg-white p-4"
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-900">
+                <Ionicons name="calendar-outline" size={18} color="#ffffff" />
+              </View>
+              <Text className="mt-3 text-sm font-semibold text-neutral-900">
+                Book
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/ai")}
+              className="flex-1 rounded-3xl border border-neutral-900 bg-neutral-900 p-4"
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-white/10">
+                <Ionicons name="sparkles-outline" size={18} color="#ffffff" />
+              </View>
+              <Text className="mt-3 text-sm font-semibold text-white">
+                AI Style
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              disabled
+              className="flex-1 rounded-3xl border border-neutral-200 bg-white p-4 opacity-60"
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                <Ionicons name="people-outline" size={18} color="#525252" />
+              </View>
+              <Text className="mt-3 text-sm font-semibold text-neutral-900">
+                Queue
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View className="mx-5 mt-6">
+          <Text className="text-lg font-semibold text-neutral-900">
+            Popular services
+          </Text>
+          <View className="mt-3 gap-3">
+            {(popularServices.length ? popularServices : [
+              {
+                id: "signature-cut",
+                name: "Signature Cut",
+                price: null,
+                durationMinutes: null,
+              },
+              {
+                id: "skin-fade",
+                name: "Skin Fade",
+                price: null,
+                durationMinutes: null,
+              },
+              {
+                id: "beard-line-up",
+                name: "Beard Line-Up",
+                price: null,
+                durationMinutes: null,
+              },
+            ]).map((service) => (
+              <TouchableOpacity
+                key={service.id}
+                onPress={() => router.push("/(tabs)/booking")}
+                className="rounded-3xl border border-neutral-200 bg-white p-4"
+              >
+                <View className="flex-row items-center justify-between">
+                  <View>
+                    <Text className="font-semibold text-neutral-900">
+                      {service.name}
+                    </Text>
+                    <Text className="mt-1 text-sm text-neutral-500">
+                      {service.durationMinutes
+                        ? `${service.durationMinutes} min`
+                        : "Book for details"}
+                    </Text>
+                  </View>
+                  <Text className="font-semibold text-neutral-900">
+                    {service.price ? `RM${service.price}` : ""}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white p-4">
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-neutral-900">
+                Shop status
+              </Text>
+              <Text className="mt-1 text-sm text-neutral-500">
+                Check booking times for the latest availability today.
+              </Text>
+              <Text className="mt-3 text-sm text-neutral-500">
+                Total bookings: {totalBookings}
+              </Text>
+            </View>
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+              <Ionicons name="storefront-outline" size={18} color="#525252" />
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );

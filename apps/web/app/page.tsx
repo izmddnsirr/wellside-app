@@ -206,7 +206,7 @@ export default async function CustomerHome() {
 
       <footer className="mt-8 w-full border-t border-border/60 bg-card/80">
         <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-          <div className="grid gap-6 text-sm md:grid-cols-3 md:items-start">
+          <div className="flex flex-col gap-6 text-sm md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase text-foreground/70">
                 Operation Hours
@@ -278,7 +278,7 @@ export default async function CustomerHome() {
                 <li className="text-muted-foreground">Taman Teratai,</li>
                 <li className="text-muted-foreground">81300 Kulai,</li>
                 <li className="text-muted-foreground">
-                  Johor Darul Ta&apos;zim, Malaysia
+                  Johor Darul Ta&apos;zim
                 </li>
               </ul>
             </div>

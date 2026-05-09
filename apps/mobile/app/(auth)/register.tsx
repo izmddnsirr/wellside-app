@@ -57,7 +57,7 @@ export default function RegisterScreen() {
 
   return (
     <View
-      className="flex-1 px-5 bg-slate-50"
+      className="flex-1 px-5 bg-neutral-50"
       style={{ paddingTop: insets.top }}
     >
       <KeyboardAvoidingView
@@ -73,20 +73,20 @@ export default function RegisterScreen() {
           <View>
             {/* Top Header */}
             <View className="mt-3">
-              <Text className="text-3xl mt-1 font-semibold text-slate-900">
+              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 Create account.
               </Text>
-              <Text className="text-slate-600 text-base mt-1 mb-6">
+              <Text className="text-neutral-500 text-base mt-1 mb-6">
                 Your personal barber.
               </Text>
             </View>
 
             {/* EMAIL */}
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Email
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -95,12 +95,12 @@ export default function RegisterScreen() {
             />
 
             {/* PASSWORD */}
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Password
             </Text>
             <View className="relative mb-6">
               <TextInput
-                className="bg-white border border-slate-200 rounded-3xl p-5 pr-12 text-base leading-5 text-slate-900"
+                className="bg-white border border-neutral-200 rounded-3xl p-5 pr-12 text-base leading-5 text-neutral-900"
                 placeholder="Enter your password"
                 secureTextEntry={!isPasswordVisible}
                 autoCapitalize="none"
@@ -120,18 +120,18 @@ export default function RegisterScreen() {
                 <Ionicons
                   name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
                   size={22}
-                  color="#0f172a"
+                  color="#171717"
                 />
               </Pressable>
             </View>
 
             {/* CONFIRM PASSWORD */}
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Confirm Password
             </Text>
             <View className="relative mb-6">
               <TextInput
-                className="bg-white border border-slate-200 rounded-3xl p-5 pr-12 text-base leading-5 text-slate-900"
+                className="bg-white border border-neutral-200 rounded-3xl p-5 pr-12 text-base leading-5 text-neutral-900"
                 placeholder="Confirm your password"
                 secureTextEntry={!isConfirmPasswordVisible}
                 autoCapitalize="none"
@@ -155,7 +155,7 @@ export default function RegisterScreen() {
                     isConfirmPasswordVisible ? "eye-off-outline" : "eye-outline"
                   }
                   size={22}
-                  color="#0f172a"
+                  color="#171717"
                 />
               </Pressable>
             </View>
@@ -167,7 +167,7 @@ export default function RegisterScreen() {
             {/* Register Button */}
             <Pressable
               onPress={onRegister}
-              className="bg-slate-900 p-4 mt-2 rounded-full active:opacity-80 mb-6"
+              className="bg-neutral-900 p-4 mt-2 rounded-full active:opacity-80 mb-6"
             >
               <Text className="text-center text-white font-semibold text-lg">
                 Next
@@ -176,11 +176,11 @@ export default function RegisterScreen() {
 
             {/* Login Link */}
             <View className="flex-row justify-center mb-4">
-              <Text className="text-base text-slate-600">
+              <Text className="text-base text-neutral-500">
                 Already have an account?{" "}
               </Text>
               <Pressable onPress={() => router.back()}>
-                <Text className="text-base font-semibold text-slate-900">
+                <Text className="text-base font-semibold text-neutral-900">
                   Login
                 </Text>
               </Pressable>

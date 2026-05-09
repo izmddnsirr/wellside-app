@@ -30,7 +30,7 @@ export function BookingConfirmationEmail({
           style={{
             display: "none",
             fontSize: "1px",
-            color: "#f8fafc",
+            color: "#fafafa",
             lineHeight: "1px",
             maxHeight: "0px",
             maxWidth: "0px",

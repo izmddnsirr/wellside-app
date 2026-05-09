@@ -361,6 +361,13 @@ export default function ConfirmingBookingScreen() {
     }
 
     const operatingRules = await loadShopOperatingRules(supabase);
+    if (!operatingRules.bookingEnabled) {
+      setPhase("error");
+      setErrorMessage("Online booking is currently paused.");
+      finalizeRequestedRef.current = false;
+      return;
+    }
+
     const shopStatus = evaluateShopDateStatus(
       startAt,
       operatingRules.weeklySchedule,
@@ -555,14 +562,14 @@ export default function ConfirmingBookingScreen() {
   };
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center justify-between px-5 pt-3">
         <Pressable
           onPress={handleCancel}
           className="h-10 w-10 items-center justify-center"
           hitSlop={10}
         >
-          <Ionicons name="arrow-back" size={22} color="#0f172a" />
+          <Ionicons name="arrow-back" size={22} color="#171717" />
         </Pressable>
         <Pressable
           onPress={() => {
@@ -572,24 +579,24 @@ export default function ConfirmingBookingScreen() {
           className="h-10 w-10 items-center justify-center"
           hitSlop={10}
         >
-          <Ionicons name="close" size={24} color="#0f172a" />
+          <Ionicons name="close" size={24} color="#171717" />
         </Pressable>
       </View>
 
       <View className="px-5 pt-2">
-        <Text className="text-3xl font-semibold text-slate-900">
+        <Text className="text-3xl font-semibold text-neutral-900">
           Confirming booking
         </Text>
-        <Text className="mt-2 text-base text-slate-600">
+        <Text className="mt-2 text-base text-neutral-500">
           Confirming your booking… You have 5 seconds to cancel.
         </Text>
       </View>
 
       <View className="mt-6 px-5">
-        <View className="rounded-3xl border border-slate-200 bg-white p-5">
-          <View className="h-3 overflow-hidden rounded-full bg-slate-200">
+        <View className="rounded-3xl border border-neutral-200 bg-white p-5">
+          <View className="h-3 overflow-hidden rounded-full bg-neutral-200">
             <Animated.View
-              className="h-3 rounded-full bg-slate-900"
+              className="h-3 rounded-full bg-neutral-900"
               style={{
                 width: progressAnim.interpolate({
                   inputRange: [0, 1],
@@ -599,16 +606,16 @@ export default function ConfirmingBookingScreen() {
             />
           </View>
           <View className="mt-3 flex-row items-center justify-between">
-            <Text className="text-sm text-slate-500">Time remaining</Text>
-            <Text className="text-sm font-semibold text-slate-900">
+            <Text className="text-sm text-neutral-500">Time remaining</Text>
+            <Text className="text-sm font-semibold text-neutral-900">
               {secondsLeft}s
             </Text>
           </View>
 
           {phase === "confirming" ? (
             <View className="mt-5 flex-row items-center">
-              <ActivityIndicator color="#0f172a" />
-              <Text className="ml-3 text-sm text-slate-600">
+              <ActivityIndicator color="#171717" />
+              <Text className="ml-3 text-sm text-neutral-500">
                 Finalizing your booking…
               </Text>
             </View>

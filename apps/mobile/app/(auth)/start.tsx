@@ -37,30 +37,30 @@ export default function StartScreen() {
             elevation: 10,
           }}
         >
-          {/* <Text className="text-center text-2xl font-semibold text-slate-900">
+          {/* <Text className="text-center text-2xl font-semibold text-neutral-900">
             Log in with
           </Text> */}
 
-          <Text className="text-center text-2xl font-semibold text-slate-900">
+          <Text className="text-center text-2xl font-semibold text-neutral-900">
             Lets get started.
           </Text>
 
           {/* <Pressable
             onPress={onGoogleLogin}
-            className="mt-6 h-16 w-full items-center justify-center rounded-full border border-slate-300 active:opacity-80"
+            className="mt-6 h-16 w-full items-center justify-center rounded-full border border-neutral-300 active:opacity-80"
           >
             <AntDesign name="google" size={22} color="#4285F4" />
           </Pressable> */}
 
           {/* <View className="mt-6 flex-row items-center justify-center">
-            <View className="h-px w-10 bg-slate-200" />
-            <Text className="mx-4 text-base text-slate-400">or</Text>
-            <View className="h-px w-10 bg-slate-200" />
+            <View className="h-px w-10 bg-neutral-200" />
+            <Text className="mx-4 text-base text-neutral-400">or</Text>
+            <View className="h-px w-10 bg-neutral-200" />
           </View> */}
 
           <Pressable
             onPress={onEmailContinue}
-            className="mt-6 h-16 w-full flex-row items-center justify-center rounded-full border border-slate-300 active:opacity-80 bg-slate-900"
+            className="mt-6 h-16 w-full flex-row items-center justify-center rounded-full border border-neutral-300 active:opacity-80 bg-neutral-900"
           >
             <Ionicons name="mail-outline" size={20} color="#ffffff" />
             <Text className="ml-3 text-base font-semibold text-white">
@@ -69,7 +69,7 @@ export default function StartScreen() {
           </Pressable>
 
           <View className="mt-8 items-center">
-            <Text className="text-center text-sm text-slate-400">
+            <Text className="text-center text-sm text-neutral-400">
               By continuing, you agree to our Terms &amp; Privacy Policy.
             </Text>
           </View>

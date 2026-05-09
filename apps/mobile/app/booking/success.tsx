@@ -65,7 +65,7 @@ export default function BookingSuccessScreen() {
     : "Duration unavailable";
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 140 }}
@@ -81,24 +81,24 @@ export default function BookingSuccessScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="close" size={24} color="#0f172a" />
+            <Ionicons name="close" size={24} color="#171717" />
           </Pressable>
         </View>
 
         <View className="px-5 pt-2">
-          <Text className="text-3xl font-semibold text-slate-900">
+          <Text className="text-3xl font-semibold text-neutral-900">
             Booking confirmed
           </Text>
-          <Text className="mt-2 text-base text-slate-600">
+          <Text className="mt-2 text-base text-neutral-500">
             We’ve locked in your slot. See you soon.
           </Text>
         </View>
 
         <View className="mt-6 px-5">
-          <View className="rounded-3xl border border-slate-200 bg-white overflow-hidden">
-            <View className="bg-slate-900 px-5 py-4">
+          <View className="rounded-3xl border border-neutral-200 bg-white overflow-hidden">
+            <View className="bg-neutral-900 px-5 py-4">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xs font-semibold tracking-[0.2em] text-slate-300">
+                <Text className="text-xs font-semibold text-neutral-300">
                   CONFIRMED
                 </Text>
                 <View className="h-8 w-8 items-center justify-center rounded-full bg-white/10">
@@ -108,38 +108,38 @@ export default function BookingSuccessScreen() {
               <Text className="mt-2 text-lg font-semibold text-white">
                 {dateLabel}
               </Text>
-              <Text className="mt-1 text-sm text-slate-300">{slotLabel}</Text>
+              <Text className="mt-1 text-sm text-neutral-300">{slotLabel}</Text>
             </View>
 
             <View className="px-5 py-4">
-              <Text className="text-xs font-semibold text-slate-500 tracking-[0.2em]">
+              <Text className="text-xs font-semibold text-neutral-500">
                 Appointment
               </Text>
               <View className="mt-3 flex-row items-center">
-                <Ionicons name="person-outline" size={18} color="#0f172a" />
-                <Text className="ml-3 text-base font-semibold text-slate-900">
+                <Ionicons name="person-outline" size={18} color="#171717" />
+                <Text className="ml-3 text-base font-semibold text-neutral-900">
                   {barberName}
                 </Text>
               </View>
               <View className="mt-3 flex-row items-center">
-                <Ionicons name="construct-outline" size={18} color="#0f172a" />
-                <Text className="ml-3 text-base font-semibold text-slate-900">
+                <Ionicons name="construct-outline" size={18} color="#171717" />
+                <Text className="ml-3 text-base font-semibold text-neutral-900">
                   {selectedService?.name ?? "Service"}
                 </Text>
               </View>
               <View className="mt-2 flex-row items-center">
-                <Ionicons name="time-outline" size={18} color="#0f172a" />
-                <Text className="ml-3 text-sm text-slate-600">
+                <Ionicons name="time-outline" size={18} color="#171717" />
+                <Text className="ml-3 text-sm text-neutral-500">
                   {durationLabel}
                 </Text>
               </View>
 
               {bookingCode ? (
-                <View className="mt-4 rounded-2xl bg-slate-100 px-4 py-3">
-                  <Text className="text-xs font-semibold text-slate-500 tracking-[0.2em]">
+                <View className="mt-4 rounded-2xl bg-neutral-100 px-4 py-3">
+                  <Text className="text-xs font-semibold text-neutral-500">
                     Booking code
                   </Text>
-                  <Text className="mt-2 text-lg font-semibold text-slate-900">
+                  <Text className="mt-2 text-lg font-semibold text-neutral-900">
                     {bookingCode}
                   </Text>
                 </View>
@@ -150,7 +150,7 @@ export default function BookingSuccessScreen() {
       </ScrollView>
 
       <View
-        className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white px-5 py-4"
+        className="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white px-5 py-4"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
         <Pressable
@@ -159,7 +159,7 @@ export default function BookingSuccessScreen() {
             router.dismissAll();
             router.replace("/(tabs)/booking");
           }}
-          className="rounded-full bg-slate-900 px-6 py-4 mb-2"
+          className="rounded-full bg-neutral-900 px-6 py-4 mb-2"
         >
           <Text className="text-center text-base font-semibold text-white">
             Done

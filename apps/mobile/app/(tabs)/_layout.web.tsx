@@ -6,11 +6,11 @@ export default function WebTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#0f172a",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: "#171717",
+        tabBarInactiveTintColor: "#737373",
         tabBarStyle: {
-          backgroundColor: "#f8fafc",
-          borderTopColor: "#e2e8f0",
+          backgroundColor: "#fafafa",
+          borderTopColor: "#e5e5e5",
           borderTopWidth: 1,
           height: 70,
           paddingBottom: 10,
@@ -19,7 +19,6 @@ export default function WebTabLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
-          letterSpacing: 0.2,
         },
       }}
     >

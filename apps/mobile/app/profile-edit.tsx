@@ -151,7 +151,7 @@ export default function ProfileEditScreen() {
   };
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -162,53 +162,53 @@ export default function ProfileEditScreen() {
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
-            <Ionicons name="arrow-back" size={22} color="#0f172a" />
+            <Ionicons name="arrow-back" size={22} color="#171717" />
           </Pressable>
           <View className="h-10 w-10" />
         </View>
 
         <View className="px-5 pt-2">
-          <Text className="text-3xl font-semibold text-slate-900">
+          <Text className="text-3xl font-semibold text-neutral-900">
             Edit profile
           </Text>
-          <Text className="mt-1 text-base text-slate-600">
+          <Text className="mt-1 text-base text-neutral-500">
             Update your details
           </Text>
         </View>
 
         {isLoading ? (
           <View className="mt-10 items-center">
-            <ActivityIndicator size="small" color="#111827" />
+            <ActivityIndicator size="small" color="#171717" />
           </View>
         ) : (
           <View className="px-5 pt-7">
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               First Name
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your first name"
               autoCapitalize="words"
               value={firstName}
               onChangeText={setFirstName}
             />
 
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Last Name
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your last name"
               autoCapitalize="words"
               value={lastName}
               onChangeText={setLastName}
             />
 
-            <Text className="text-xs font-semibold text-slate-600 mb-3 tracking-[0.2em]">
+            <Text className="text-xs font-semibold text-neutral-500 mb-3">
               Phone Number
             </Text>
             <TextInput
-              className="bg-white border border-slate-200 rounded-3xl p-5 text-base leading-5 mb-6 text-slate-900"
+              className="bg-white border border-neutral-200 rounded-3xl p-5 text-base leading-5 mb-6 text-neutral-900"
               placeholder="Enter your phone number"
               keyboardType="phone-pad"
               autoCapitalize="none"
@@ -219,7 +219,7 @@ export default function ProfileEditScreen() {
             <TouchableOpacity
               onPress={onSave}
               disabled={isSaving}
-              className={`bg-slate-900 p-4 rounded-full active:opacity-80 ${
+              className={`bg-neutral-900 p-4 rounded-full active:opacity-80 ${
                 isSaving ? "opacity-60" : ""
               }`}
             >

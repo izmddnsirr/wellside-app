@@ -111,7 +111,7 @@ export default function NotificationScreen() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <View className="flex-1 bg-slate-50" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -121,22 +121,22 @@ export default function NotificationScreen() {
       >
         <View className="mx-5 mt-3 flex-row justify-between items-center">
           <View>
-            <Text className="text-3xl mt-1 font-semibold text-slate-900">
+            <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Notifications
             </Text>
-            <Text className="text-slate-600 text-base mt-1">
+            <Text className="text-neutral-500 text-base mt-1">
               {unreadCount > 0
                 ? `${unreadCount} unread`
                 : "You're all caught up"}
             </Text>
           </View>
-          {isLoading && <ActivityIndicator size="small" color="#0f172a" />}
+          {isLoading && <ActivityIndicator size="small" color="#171717" />}
         </View>
 
         <View className="mx-5 mt-6 gap-3">
           {!isLoading && notifications.length === 0 ? (
-            <View className="rounded-3xl border border-dashed border-slate-200 bg-white p-6">
-              <Text className="text-slate-600 text-base">
+            <View className="rounded-3xl border border-dashed border-neutral-200 bg-white p-6">
+              <Text className="text-neutral-500 text-base">
                 No notifications yet.
               </Text>
             </View>
@@ -147,30 +147,30 @@ export default function NotificationScreen() {
               key={item.id}
               className={`rounded-3xl border p-5 ${
                 item.read
-                  ? "bg-white border-slate-200"
-                  : "bg-white border-slate-900"
+                  ? "bg-white border-neutral-200"
+                  : "bg-white border-neutral-900"
               }`}
             >
               <View className="flex-row items-start justify-between gap-3">
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2">
                     {!item.read && (
-                      <View className="h-2 w-2 rounded-full bg-slate-900" />
+                      <View className="h-2 w-2 rounded-full bg-neutral-900" />
                     )}
                     <Text
                       className={`text-base font-semibold ${
-                        item.read ? "text-slate-700" : "text-slate-900"
+                        item.read ? "text-neutral-700" : "text-neutral-900"
                       }`}
                     >
                       {item.title}
                     </Text>
                   </View>
-                  <Text className="mt-1 text-sm text-slate-500 leading-5">
+                  <Text className="mt-1 text-sm text-neutral-500 leading-5">
                     {item.body}
                   </Text>
                 </View>
               </View>
-              <Text className="mt-3 text-xs text-slate-400">
+              <Text className="mt-3 text-xs text-neutral-400">
                 {timeAgo(item.created_at)}
               </Text>
             </View>
