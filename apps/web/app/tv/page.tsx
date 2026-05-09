@@ -1,18 +1,14 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 function TvAccessForm() {
-  const searchParams = useSearchParams();
   const [pin, setPin] = useState("");
-  const [error, setError] = useState(searchParams.get("error") === "invalid");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (pin.length !== 6) return;
-    setError(false);
     setLoading(true);
 
     const res = await fetch("/tv/verify", {
@@ -24,7 +20,6 @@ function TvAccessForm() {
     if (res.ok) {
       window.location.href = "/tv/display";
     } else {
-      setError(true);
       setLoading(false);
     }
   };
@@ -56,7 +51,6 @@ function TvAccessForm() {
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, "");
                   setPin(val);
-                  setError(false);
                 }}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-center text-[15px] tracking-[0.3em] font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring"
               />

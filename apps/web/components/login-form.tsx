@@ -1,3 +1,5 @@
+import type { ComponentProps } from "react";
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -7,7 +9,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 export function LoginForm({
   className,
   ...props
-}: React.ComponentProps<"form">) {
+}: ComponentProps<"form">) {
   return (
     <form className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup>
