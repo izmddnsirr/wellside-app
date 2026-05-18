@@ -1,0 +1,165 @@
+@media print {
+  /* Hide everything not needed */
+  [data-sidebar],
+  [data-slot="sidebar"],
+  nav,
+  header,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 16mm 14mm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Print header with logo */
+  .print-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #111;
+    padding-bottom: 10px;
+    margin-bottom: 18px;
+  }
+
+  .print-header img {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .print-header-info {
+    text-align: right;
+  }
+
+  .print-header-info h1 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
+  .print-header-info p {
+    font-size: 11px;
+    color: #555;
+    margin: 2px 0 0;
+  }
+
+  /* Section headings */
+  .print-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+    margin: 18px 0 8px;
+  }
+
+  /* Page breaks */
+  .print-page-break {
+    page-break-before: always;
+  }
+
+  /* Table base */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5px;
+  }
+
+  thead tr {
+    background: #f3f3f3 !important;
+  }
+
+  thead th {
+    padding: 5px 8px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #555;
+    border-bottom: 1px solid #ccc;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #eee;
+  }
+
+  tbody td {
+    padding: 5px 8px;
+    vertical-align: middle;
+  }
+
+  /* Monospace / Courier for all number columns */
+  .print-num {
+    font-family: "Courier New", Courier, monospace !important;
+    text-align: right !important;
+  }
+
+  /* Cards — hide in print, we use compact summary instead */
+  .print-summary-table {
+    display: table !important;
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+  }
+
+  .print-summary-table td {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    font-size: 10.5px;
+    width: 25%;
+  }
+
+  .print-summary-table td .summary-label {
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #777;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .print-summary-table td .summary-value {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 13px;
+    font-weight: 700;
+    display: block;
+  }
+
+  .print-summary-table td .summary-delta {
+    font-size: 8.5px;
+    color: #666;
+    display: block;
+    margin-top: 1px;
+  }
+
+  /* Remove card shadows/borders */
+  [data-slot="card"] {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* Tabs — hide tab buttons, show all content */
+  [role="tablist"] {
+    display: none !important;
+  }
+
+  [role="tabpanel"] {
+    display: block !important;
+    opacity: 1 !important;
+  }
+}

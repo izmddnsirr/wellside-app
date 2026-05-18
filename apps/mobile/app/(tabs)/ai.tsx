@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
+import HairstyleDictionaryModal from "../hairstyle-dictionary-modal";
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +30,7 @@ type HairstyleSuggestion = {
 type HairAnalysisResult = {
   face_shape: string;
   hair_type: string;
+  gender?: string;
   suggestions: HairstyleSuggestion[];
 };
 
@@ -207,6 +209,8 @@ export default function AIScreen() {
       (isUnknownValue(analysisResult.hair_type) ||
         isCoveredHairValue(analysisResult.hair_type))
   );
+
+  const [isDictionaryVisible, setIsDictionaryVisible] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
@@ -436,6 +440,7 @@ export default function AIScreen() {
         body: {
           faceShape: analysisResult.face_shape,
           hairType,
+          gender: analysisResult.gender,
         },
       });
 
@@ -562,13 +567,31 @@ export default function AIScreen() {
       >
         {/* Header */}
         <View className="mx-5 mt-3">
-          <Text className="text-3xl mt-1 font-semibold text-neutral-900">
-            AI Style Studio
-          </Text>
-          <Text className="text-neutral-500 text-base mt-1">
-            Upload a photo for tailored cut suggestions.
-          </Text>
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
+                AI Style Studio
+              </Text>
+              <Text className="text-neutral-500 text-base mt-1">
+                Upload a photo for tailored cut suggestions.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setIsDictionaryVisible(true)}
+              className="mt-2 ml-3 flex-row items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-2"
+            >
+              <Ionicons name="book-outline" size={14} color="#171717" />
+              <Text className="text-xs font-semibold text-neutral-900">
+                Gaya MY
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <HairstyleDictionaryModal
+          visible={isDictionaryVisible}
+          onClose={() => setIsDictionaryVisible(false)}
+        />
 
         {/* Upload */}
         <View className="mx-5 mt-6">

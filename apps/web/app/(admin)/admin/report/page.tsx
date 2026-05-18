@@ -18,7 +18,10 @@ import {
 import { createAdminClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 import { ReportMonthPicker } from "./report-month-picker";
+import { ReportExportButtons } from "./report-export-buttons";
+import "./print.css";
 
 type Relation<T> = T | T[] | null;
 
@@ -530,10 +533,27 @@ export default async function Page({ searchParams }: ReportPageProps) {
 
   return (
     <AdminShell title="Reports">
-      <div className="px-4 lg:px-6">
+      <div className="px-4 lg:px-6" id="report-content">
         <div className="space-y-4 md:space-y-6">
-          <section className="flex justify-end">
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+
+          {/* Print-only header with logo */}
+          <div className="print-header hidden">
+            <Image
+              src="/wellside-logo.png"
+              alt="Wellside Barbershop"
+              width={120}
+              height={36}
+              className="object-contain"
+              priority
+            />
+            <div className="print-header-info">
+              <h1>Sales Report</h1>
+              <p>{monthHeading}</p>
+            </div>
+          </div>
+
+          <section className="flex items-center justify-between print-hide">
+          <div className="flex gap-2">
             <ReportMonthPicker
               selectedMonth={selectedMonthValue}
               dataMonths={dataMonths}
@@ -548,6 +568,16 @@ export default async function Page({ searchParams }: ReportPageProps) {
               <Link href="/admin/report">Current</Link>
             </Button>
           </div>
+          <ReportExportButtons
+            monthHeading={monthHeading}
+            selectedMonthValue={selectedMonthValue}
+            dailyRows={dailyRows}
+            weeklyRows={weeklyRows}
+            topBarbers={topBarbers}
+            topServices={topServices}
+            topProducts={topProducts}
+            summaryCards={summaryCards}
+          />
           </section>
 
           {hasError ? (
@@ -561,7 +591,8 @@ export default async function Page({ searchParams }: ReportPageProps) {
             </p>
           ) : null}
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* Screen: summary cards */}
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 print-hide">
             {summaryCards.map((card) => (
               <Card key={card.label}>
                 <CardHeader className="space-y-1 pb-3">
@@ -575,16 +606,32 @@ export default async function Page({ searchParams }: ReportPageProps) {
             ))}
           </section>
 
+          {/* Print-only: compact summary table */}
+          <table className="print-summary-table hidden">
+            <tbody>
+              <tr>
+                {summaryCards.map((card) => (
+                  <td key={card.label}>
+                    <span className="summary-label">{card.label}</span>
+                    <span className="summary-value">{card.value}</span>
+                    <span className="summary-delta">{card.delta}</span>
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+
           <Tabs defaultValue="daily" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 sm:w-90">
+          <TabsList className="grid w-full grid-cols-3 sm:w-90 print-hide">
             <TabsTrigger value="daily">Daily</TabsTrigger>
             <TabsTrigger value="weekly">Weekly</TabsTrigger>
             <TabsTrigger value="monthly">Monthly</TabsTrigger>
           </TabsList>
 
           <TabsContent value="daily" className="space-y-4">
+            <p className="print-section-title hidden">Daily Breakdown</p>
             <Card>
-              <CardHeader>
+              <CardHeader className="print-hide">
                 <CardTitle>Daily Breakdown</CardTitle>
                 <CardDescription>
                   Daily performance across {monthHeading}. Values are based on booking date and paid ticket date.
@@ -616,16 +663,16 @@ export default async function Page({ searchParams }: ReportPageProps) {
                           <TableCell className={`${reportTableCellClass} font-medium`}>
                             {row.dayLabel}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {row.bookings}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {row.paidTickets}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {formatCurrency(row.sales)}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {formatCurrency(toAverageTicket(row.sales, row.paidTickets))}
                           </TableCell>
                         </TableRow>
@@ -637,9 +684,10 @@ export default async function Page({ searchParams }: ReportPageProps) {
             </Card>
           </TabsContent>
 
-          <TabsContent value="weekly" className="space-y-4">
+          <TabsContent value="weekly" className="space-y-4 print-page-break">
+            <p className="print-section-title hidden">Weekly Summary</p>
             <Card>
-              <CardHeader>
+              <CardHeader className="print-hide">
                 <CardTitle>Weekly Summary</CardTitle>
                 <CardDescription>
                   Weeks are grouped by calendar week (Mon-Sun) within {monthHeading}.
@@ -671,16 +719,16 @@ export default async function Page({ searchParams }: ReportPageProps) {
                           <TableCell className={`${reportTableCellClass} font-medium`}>
                             {row.weekLabel}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {row.bookings}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {row.paidTickets}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {formatCurrency(row.sales)}
                           </TableCell>
-                          <TableCell className={reportTableCellClass}>
+                          <TableCell className={`${reportTableCellClass} print-num`}>
                             {formatCurrency(toAverageTicket(row.sales, row.paidTickets))}
                           </TableCell>
                         </TableRow>
@@ -692,7 +740,7 @@ export default async function Page({ searchParams }: ReportPageProps) {
             </Card>
           </TabsContent>
 
-          <TabsContent value="monthly" className="space-y-4">
+          <TabsContent value="monthly" className="space-y-4 print-page-break">
             <div className="grid gap-4 xl:grid-cols-2">
               <Card>
                 <CardHeader>
@@ -722,10 +770,10 @@ export default async function Page({ searchParams }: ReportPageProps) {
                               <TableCell className={`${reportTableCellClass} font-medium`}>
                                 {row.name}
                               </TableCell>
-                              <TableCell className={reportTableCellClass}>
+                              <TableCell className={`${reportTableCellClass} print-num`}>
                                 {row.paidTickets}
                               </TableCell>
-                              <TableCell className={reportTableCellClass}>
+                              <TableCell className={`${reportTableCellClass} print-num`}>
                                 {formatCurrency(row.sales)}
                               </TableCell>
                             </TableRow>
@@ -774,10 +822,10 @@ export default async function Page({ searchParams }: ReportPageProps) {
                               <TableCell className={`${reportTableCellClass} font-medium`}>
                                 {row.name}
                               </TableCell>
-                              <TableCell className={reportTableCellClass}>
+                              <TableCell className={`${reportTableCellClass} print-num`}>
                                 {row.qty}
                               </TableCell>
-                              <TableCell className={reportTableCellClass}>
+                              <TableCell className={`${reportTableCellClass} print-num`}>
                                 {formatCurrency(row.sales)}
                               </TableCell>
                             </TableRow>
@@ -826,10 +874,10 @@ export default async function Page({ searchParams }: ReportPageProps) {
                               <TableCell className={`${reportTableCellClass} font-medium`}>
                                 {row.name}
                               </TableCell>
-                              <TableCell className={reportTableCellClass}>
+                              <TableCell className={`${reportTableCellClass} print-num`}>
                                 {row.qty}
                               </TableCell>
-                              <TableCell className={reportTableCellClass}>
+                              <TableCell className={`${reportTableCellClass} print-num`}>
                                 {formatCurrency(row.sales)}
                               </TableCell>
                             </TableRow>

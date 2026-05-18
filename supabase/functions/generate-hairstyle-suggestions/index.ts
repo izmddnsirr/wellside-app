@@ -66,11 +66,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { faceShape, hairType } = await req.json();
+    const { faceShape, hairType, gender } = await req.json();
 
     if (typeof faceShape !== "string" || typeof hairType !== "string") {
       return jsonResponse({ error: "faceShape and hairType are required" }, 400);
     }
+
+    const detectedGender = typeof gender === "string" ? gender : "unknown";
+    const isMale = detectedGender === "male";
+
+    const maleStyles =
+      "Two-Block, Edgar Cut, Undercut Fade, Crop Taper, Textured Fringe, High Fade, Burst Fade, Slick Back, or Pompadour Fade popular at Malaysian barbershops. For bald hair type, suggest clean shave maintenance, buzz cut, or beard styling grooming tips.";
+
+    const femaleStyles =
+      "Korean Bob, Curtain Bangs, Rebonding Straight, Layer Cut, Wolf Cut, Butterfly Cut, C-Curl Blowdry, or Wispy Fringe popular at Malaysian salons. Suggest styles that are practical for Malaysia's hot and humid weather and suit daily wear.";
 
     const payload = {
       modelId,
@@ -83,8 +92,9 @@ Deno.serve(async (req) => {
                 "Return ONLY valid JSON for hairstyle suggestions. " +
                 "Use this exact shape: " +
                 '{"suggestions":[{"name":"","description":"","suits_because":"","example_search_query":""}]}. ' +
-                `The user has a ${faceShape} face shape and ${hairType} hair. ` +
-                "Give exactly 3 practical hairstyle or grooming suggestions based on both face shape and hair type. If hairType is bald, suggest clean-shaven or shaved-scalp grooming options. Make each example_search_query a short Google Images search phrase for that hairstyle.",
+                `The user appears to be ${isMale ? "male" : "female"} with a ${faceShape} face shape and ${hairType} hair. ` +
+                `Give exactly 3 hairstyle or grooming suggestions that are popular in Malaysia — specifically: ${isMale ? maleStyles : femaleStyles} ` +
+                "Consider Malaysia's hot and humid climate and recommend styles that are practical and easy to maintain. Make each example_search_query a short Google Images search phrase for that hairstyle popular in Malaysia.",
             },
           ],
         },

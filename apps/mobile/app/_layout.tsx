@@ -7,6 +7,7 @@ import {
 } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BookingProvider } from "../context/BookingContext";
 import { OnboardingProvider } from "../context/OnboardingContext";
@@ -65,6 +66,7 @@ export default function RootLayout() {
   }, [navigationState?.key, isSessionReady, segments, session, router]);
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <OnboardingProvider>
         <BookingProvider>
@@ -103,5 +105,6 @@ export default function RootLayout() {
         </BookingProvider>
       </OnboardingProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

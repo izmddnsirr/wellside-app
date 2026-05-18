@@ -140,10 +140,18 @@ Deno.serve(async (req) => {
             },
             {
               text:
-                "Analyze this person's face shape and visible hair type. If the person is bald, clean-shaven, or has a shaved scalp with no visible hair texture, return hair_type as \"bald\" and give suitable bald/shaved-look grooming suggestions. If hair is covered by a hijab, tudung, cap, hat, scarf, or head covering, detect the face shape if possible, return hair_type as \"covered\", and return an empty suggestions array. If no person, face, or hair is visible, return face_shape and hair_type as \"unable to determine\" with an empty suggestions array. " +
+                "You are a Malaysian hairstyle advisor. Analyze this person's face shape, visible hair type, and apparent gender from the photo.\n\n" +
+                "GENDER DETECTION: Determine if the person appears to be male or female based on visual cues. This affects which hairstyle suggestions to give.\n\n" +
+                "SPECIAL CASES:\n" +
+                "- If the person is bald, clean-shaven scalp, or has a fully shaved head with no visible hair texture: return hair_type as \"bald\" and suggest grooming styles suitable for bald/shaved-head looks.\n" +
+                "- If hair is covered by a hijab, tudung, cap, hat, scarf, or any head covering: detect face shape if possible, return hair_type as \"covered\", and return an empty suggestions array.\n" +
+                "- If no person, face, or hair is visible: return face_shape and hair_type as \"unable to determine\" with an empty suggestions array.\n\n" +
                 "Return ONLY valid JSON with this exact shape: " +
-                '{"face_shape":"oval|round|square|heart|oblong|unable to determine","hair_type":"straight|wavy|curly|coily|bald|covered|unable to determine","suggestions":[{"name":"","description":"","suits_because":"","example_search_query":""}]}. ' +
-                "If both face shape and visible hair type are available, give exactly 3 practical hairstyle suggestions based on both. Make each example_search_query a short Google Images search phrase for that hairstyle.",
+                '{"face_shape":"oval|round|square|heart|oblong|unable to determine","hair_type":"straight|wavy|curly|coily|bald|covered|unable to determine","gender":"male|female|unknown","suggestions":[{"name":"","description":"","suits_because":"","example_search_query":""}]}. ' +
+                "If both face shape and visible hair type are available, give exactly 3 hairstyle suggestions tailored to the detected gender and popular at Malaysian salons or barbershops:\n\n" +
+                "FOR MALES: Suggest styles popular at Malaysian barbershops — e.g. Two-Block, Edgar Cut, Undercut Fade, Crop Taper, Textured Fringe, High Fade, Burst Fade, Slick Back, or Pompadour Fade. For bald men, suggest grooming options like clean shave maintenance, buzz cut, or beard styling.\n\n" +
+                "FOR FEMALES: Suggest styles popular at Malaysian salons — e.g. Korean Bob, Curtain Bangs, Rebonding Straight, Layer Cut, Wolf Cut, Butterfly Cut, C-Curl Blowdry, or Wispy Fringe. Consider styles that suit Malaysia's hot and humid weather and are practical for daily wear.\n\n" +
+                "For ALL suggestions: consider Malaysia's hot and humid climate, recommend styles that are easy to maintain, and make each example_search_query a short Google Images search phrase for that hairstyle popular in Malaysia.",
             },
           ],
         },

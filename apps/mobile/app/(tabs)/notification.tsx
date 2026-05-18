@@ -3,11 +3,14 @@ import * as Notifications from "expo-notifications";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   RefreshControl,
   ScrollView,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../../utils/supabase";
 
@@ -44,11 +47,14 @@ function timeAgo(isoString: string): string {
   return dateTimeFormatter.format(new Date(isoString));
 }
 
+const CARD_HEIGHT = 80;
+
 export default function NotificationScreen() {
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selected, setSelected] = useState<Notification | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
@@ -78,6 +84,11 @@ export default function NotificationScreen() {
       .eq("read", false);
 
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
+  const deleteNotification = useCallback(async (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await supabase.from("notifications").delete().eq("id", id);
   }, []);
 
   useFocusEffect(
@@ -142,41 +153,123 @@ export default function NotificationScreen() {
             </View>
           ) : null}
 
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <View
+                  key={i}
+                  style={{ height: CARD_HEIGHT }}
+                  className="rounded-3xl border border-neutral-200 bg-white px-5 justify-center gap-2"
+                >
+                  <View className="flex-row justify-between items-center">
+                    <View className="h-4 w-2/5 rounded-full bg-neutral-100" />
+                    <View className="h-3 w-12 rounded-full bg-neutral-100" />
+                  </View>
+                  <View className="h-3 w-3/4 rounded-full bg-neutral-100" />
+                </View>
+              ))
+            : null}
+
           {notifications.map((item) => (
-            <View
+            <ReanimatedSwipeable
               key={item.id}
-              className={`rounded-3xl border p-5 ${
-                item.read
-                  ? "bg-white border-neutral-200"
-                  : "bg-white border-neutral-900"
-              }`}
+              renderRightActions={(_progress, _translation, _swipeable) => (
+                <TouchableOpacity
+                  style={{ height: CARD_HEIGHT }}
+                  className="justify-center items-center bg-red-500 rounded-3xl w-20 ml-2"
+                  onPress={() => deleteNotification(item.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text className="text-white text-xs font-semibold">
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              )}
+              onSwipeableOpen={(direction: string) => {
+                if (direction === "left") deleteNotification(item.id);
+              }}
+              rightThreshold={80}
+              overshootRight={false}
             >
-              <View className="flex-row items-start justify-between gap-3">
-                <View className="flex-1">
-                  <View className="flex-row items-center gap-2">
-                    {!item.read && (
-                      <View className="h-2 w-2 rounded-full bg-neutral-900" />
-                    )}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setSelected(item)}
+                style={{ height: CARD_HEIGHT }}
+                className={`rounded-3xl border overflow-hidden flex-row ${
+                  item.read
+                    ? "bg-white border-neutral-200"
+                    : "bg-neutral-50 border-neutral-200"
+                }`}
+              >
+                {!item.read && (
+                  <View className="w-1 bg-neutral-900 self-stretch" />
+                )}
+                <View className="flex-1 px-5 justify-center">
+                  <View className="flex-row items-center justify-between gap-3">
                     <Text
-                      className={`text-base font-semibold ${
-                        item.read ? "text-neutral-700" : "text-neutral-900"
+                      numberOfLines={1}
+                      className={`flex-1 text-base font-semibold ${
+                        item.read ? "text-neutral-600" : "text-neutral-900"
                       }`}
                     >
                       {item.title}
                     </Text>
+                    <Text className="text-xs text-neutral-400 shrink-0">
+                      {timeAgo(item.created_at)}
+                    </Text>
                   </View>
-                  <Text className="mt-1 text-sm text-neutral-500 leading-5">
+                  <Text
+                    numberOfLines={1}
+                    className="mt-1 text-sm text-neutral-500"
+                  >
                     {item.body}
                   </Text>
                 </View>
-              </View>
-              <Text className="mt-3 text-xs text-neutral-400">
-                {timeAgo(item.created_at)}
-              </Text>
-            </View>
+              </TouchableOpacity>
+            </ReanimatedSwipeable>
           ))}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={selected !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelected(null)}
+      >
+        {selected && (
+          <View
+            className="flex-1 bg-neutral-50"
+            style={{ paddingTop: insets.top }}
+          >
+            <View className="flex-row items-center justify-between px-5 pt-4 pb-3 border-b border-neutral-100">
+              <Text className="text-lg font-semibold text-neutral-900 flex-1 mr-4">
+                {selected.title}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelected(null)}
+                className="bg-neutral-100 rounded-full px-4 py-1.5"
+                activeOpacity={0.7}
+              >
+                <Text className="text-sm font-medium text-neutral-600">
+                  Close
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={{ padding: 20 }}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text className="text-sm text-neutral-400 mb-4">
+                {dateTimeFormatter.format(new Date(selected.created_at))}
+              </Text>
+              <Text className="text-base text-neutral-700 leading-7">
+                {selected.body}
+              </Text>
+            </ScrollView>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
