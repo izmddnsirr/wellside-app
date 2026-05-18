@@ -1,8 +1,8 @@
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   RefreshControl,
   ScrollView,
@@ -12,6 +12,11 @@ import {
 } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NotificationListSkeleton } from "../../components/booking-skeletons";
+import {
+  BookingPageTransition,
+  BookingStaggerItem,
+} from "../../components/motion";
 import { supabase } from "../../utils/supabase";
 
 type Notification = {
@@ -91,6 +96,13 @@ export default function NotificationScreen() {
     await supabase.from("notifications").delete().eq("id", id);
   }, []);
 
+  const clearAll = useCallback(async () => {
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) return;
+    setNotifications([]);
+    await supabase.from("notifications").delete().eq("user_id", authData.user.id);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
@@ -107,8 +119,26 @@ export default function NotificationScreen() {
 
       load();
 
+      // Realtime subscription — auto refresh when new notification arrives
+      const channel = supabase
+        .channel("notifications-tab")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications" },
+          () => {
+            if (isMounted) {
+              fetchNotifications().then(() => {
+                markAllRead();
+                Notifications.setBadgeCountAsync(0);
+              });
+            }
+          }
+        )
+        .subscribe();
+
       return () => {
         isMounted = false;
+        supabase.removeChannel(channel);
       };
     }, [fetchNotifications, markAllRead]),
   );
@@ -130,7 +160,7 @@ export default function NotificationScreen() {
         }
         contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <View className="mx-5 mt-3 flex-row justify-between items-center">
+        <BookingPageTransition className="mx-5 mt-3 flex-row justify-between items-center">
           <View>
             <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Notifications
@@ -141,10 +171,19 @@ export default function NotificationScreen() {
                 : "You're all caught up"}
             </Text>
           </View>
-          {isLoading && <ActivityIndicator size="small" color="#171717" />}
-        </View>
+          {!isLoading && notifications.length > 0 ? (
+            <TouchableOpacity
+              onPress={clearAll}
+              className="bg-white px-4 py-3 rounded-full flex-row items-center border border-neutral-200"
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={16} color="#171717" />
+              <Text className="font-semibold text-neutral-900 ml-2">Clear all</Text>
+            </TouchableOpacity>
+          ) : null}
+        </BookingPageTransition>
 
-        <View className="mx-5 mt-6 gap-3">
+        <BookingStaggerItem className="mx-5 mt-6 gap-3">
           {!isLoading && notifications.length === 0 ? (
             <View className="rounded-3xl border border-dashed border-neutral-200 bg-white p-6">
               <Text className="text-neutral-500 text-base">
@@ -153,21 +192,7 @@ export default function NotificationScreen() {
             </View>
           ) : null}
 
-          {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <View
-                  key={i}
-                  style={{ height: CARD_HEIGHT }}
-                  className="rounded-3xl border border-neutral-200 bg-white px-5 justify-center gap-2"
-                >
-                  <View className="flex-row justify-between items-center">
-                    <View className="h-4 w-2/5 rounded-full bg-neutral-100" />
-                    <View className="h-3 w-12 rounded-full bg-neutral-100" />
-                  </View>
-                  <View className="h-3 w-3/4 rounded-full bg-neutral-100" />
-                </View>
-              ))
-            : null}
+          {isLoading ? <NotificationListSkeleton /> : null}
 
           {notifications.map((item) => (
             <ReanimatedSwipeable
@@ -193,17 +218,14 @@ export default function NotificationScreen() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => setSelected(item)}
-                style={{ height: CARD_HEIGHT }}
                 className={`rounded-3xl border overflow-hidden flex-row ${
-                  item.read
-                    ? "bg-white border-neutral-200"
-                    : "bg-neutral-50 border-neutral-200"
+                  item.read ? "bg-white border-neutral-200" : "bg-neutral-50 border-neutral-200"
                 }`}
               >
                 {!item.read && (
                   <View className="w-1 bg-neutral-900 self-stretch" />
                 )}
-                <View className="flex-1 px-5 justify-center">
+                <View className="flex-1 px-5 py-4">
                   <View className="flex-row items-center justify-between gap-3">
                     <Text
                       numberOfLines={1}
@@ -217,17 +239,14 @@ export default function NotificationScreen() {
                       {timeAgo(item.created_at)}
                     </Text>
                   </View>
-                  <Text
-                    numberOfLines={1}
-                    className="mt-1 text-sm text-neutral-500"
-                  >
+                  <Text numberOfLines={1} className="mt-1 text-sm text-neutral-500">
                     {item.body}
                   </Text>
                 </View>
               </TouchableOpacity>
             </ReanimatedSwipeable>
           ))}
-        </View>
+        </BookingStaggerItem>
       </ScrollView>
 
       <Modal
@@ -237,39 +256,36 @@ export default function NotificationScreen() {
         onRequestClose={() => setSelected(null)}
       >
         {selected && (
-          <View
-            className="flex-1 bg-neutral-50"
-            style={{ paddingTop: insets.top }}
-          >
-            <View className="flex-row items-center justify-between px-5 pt-4 pb-3 border-b border-neutral-100">
-              <Text className="text-lg font-semibold text-neutral-900 flex-1 mr-4">
-                {selected.title}
-              </Text>
+          <View className="flex-1 bg-white" style={{ paddingTop: 20 }}>
+            <View className="flex-row items-center justify-end px-5 pb-5">
               <TouchableOpacity
                 onPress={() => setSelected(null)}
-                className="bg-neutral-100 rounded-full px-4 py-1.5"
+                className="h-8 w-8 items-center justify-center rounded-full bg-neutral-100"
                 activeOpacity={0.7}
               >
-                <Text className="text-sm font-medium text-neutral-600">
-                  Close
-                </Text>
+                <Ionicons name="close" size={16} color="#404040" />
               </TouchableOpacity>
             </View>
 
             <ScrollView
-              contentContainerStyle={{ padding: 20 }}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 32 }}
               showsVerticalScrollIndicator={false}
             >
-              <Text className="text-sm text-neutral-400 mb-4">
+              <Text className="text-2xl font-bold text-neutral-900 leading-tight">
+                {selected.title}
+              </Text>
+              <Text className="text-xs text-neutral-400 mt-2">
                 {dateTimeFormatter.format(new Date(selected.created_at))}
               </Text>
-              <Text className="text-base text-neutral-700 leading-7">
+              <View className="h-px bg-neutral-100 my-5" />
+              <Text className="text-base text-neutral-600 leading-7">
                 {selected.body}
               </Text>
             </ScrollView>
           </View>
         )}
       </Modal>
+
     </View>
   );
 }

@@ -3,6 +3,11 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  BookingPageTransition,
+  BookingStaggerList,
+  BookingStaggerItem,
+} from "@/components/customer/booking-motion";
 
 import {
   Breadcrumb,
@@ -93,8 +98,8 @@ async function ServicesList({ params }: { params: BookingSearchParams }) {
   const serviceId = readParam(params.serviceId);
 
   return (
-    <section className="space-y-4" style={{ animationDelay: "80ms" }}>
-      <div className="space-y-4">
+    <section className="space-y-4">
+      <BookingStaggerList className="space-y-4">
         {servicesError ? (
           <p className="text-sm text-red-500">
             Unable to load services right now.
@@ -129,8 +134,8 @@ async function ServicesList({ params }: { params: BookingSearchParams }) {
           });
 
           return (
+            <BookingStaggerItem key={service.id}>
             <div
-              key={service.id}
               className={`text-card-foreground flex flex-col gap-6 rounded-3xl border bg-card/80 ${
                 isSelected
                   ? "border-primary/60 shadow-sm"
@@ -180,9 +185,10 @@ async function ServicesList({ params }: { params: BookingSearchParams }) {
                 </Button>
               </div>
             </div>
+            </BookingStaggerItem>
           );
         })}
-      </div>
+      </BookingStaggerList>
     </section>
   );
 }
@@ -191,16 +197,16 @@ function ServicesListSkeleton() {
   return (
     <section className="space-y-4">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-3xl border border-border/60 bg-card/80 px-6 py-6">
-          <div className="flex items-center justify-between">
+        <div key={i} className="rounded-3xl border border-border/60 bg-card/80">
+          <div className="px-6 py-6 flex items-center justify-between">
             <div className="space-y-3">
-              <Skeleton className="h-5 w-32" />
-              <div className="flex gap-2">
-                <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-5 w-36" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
                 <Skeleton className="h-6 w-24 rounded-full" />
               </div>
             </div>
-            <Skeleton className="h-14 w-14 rounded-full" />
+            <Skeleton className="h-14 w-14 rounded-full shrink-0" />
           </div>
         </div>
       ))}
@@ -227,7 +233,7 @@ export default async function SelectServicesPage({
   const serviceId = readParam(params.serviceId);
 
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-300">
+    <BookingPageTransition className="mx-auto w-full max-w-xl lg:max-w-300">
       <div className="pb-12">
         <div className="flex flex-col gap-10 lg:flex lg:flex-row lg:items-start lg:gap-12">
           <div className="flex flex-col gap-6 lg:flex-[1.4] lg:min-w-0">
@@ -305,6 +311,6 @@ export default async function SelectServicesPage({
           </aside>
         </div>
       </div>
-    </div>
+    </BookingPageTransition>
   );
 }

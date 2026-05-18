@@ -9,6 +9,7 @@ import { createAdminClient } from "@/utils/supabase/server";
 import { createAdminAuthClient } from "@/utils/supabase/admin";
 import { isValidE164, normalizePhone } from "@/src/lib/phone";
 import { BarbersCard } from "./barbers-card";
+import { getBarberRatings } from "@/utils/barber-ratings";
 
 const normalizeValue = (value: FormDataEntryValue | null) => {
   if (value === null) {
@@ -222,17 +223,23 @@ async function BarbersContent() {
   const { data: barbers, error } = await supabase
     .from("profiles")
     .select(
-      "id, first_name, last_name, display_name, email, phone, is_active, created_at, working_start_time, working_end_time, barber_level, off_days"
+      "id, first_name, last_name, display_name, email, phone, is_active, created_at, working_start_time, working_end_time, barber_level, off_days, avatar_url"
     )
     .eq("role", "barber")
     .order("created_at", { ascending: false });
-  const errorMessage = error
-    ? "Failed to load barbers. Please try again."
-    : null;
+  const errorMessage = error ? "Failed to load barbers. Please try again." : null;
+
+  const barberIds = (barbers ?? []).map((b) => b.id);
+  const ratingsMap = await getBarberRatings(barberIds);
+
+  const barbersWithRatings = (barbers ?? []).map((b) => {
+    const r = ratingsMap.get(b.id);
+    return { ...b, ratingAverage: r?.average ?? null, ratingCount: r?.count ?? 0 };
+  });
 
   return (
     <BarbersCard
-      barbers={barbers ?? []}
+      barbers={barbersWithRatings}
       errorMessage={errorMessage}
       createBarber={createBarber}
       moveBarberToCustomer={moveBarberToCustomer}
@@ -242,14 +249,50 @@ async function BarbersContent() {
 
 function BarbersSkeleton() {
   return (
-    <div className="space-y-3 rounded-xl border border-border/60 p-4">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-9 w-28" />
+    <div className="space-y-4">
+      {/* Filter bar */}
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-9 w-37.5" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-9 w-45" />
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-8 w-12" />
+          </div>
+        </div>
       </div>
-      <div className="space-y-2">
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
+        <div className="flex items-center gap-3 bg-muted/40 border-b border-border/60 px-4 py-3">
+          <Skeleton className="h-3 w-14" />
+          <Skeleton className="h-3 w-18" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-8" />
+          <Skeleton className="ml-auto h-3 w-14" />
+        </div>
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
+          <div key={i} className="flex items-center gap-3 border-b border-border/60 bg-background px-4 py-3 last:border-0">
+            <div className="flex items-center gap-2 w-[18%]">
+              <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <Skeleton className="h-4 w-28 flex-1" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="ml-auto h-8 w-8 rounded-md" />
+          </div>
         ))}
       </div>
     </div>

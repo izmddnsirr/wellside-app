@@ -3,6 +3,12 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ServiceListSkeleton } from "../../components/booking-skeletons";
+import {
+  BookingPageTransition,
+  BookingStaggerItem,
+  BookingStaggerList,
+} from "../../components/motion";
 import { useBooking } from "../../context/BookingContext";
 import { supabase } from "../../utils/supabase";
 import { loadBookingAvailability } from "../../utils/shop-operations";
@@ -118,18 +124,16 @@ export default function SelectServiceScreen() {
           </Pressable>
         </View>
 
-        <View className="px-5 pt-2">
+        <BookingPageTransition className="px-5 pt-2">
           <Text className="text-3xl font-semibold text-neutral-900">Select Services</Text>
           <Text className="mt-1 text-base text-neutral-500">
             Choose your cut and finishing.
           </Text>
-        </View>
+        </BookingPageTransition>
 
         <View className="px-5">
           {isLoading ? (
-            <Text className="mt-6 text-sm text-neutral-500">
-              Loading services...
-            </Text>
+            <ServiceListSkeleton />
           ) : null}
           {errorMessage ? (
             <Text className="mt-6 text-sm text-red-500">{errorMessage}</Text>
@@ -154,13 +158,14 @@ export default function SelectServiceScreen() {
               No services available right now.
             </Text>
           ) : null}
-          {bookingEnabled ? groupedServices.map((group) => (
+          {!isLoading && bookingEnabled ? groupedServices.map((group) => (
             <View key={group.category} className="pt-7">
               <Text className="text-xs font-semibold text-neutral-500">
                 {group.category}
               </Text>
+              <BookingStaggerList>
               {group.items.map((service, index) => (
-                <View
+                <BookingStaggerItem
                   key={service.id}
                   className={`mt-4 rounded-2xl border border-neutral-200 bg-white p-4 ${
                     index === group.items.length - 1 ? "mb-2" : ""
@@ -199,8 +204,9 @@ export default function SelectServiceScreen() {
                       <Ionicons name="add" size={22} color="#ffffff" />
                     </Pressable>
                   </View>
-                </View>
+                </BookingStaggerItem>
               ))}
+              </BookingStaggerList>
             </View>
           )) : null}
         </View>

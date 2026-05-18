@@ -3,7 +3,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   Platform,
@@ -14,6 +13,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  UpcomingBookingSkeleton,
+} from "../../components/booking-skeletons";
 import { supabase } from "../../utils/supabase";
 import { loadBookingAvailability } from "../../utils/shop-operations";
 
@@ -51,19 +53,6 @@ type UpcomingBooking = {
   status: "scheduled" | "in_progress";
 };
 
-type ServicePreview = {
-  id: string;
-  name: string;
-  basePrice: number | null;
-  durationMinutes: number | null;
-};
-
-type ProfessionalPreview = {
-  id: string;
-  name: string;
-  level: string | null;
-};
-
 export default function BookingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -72,8 +61,6 @@ export default function BookingScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [services, setServices] = useState<ServicePreview[]>([]);
-  const [professionals, setProfessionals] = useState<ProfessionalPreview[]>([]);
   const [bookingEnabled, setBookingEnabled] = useState(true);
 
   const fetchUpcoming = useCallback(async () => {
@@ -84,60 +71,13 @@ export default function BookingScreen() {
     if (authError || !authData.user) {
       setIsLoading(false);
       setUpcoming(null);
-      setServices([]);
-      setProfessionals([]);
       setBookingEnabled(true);
       setErrorMessage("Please sign in to view your booking.");
       return;
     }
 
-    const [
-      isBookingEnabled,
-      { data: servicesData },
-      { data: barbersData },
-    ] = await Promise.all([
-      loadBookingAvailability(supabase as never),
-      supabase
-        .from("services")
-        .select("id,name,base_price,duration_minutes")
-        .eq("is_active", true)
-        .eq("allow_booking", true)
-        .order("service_code", { ascending: true })
-        .order("name", { ascending: true })
-        .limit(3),
-      supabase
-        .from("profiles")
-        .select("id,display_name,first_name,last_name,barber_level")
-        .eq("is_active", true)
-        .eq("role", "barber")
-        .order("display_name")
-        .limit(4),
-    ]);
-
+    const isBookingEnabled = await loadBookingAvailability(supabase as never);
     setBookingEnabled(isBookingEnabled);
-
-    setServices(
-      (servicesData ?? []).map((service) => ({
-        id: service.id,
-        name: service.name,
-        basePrice: service.base_price ?? null,
-        durationMinutes: service.duration_minutes ?? null,
-      })),
-    );
-
-    setProfessionals(
-      (barbersData ?? []).map((barber) => ({
-        id: barber.id,
-        name:
-          barber.display_name?.trim() ||
-          [barber.first_name, barber.last_name]
-            .filter(Boolean)
-            .join(" ")
-            .trim() ||
-          "Barber",
-        level: barber.barber_level?.trim() || null,
-      })),
-    );
 
     const { data: bookingData, error: bookingError } = await supabase
       .from("bookings")
@@ -445,13 +385,10 @@ export default function BookingScreen() {
                 No upcoming bookings yet.
               </Text>
             </View>
-          ) : (
+          ) : null}
+          {isLoading ? <UpcomingBookingSkeleton /> : null}
+          {!isLoading && (errorMessage || upcoming) ? (
             <View className="mt-4 rounded-3xl border border-neutral-200 bg-white overflow-hidden min-h-[180px]">
-              {isLoading ? (
-                <View className="flex-1 items-center justify-center p-6">
-                  <ActivityIndicator size="small" color="#171717" />
-                </View>
-              ) : null}
               {errorMessage ? (
                 <View className="p-5">
                   <Text className="text-sm text-red-500">{errorMessage}</Text>
@@ -541,7 +478,7 @@ export default function BookingScreen() {
                 </>
               ) : null}
             </View>
-          )}
+          ) : null}
           {!isLoading && !errorMessage && upcoming ? (
             <View className="mt-4 flex-row gap-3">
               <TouchableOpacity
@@ -567,32 +504,22 @@ export default function BookingScreen() {
         </View>
 
         {/* New appointment */}
-        <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white p-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 pr-4">
-              <Text className="text-lg font-semibold text-neutral-900">
-                New appointment
-              </Text>
-              <Text className="mt-1 text-sm text-neutral-500">
-                Pick a service, barber, and time that works for you.
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push("/booking/select-service")}
-              disabled={!bookingEnabled}
-              className={`rounded-full px-4 py-2.5 ${
-                bookingEnabled ? "bg-neutral-900" : "bg-neutral-200"
+        <View className="mx-5 mt-6">
+          <TouchableOpacity
+            onPress={() => router.push("/booking/select-service")}
+            disabled={!bookingEnabled}
+            className={`w-full rounded-full px-4 py-4 ${
+              bookingEnabled ? "bg-neutral-900" : "bg-neutral-200"
+            }`}
+          >
+            <Text
+              className={`text-center text-base font-semibold ${
+                bookingEnabled ? "text-white" : "text-neutral-500"
               }`}
             >
-              <Text
-                className={`text-sm font-semibold ${
-                  bookingEnabled ? "text-white" : "text-neutral-500"
-                }`}
-              >
-                {bookingEnabled ? "Book now" : "Paused"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {bookingEnabled ? "Book now" : "Paused"}
+            </Text>
+          </TouchableOpacity>
           {!bookingEnabled ? (
             <View className="mt-4 rounded-2xl bg-amber-50 p-3">
               <Text className="text-sm leading-5 text-amber-800">
@@ -603,123 +530,6 @@ export default function BookingScreen() {
           ) : null}
         </View>
 
-        {/* Services */}
-        <View className="mx-5 mt-6">
-          <Text className="text-lg font-semibold text-neutral-900">
-            Services
-          </Text>
-          <View className="mt-3 gap-3">
-            {services.length ? (
-              services.map((service) => (
-                <TouchableOpacity
-                  key={service.id}
-                  onPress={() => {
-                    if (bookingEnabled) {
-                      router.push("/booking/select-service");
-                    }
-                  }}
-                  disabled={!bookingEnabled}
-                  className={`rounded-3xl border border-neutral-200 bg-white p-4 ${
-                    !bookingEnabled ? "opacity-60" : ""
-                  }`}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View>
-                      <Text className="font-semibold text-neutral-900">
-                        {service.name}
-                      </Text>
-                      <Text className="mt-1 text-sm text-neutral-500">
-                        {service.durationMinutes
-                          ? `${service.durationMinutes} min`
-                          : "Duration unavailable"}
-                      </Text>
-                    </View>
-                    <Text className="font-semibold text-neutral-900">
-                      {service.basePrice ? `RM${service.basePrice}` : ""}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View className="rounded-3xl border border-neutral-200 bg-white p-4">
-                <Text className="text-sm text-neutral-500">
-                  Services will appear here when available.
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Professionals */}
-        <View className="mx-5 mt-6">
-          <Text className="text-lg font-semibold text-neutral-900">
-            Professionals
-          </Text>
-          <View className="mt-3 flex-row flex-wrap justify-between">
-            {professionals.length ? (
-              professionals.map((professional) => (
-                <TouchableOpacity
-                  key={professional.id}
-                  onPress={() => {
-                    if (bookingEnabled) {
-                      router.push("/booking/select-service");
-                    }
-                  }}
-                  disabled={!bookingEnabled}
-                  className={`mb-3 w-[48%] rounded-3xl border border-neutral-200 bg-white p-4 ${
-                    !bookingEnabled ? "opacity-60" : ""
-                  }`}
-                >
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-                    <Text className="text-sm font-semibold text-neutral-900">
-                      {professional.name
-                        .split(" ")
-                        .map((part) => part[0])
-                        .slice(0, 2)
-                        .join("")}
-                    </Text>
-                  </View>
-                  <Text className="mt-3 font-semibold text-neutral-900">
-                    {professional.name}
-                  </Text>
-                  {professional.level ? (
-                    <Text className="mt-1 text-sm text-neutral-500">
-                      {professional.level}
-                    </Text>
-                  ) : null}
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View className="w-full rounded-3xl border border-neutral-200 bg-white p-4">
-                <Text className="text-sm text-neutral-500">
-                  Professionals will appear here when available.
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Booking note */}
-        <View className="mx-5 mt-3 rounded-3xl border border-neutral-200 bg-white p-4">
-          <View className="flex-row items-start">
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-              <Ionicons
-                name="information-circle-outline"
-                size={18}
-                color="#525252"
-              />
-            </View>
-            <View className="ml-3 flex-1">
-              <Text className="font-semibold text-neutral-900">
-                Booking note
-              </Text>
-              <Text className="mt-1 text-sm leading-5 text-neutral-500">
-                Please arrive 5 minutes before your slot. For late changes,
-                contact the shop directly.
-              </Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );

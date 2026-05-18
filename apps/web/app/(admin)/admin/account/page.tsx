@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AdminShell } from "../components/admin-shell";
 import { createAdminClient } from "@/utils/supabase/server";
@@ -13,6 +14,81 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function AccountSkeleton() {
+  return (
+    <div className="grid gap-4 px-4 lg:px-6 lg:grid-cols-[1.2fr_0.8fr]">
+      {/* Profile card */}
+      <div className="rounded-xl border border-border/60 bg-card">
+        <div className="space-y-1.5 p-6 pb-4">
+          <Skeleton className="h-5 w-16" />
+          <Skeleton className="h-4 w-56 max-w-full" />
+        </div>
+        <div className="space-y-6 p-6 pt-2">
+          {/* Avatar + name row */}
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-44 max-w-full" />
+            </div>
+          </div>
+          <Skeleton className="h-px w-full" />
+          {/* Form grid */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Skeleton className="h-3.5 w-10" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Skeleton className="h-3.5 w-12" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          </div>
+          {/* Save row */}
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3.5 w-52 max-w-full" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </div>
+      </div>
+
+      {/* Right sidebar */}
+      <div className="space-y-4">
+        {/* Security card */}
+        <div className="rounded-xl border border-border/60 bg-card">
+          <div className="space-y-1.5 p-6 pb-4">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-4 w-48 max-w-full" />
+          </div>
+          <div className="space-y-4 p-6 pt-2">
+            <Skeleton className="h-16 w-full rounded-xl" />
+            <Skeleton className="h-9 w-36" />
+          </div>
+        </div>
+        {/* Preferences card */}
+        <div className="rounded-xl border border-border/60 bg-card">
+          <div className="space-y-1.5 p-6 pb-4">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-44 max-w-full" />
+          </div>
+          <div className="p-6 pt-2">
+            <Skeleton className="h-4 w-52 max-w-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ProfileRow = {
   first_name: string | null;
@@ -30,7 +106,7 @@ const buildInitials = (value: string) =>
     .map((part) => part[0]?.toUpperCase())
     .join("");
 
-export default async function AccountPage() {
+async function AccountContent() {
   const supabase = await createAdminClient();
   const {
     data: { user },
@@ -51,13 +127,18 @@ export default async function AccountPage() {
   const lastName = profile?.last_name ?? "";
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
   const email = profile?.email ?? user.email ?? "";
-  const phone = profile?.phone ?? "";
   const avatarUrl = profile?.avatar_url ?? "";
+  const rawPhone = profile?.phone ?? "";
+  const phoneDigits = rawPhone.replace(/\D/g, "");
+  const phone = phoneDigits.startsWith("60")
+    ? phoneDigits.slice(2)
+    : phoneDigits.startsWith("0")
+      ? phoneDigits.slice(1)
+      : phoneDigits;
   const initials = buildInitials(fullName || email || "Admin");
 
   return (
-    <AdminShell title="Account">
-      <div className="grid gap-4 px-4 lg:px-6 lg:grid-cols-[1.2fr_0.8fr]">
+    <div className="grid gap-4 px-4 lg:px-6 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
@@ -147,7 +228,16 @@ export default async function AccountPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <AdminShell title="Account">
+      <Suspense fallback={<AccountSkeleton />}>
+        <AccountContent />
+      </Suspense>
     </AdminShell>
   );
 }

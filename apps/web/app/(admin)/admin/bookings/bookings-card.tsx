@@ -55,6 +55,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { formatMalaysiaPhone } from "@/utils/phone";
 import type {
   RestWindow,
   TemporaryClosure,
@@ -209,11 +210,11 @@ const getBookingCustomerName = (booking: BookingRow) => {
   return booking.walk_in_name?.trim() || booking.walk_in_customer?.name?.trim() || "Walk-in";
 };
 
-const getBookingCustomerContact = (booking: BookingRow) =>
-  booking.customer?.phone ||
-  booking.customer?.email ||
-  booking.walk_in_customer?.phone ||
-  "-";
+const getBookingCustomerContact = (booking: BookingRow) => {
+  const phone = booking.customer?.phone || booking.walk_in_customer?.phone;
+  if (phone) return formatMalaysiaPhone(phone);
+  return booking.customer?.email || "-";
+};
 
 const formatStatusLabel = (status: string | null) => {
   if (!status) {

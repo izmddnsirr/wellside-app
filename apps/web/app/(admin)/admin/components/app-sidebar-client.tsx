@@ -90,24 +90,14 @@ const data = {
           ],
         },
         {
-          title: "Report",
+          title: "Reports",
           url: "/admin/report",
-          icon: FileText, // TODO: verify icon match
-        },
-        {
-          title: "Notifications",
-          url: "/admin/notifications",
-          icon: Bell,
-        },
-        {
-          title: "Settings",
-          url: "/admin/settings",
-          icon: Settings,
+          icon: FileText,
         },
       ],
     },
     {
-      label: "Catalog",
+      label: "Manage",
       items: [
         {
           title: "Services",
@@ -119,11 +109,6 @@ const data = {
           url: "/admin/products",
           icon: Package,
         },
-      ],
-    },
-    {
-      label: "Users",
-      items: [
         {
           title: "Customers",
           url: "/admin/customers",
@@ -133,6 +118,21 @@ const data = {
           title: "Barbers",
           url: "/admin/barbers",
           icon: Scissors,
+        },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        {
+          title: "Notifications",
+          url: "/admin/notifications",
+          icon: Bell,
+        },
+        {
+          title: "Settings",
+          url: "/admin/settings",
+          icon: Settings,
         },
       ],
     },
@@ -148,14 +148,17 @@ type SidebarUser = {
 type AppSidebarClientProps = React.ComponentProps<typeof Sidebar> & {
   user: SidebarUser;
   activeBookingsCount?: number;
+  lowStockCount?: number;
 };
 
 export function AppSidebarClient({
   user,
   activeBookingsCount = 0,
+  lowStockCount = 0,
   ...props
 }: AppSidebarClientProps) {
   const hasActiveBookings = activeBookingsCount > 0;
+  const hasLowStock = lowStockCount > 0;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -213,7 +216,19 @@ export function AppSidebarClient({
                   : item
               ),
             },
-            ...data.navMain.slice(1),
+            {
+              ...data.navMain[1],
+              items: data.navMain[1].items.map((item) =>
+                item.title === "Products"
+                  ? {
+                      ...item,
+                      notification: hasLowStock,
+                      notificationCount: lowStockCount,
+                    }
+                  : item
+              ),
+            },
+            ...data.navMain.slice(2),
           ]}
         />
       </SidebarContent>

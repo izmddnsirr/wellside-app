@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,7 +37,11 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createAdminClient } from "@/utils/supabase/client";
 import { isValidE164, normalizePhone } from "@/src/lib/phone";
+import { formatMalaysiaPhone } from "@/utils/phone";
 import { toast } from "sonner";
+import { AvatarUpload } from "@/components/ui/avatar-upload";
+import { StarRating } from "@/components/ui/star-rating";
+import { formatRating } from "@/utils/format-rating";
 
 type Barber = {
   id: string;
@@ -51,6 +56,9 @@ type Barber = {
   working_end_time: string | null;
   barber_level: string | null;
   off_days: string[] | null;
+  avatar_url: string | null;
+  ratingAverage: number | null;
+  ratingCount: number;
 };
 
 type BarbersCardProps = {
@@ -379,8 +387,8 @@ export function BarbersCard({
       display_name: displayName,
       email: emailValue,
       phone: normalizedPhone,
-      working_start_time: normalizeValue(formData.get("working_start_time")),
-      working_end_time: normalizeValue(formData.get("working_end_time")),
+      working_start_time: readField("working_start_time", selectedBarber.working_start_time),
+      working_end_time: readField("working_end_time", selectedBarber.working_end_time),
       barber_level: selectedBarberLevel || null,
       off_days: selectedOffDays,
       is_active: formData.get("is_active") === "on",
@@ -657,6 +665,21 @@ export function BarbersCard({
               </TabsList>
 
               <TabsContent value="profile" className="space-y-4">
+                {selectedBarber ? (
+                  <div className="flex justify-center">
+                    <AvatarUpload
+                      uid={selectedBarber.id}
+                      url={selectedBarber.avatar_url}
+                      initials={
+                        `${selectedBarber.first_name?.[0] ?? ""}${selectedBarber.last_name?.[0] ?? ""}`.toUpperCase() || "?"
+                      }
+                      size={72}
+                      onUpload={(url) => {
+                        setSelectedBarber((prev) => prev ? { ...prev, avatar_url: url } : prev);
+                      }}
+                    />
+                  </div>
+                ) : null}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="update-barber-first-name">First name</Label>
@@ -905,8 +928,11 @@ export function BarbersCard({
                 <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   End time
                 </TableHead>
-                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Level
+                </TableHead>
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Rating
                 </TableHead>
                 <TableHead className="w-[10%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Status
@@ -927,16 +953,32 @@ export function BarbersCard({
                     key={barber.id}
                     className="bg-background hover:bg-muted/50"
                   >
-                    <TableCell className="w-[18%] px-4 py-3 font-semibold text-foreground">
-                      {[barber.first_name, barber.last_name]
-                        .filter(Boolean)
-                        .join(" ") || "-"}
+                    <TableCell className="w-[18%] px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+                          {barber.avatar_url ? (
+                            <Image
+                              src={barber.avatar_url}
+                              alt=""
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">
+                              {`${barber.first_name?.[0] ?? ""}${barber.last_name?.[0] ?? ""}`.toUpperCase() || "?"}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-semibold text-foreground">
+                          {[barber.first_name, barber.last_name].filter(Boolean).join(" ") || "-"}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="w-[20%] px-4 py-3 text-muted-foreground">
                       {barber.email || "-"}
                     </TableCell>
                     <TableCell className="w-[12%] px-4 py-3 text-muted-foreground">
-                      {barber.phone || "-"}
+                      {formatMalaysiaPhone(barber.phone)}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3 text-muted-foreground">
                       {formatWorkingTime(barber.working_start_time)}
@@ -944,8 +986,20 @@ export function BarbersCard({
                     <TableCell className="w-[10%] px-4 py-3 text-muted-foreground">
                       {formatWorkingTime(barber.working_end_time)}
                     </TableCell>
-                    <TableCell className="w-[12%] px-4 py-3 text-foreground">
+                    <TableCell className="w-[10%] px-4 py-3 text-foreground">
                       {barber.barber_level || "-"}
+                    </TableCell>
+                    <TableCell className="w-[10%] px-4 py-3">
+                      {barber.ratingAverage !== null ? (
+                        <div className="flex items-center gap-1">
+                          <StarRating value={Math.round(barber.ratingAverage)} readonly size={12} />
+                          <span className="text-xs text-muted-foreground">
+                            {formatRating(barber.ratingAverage)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="w-[10%] px-4 py-3 text-center">
                       <div className="flex justify-center">

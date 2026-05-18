@@ -17,7 +17,11 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
+import {
+  BookingPageTransition,
+  BookingStaggerItem,
+  BookingStaggerList,
+} from "../../components/motion";
 import { supabase } from "../../utils/supabase";
 
 type HairstyleSuggestion = {
@@ -566,7 +570,7 @@ export default function AIScreen() {
         }
       >
         {/* Header */}
-        <View className="mx-5 mt-3">
+        <BookingPageTransition className="mx-5 mt-3">
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
               <Text className="text-3xl mt-1 font-semibold text-neutral-900">
@@ -578,23 +582,23 @@ export default function AIScreen() {
             </View>
             <TouchableOpacity
               onPress={() => setIsDictionaryVisible(true)}
-              className="mt-2 ml-3 flex-row items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-2"
+              className="bg-white px-4 py-3 rounded-full flex-row items-center border border-neutral-200"
+              activeOpacity={0.7}
             >
-              <Ionicons name="book-outline" size={14} color="#171717" />
-              <Text className="text-xs font-semibold text-neutral-900">
-                Gaya MY
-              </Text>
+              <Ionicons name="book-outline" size={16} color="#171717" />
+              <Text className="font-semibold text-neutral-900 ml-2">MY Styles</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </BookingPageTransition>
 
         <HairstyleDictionaryModal
           visible={isDictionaryVisible}
           onClose={() => setIsDictionaryVisible(false)}
         />
 
+        <BookingStaggerList>
         {/* Upload */}
-        <View className="mx-5 mt-6">
+        <BookingStaggerItem className="mx-5 mt-6">
           {/* Image area */}
           <TouchableOpacity
             onPress={pickFromGallery}
@@ -787,11 +791,11 @@ export default function AIScreen() {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
+        </BookingStaggerItem>
 
         {/* Results */}
         {analysisResult ? (
-          <View className="mx-5 mt-6">
+          <BookingStaggerItem className="mx-5 mt-6">
             <Text className="text-lg font-semibold text-neutral-900">
               {hasUsableAnalysis
                 ? "Recommended cuts"
@@ -1050,8 +1054,9 @@ export default function AIScreen() {
                 )}
               </View>
             )}
-          </View>
+          </BookingStaggerItem>
         ) : null}
+        </BookingStaggerList>
       </ScrollView>
     </View>
   );

@@ -33,6 +33,7 @@ import { Pencil, Search, UserX } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { formatMalaysiaPhone } from "@/utils/phone";
 
 type Customer = {
   id: string;
@@ -295,7 +296,7 @@ export function CustomersCard({
                       {customer.email || "-"}
                     </TableCell>
                     <TableCell className="w-[16%] px-4 py-3 text-muted-foreground">
-                      {customer.phone || "-"}
+                      {formatMalaysiaPhone(customer.phone)}
                     </TableCell>
                     <TableCell className="w-[12%] px-4 py-3 text-center">
                       <div className="flex justify-center">
@@ -334,7 +335,7 @@ export function CustomersCard({
                                   {customer.email || "-"}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  {customer.phone || "-"}
+                                  {formatMalaysiaPhone(customer.phone)}
                                 </p>
                               </div>
                               <div className="grid gap-3 sm:grid-cols-2">
