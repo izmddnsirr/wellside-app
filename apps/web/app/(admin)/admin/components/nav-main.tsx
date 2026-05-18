@@ -14,6 +14,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import React from "react";
 
@@ -33,6 +34,7 @@ type NavGroup = {
 
 export function NavMain({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
+  const { state } = useSidebar();
   const [openItems, setOpenItems] = React.useState<Record<string, boolean>>({});
   const toNotificationLabel = (count: number) => (count > 99 ? "99+" : String(count));
 
@@ -60,6 +62,8 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                     : Boolean(isChildActive);
                   const isOpen =
                     openItems[item.title] ?? Boolean(isChildActive);
+                  const showParentNotification =
+                    item.notification && (!isOpen || state === "collapsed");
 
                   return (
                     <SidebarMenuItem key={item.title}>
@@ -69,7 +73,7 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                             tooltip={item.title}
                             isActive={isActive}
                             className={cn(
-                              "border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground [&>svg]:text-muted-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground data-[active=true]:border-border data-[active=true]:[&>svg]:text-foreground"
+                              "relative border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground group-data-[collapsible=icon]:overflow-visible [&>svg]:text-muted-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground data-[active=true]:border-border data-[active=true]:[&>svg]:text-foreground"
                             )}
                             onClick={() =>
                               setOpenItems((prev) => ({
@@ -80,21 +84,22 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                           >
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
-                            {item.notification && !isOpen ? (
+                            {showParentNotification ? (
                               item.notificationCount && item.notificationCount > 0 ? (
-                                <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+                                <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:-right-1 group-data-[collapsible=icon]:-top-1 group-data-[collapsible=icon]:z-10 group-data-[collapsible=icon]:ml-0">
                                   {toNotificationLabel(item.notificationCount)}
                                 </span>
                               ) : (
                                 <span
-                                  className="ml-2 inline-flex h-2 w-2 rounded-full bg-red-500"
+                                  className="ml-auto inline-flex h-2 w-2 rounded-full bg-red-500 group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:right-0 group-data-[collapsible=icon]:top-0 group-data-[collapsible=icon]:z-10 group-data-[collapsible=icon]:ml-0"
                                   aria-hidden="true"
                                 />
                               )
                             ) : null}
                             <ChevronDown
                               className={cn(
-                                "ml-auto size-4 transition-transform",
+                                "size-4 transition-transform group-data-[collapsible=icon]:hidden",
+                                !showParentNotification && "ml-auto",
                                 isOpen && "rotate-180"
                               )}
                             />

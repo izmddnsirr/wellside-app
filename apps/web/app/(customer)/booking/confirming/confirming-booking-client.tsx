@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
+import { BookingPageTransition } from "@/components/customer/booking-motion";
 
 type ConfirmingBookingClientProps = {
   startedAt: number;
@@ -87,7 +88,7 @@ export function ConfirmingBookingClient({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 pb-24">
+    <BookingPageTransition className="mx-auto flex w-full max-w-2xl flex-col gap-6 pb-24">
       <div className="flex flex-col gap-4">
         <header className="space-y-4">
           <div className="lg:hidden">
@@ -137,6 +138,6 @@ export function ConfirmingBookingClient({
       <form ref={confirmFormRef} action={confirmAction} className="hidden">
         <button type="submit" aria-hidden="true" tabIndex={-1} />
       </form>
-    </div>
+    </BookingPageTransition>
   );
 }

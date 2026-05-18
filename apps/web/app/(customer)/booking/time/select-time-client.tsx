@@ -1,6 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { ChevronDown } from "lucide-react";
+import {
+  BookingPageTransition,
+  BookingStaggerList,
+  BookingStaggerItem,
+} from "@/components/customer/booking-motion";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -460,13 +466,18 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
           name: displayName,
           initials: buildInitials(displayName) || "B",
           level: barber.barber_level?.trim() || null,
+          avatarUrl: barber.avatar_url ?? null,
         };
       }),
     [barbers],
   );
 
+  const barberAvatarUrl = professionals.find(
+    (p) => (barberId ? p.id === barberId : p.name === barberName),
+  )?.avatarUrl ?? null;
+
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-300">
+    <BookingPageTransition className="mx-auto w-full max-w-xl lg:max-w-300">
       <div className="pb-12">
         <div className="flex flex-col gap-10 lg:flex lg:flex-row lg:items-start lg:gap-12">
           <div className="flex flex-col gap-6 lg:flex-[1.4] lg:min-w-0">
@@ -517,7 +528,9 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
               </div>
             </header>
 
-            <section className="space-y-6" style={{ animationDelay: "80ms" }}>
+            <BookingStaggerList className="flex flex-col gap-6">
+            <BookingStaggerItem>
+            <section className="space-y-6">
               <Dialog
                 open={isBarberDialogOpen}
                 onOpenChange={setIsBarberDialogOpen}
@@ -527,8 +540,14 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                     variant="outline"
                     className="h-auto w-fit rounded-full border-border/60 bg-background/80 px-4 py-2.5 text-sm font-semibold text-foreground shadow-none"
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
-                      {barberInitials}
+                    <span className="relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
+                      {barberAvatarUrl ? (
+                        <Image src={barberAvatarUrl} alt="" fill className="object-cover" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-foreground">
+                          {barberInitials}
+                        </span>
+                      )}
                     </span>
                     <span className="text-foreground">{barberLabel}</span>
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -572,8 +591,14 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                                 : "border-border/60 bg-background hover:border-border"
                             }`}
                           >
-                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
-                              {pro.initials}
+                            <span className="relative flex h-11 w-11 shrink-0 overflow-hidden rounded-full bg-muted">
+                              {pro.avatarUrl ? (
+                                <Image src={pro.avatarUrl} alt="" fill className="object-cover" />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-foreground">
+                                  {pro.initials}
+                                </span>
+                              )}
                             </span>
                             <span>
                               <span className="block text-sm font-semibold text-foreground">
@@ -639,8 +664,10 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                 </div>
               </div>
             </section>
+            </BookingStaggerItem>
 
-            <section className="space-y-4" style={{ animationDelay: "160ms" }}>
+            <BookingStaggerItem>
+            <section className="space-y-4">
               {closedDatesError ? (
                 <p className="text-sm text-destructive">{closedDatesError}</p>
               ) : null}
@@ -655,9 +682,13 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                 </p>
               ) : null}
               {slotsKey && effectiveSlotState.isLoading ? (
-                <p className="text-sm text-muted-foreground">
-                  Loading available slots...
-                </p>
+                <BookingStaggerList className="flex flex-col gap-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <BookingStaggerItem key={i}>
+                      <div className="h-14.5 w-full animate-pulse rounded-3xl bg-muted" />
+                    </BookingStaggerItem>
+                  ))}
+                </BookingStaggerList>
               ) : null}
               {slotsKey && effectiveSlotState.error ? (
                 <p className="text-sm text-destructive">
@@ -690,6 +721,8 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
                 );
               })}
             </section>
+            </BookingStaggerItem>
+            </BookingStaggerList>
           </div>
 
           <aside className="hidden lg:block lg:flex-1 lg:self-start">
@@ -728,6 +761,6 @@ export default function SelectTimeClient({ barbers }: SelectTimeClientProps) {
           </aside>
         </div>
       </div>
-    </div>
+    </BookingPageTransition>
   );
 }

@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
+import HairstyleDictionaryModal from "../hairstyle-dictionary-modal";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +17,11 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
+import {
+  BookingPageTransition,
+  BookingStaggerItem,
+  BookingStaggerList,
+} from "../../components/motion";
 import { supabase } from "../../utils/supabase";
 
 type HairstyleSuggestion = {
@@ -29,6 +34,7 @@ type HairstyleSuggestion = {
 type HairAnalysisResult = {
   face_shape: string;
   hair_type: string;
+  gender?: string;
   suggestions: HairstyleSuggestion[];
 };
 
@@ -207,6 +213,8 @@ export default function AIScreen() {
       (isUnknownValue(analysisResult.hair_type) ||
         isCoveredHairValue(analysisResult.hair_type))
   );
+
+  const [isDictionaryVisible, setIsDictionaryVisible] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
@@ -436,6 +444,7 @@ export default function AIScreen() {
         body: {
           faceShape: analysisResult.face_shape,
           hairType,
+          gender: analysisResult.gender,
         },
       });
 
@@ -561,17 +570,35 @@ export default function AIScreen() {
         }
       >
         {/* Header */}
-        <View className="mx-5 mt-3">
-          <Text className="text-3xl mt-1 font-semibold text-neutral-900">
-            AI Style Studio
-          </Text>
-          <Text className="text-neutral-500 text-base mt-1">
-            Upload a photo for tailored cut suggestions.
-          </Text>
-        </View>
+        <BookingPageTransition className="mx-5 mt-3">
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
+                AI Style Studio
+              </Text>
+              <Text className="text-neutral-500 text-base mt-1">
+                Upload a photo for tailored cut suggestions.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setIsDictionaryVisible(true)}
+              className="bg-white px-4 py-3 rounded-full flex-row items-center border border-neutral-200"
+              activeOpacity={0.7}
+            >
+              <Ionicons name="book-outline" size={16} color="#171717" />
+              <Text className="font-semibold text-neutral-900 ml-2">MY Styles</Text>
+            </TouchableOpacity>
+          </View>
+        </BookingPageTransition>
 
+        <HairstyleDictionaryModal
+          visible={isDictionaryVisible}
+          onClose={() => setIsDictionaryVisible(false)}
+        />
+
+        <BookingStaggerList>
         {/* Upload */}
-        <View className="mx-5 mt-6">
+        <BookingStaggerItem className="mx-5 mt-6">
           {/* Image area */}
           <TouchableOpacity
             onPress={pickFromGallery}
@@ -764,11 +791,11 @@ export default function AIScreen() {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
+        </BookingStaggerItem>
 
         {/* Results */}
         {analysisResult ? (
-          <View className="mx-5 mt-6">
+          <BookingStaggerItem className="mx-5 mt-6">
             <Text className="text-lg font-semibold text-neutral-900">
               {hasUsableAnalysis
                 ? "Recommended cuts"
@@ -1027,8 +1054,9 @@ export default function AIScreen() {
                 )}
               </View>
             )}
-          </View>
+          </BookingStaggerItem>
         ) : null}
+        </BookingStaggerList>
       </ScrollView>
     </View>
   );

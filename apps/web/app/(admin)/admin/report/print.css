@@ -1,0 +1,207 @@
+/* Hide print layout on screen */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Hide ALL screen content except print layout */
+  body > *,
+  #__NEXT_DATA__,
+  [data-sidebar],
+  [data-slot="sidebar"],
+  nav,
+  header,
+  aside,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Show only the print layout */
+  .print-only,
+  .print-only * {
+    display: revert;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 10mm 12mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 9px;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ── Header ── */
+  .print-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1.5px solid #111;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  .print-header img {
+    height: 28px;
+    width: auto;
+  }
+
+  .print-header-info {
+    text-align: right;
+  }
+
+  .print-header-info h1 {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .print-header-info p {
+    font-size: 9px;
+    color: #555;
+    margin: 2px 0 0;
+  }
+
+  /* ── Summary row ── */
+  .print-summary-row {
+    display: flex !important;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .print-summary-cell {
+    flex: 1;
+    border: 1px solid #ddd;
+    padding: 5px 8px;
+  }
+
+  .print-summary-cell .summary-label {
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #777;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .print-summary-cell .summary-value {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    display: block;
+  }
+
+  .print-summary-cell .summary-delta {
+    font-size: 7px;
+    color: #666;
+    display: block;
+    margin-top: 1px;
+  }
+
+  /* ── Grid layout ── */
+  .print-grid-2 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .print-col-stack {
+    display: flex !important;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ── Section block ── */
+  .print-block {
+    border: 1px solid #ddd;
+    overflow: hidden;
+  }
+
+  .print-block-title {
+    font-size: 7.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #333;
+    background: #f3f3f3 !important;
+    padding: 4px 8px;
+    border-bottom: 1px solid #ddd;
+    margin: 0;
+    display: block;
+  }
+
+  /* ── Tables ── */
+  .print-block table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8px;
+  }
+
+  .print-block thead th {
+    padding: 3px 6px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #555;
+    border-bottom: 1px solid #ccc;
+    background: #fafafa !important;
+  }
+
+  .print-block tbody tr {
+    border-bottom: 1px solid #eee;
+  }
+
+  .print-block tbody td {
+    padding: 3px 6px;
+    vertical-align: middle;
+  }
+
+  .print-block tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  /* Total row */
+  .print-total-row td {
+    font-weight: 700;
+    border-top: 1.5px solid #bbb !important;
+    background: #f3f3f3 !important;
+  }
+
+  /* Number columns */
+  .print-num {
+    font-family: "Courier New", Courier, monospace !important;
+    text-align: right !important;
+  }
+
+  /* Prevent page breaks inside blocks */
+  .print-block,
+  .print-summary-row,
+  .print-grid-2 {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Force no extra page breaks */
+  .print-only {
+    page-break-before: avoid;
+    page-break-after: avoid;
+  }
+}

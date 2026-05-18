@@ -130,5 +130,7 @@ export async function broadcastPush(
     await sendChunk(supabase, allMessages.slice(i, i + CHUNK_SIZE), allTokens.slice(i, i + CHUNK_SIZE));
   }
 
+  await supabase.from("broadcast_logs").insert({ title, body, sent_to: byUser.size });
+
   return { sent: byUser.size };
 }

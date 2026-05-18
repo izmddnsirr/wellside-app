@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   Text,
@@ -12,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HomeAppointmentSkeleton } from "../../components/booking-skeletons";
 import { supabase } from "../../utils/supabase";
 
 type Profile = {
@@ -23,13 +23,6 @@ type UpcomingBooking = {
   serviceName: string;
   barberName: string;
   status: "scheduled" | "in_progress";
-};
-
-type PopularService = {
-  id: string;
-  name: string;
-  price: number | null;
-  durationMinutes: number | null;
 };
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
@@ -55,16 +48,12 @@ export default function HomeScreen() {
   const [upcoming, setUpcoming] = useState<UpcomingBooking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [totalBookings, setTotalBookings] = useState(0);
-  const [popularServices, setPopularServices] = useState<PopularService[]>([]);
 
   const fetchHome = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) {
       setProfile(null);
       setUpcoming(null);
-      setTotalBookings(0);
-      setPopularServices([]);
       return;
     }
 
@@ -86,27 +75,6 @@ export default function HomeScreen() {
       .order("start_at", { ascending: true })
       .limit(1)
       .maybeSingle();
-
-    const { count: bookingCount } = await supabase
-      .from("bookings")
-      .select("id", { count: "exact", head: true })
-      .eq("customer_id", authData.user.id);
-    setTotalBookings(bookingCount ?? 0);
-
-    const { data: servicesData } = await supabase
-      .from("services")
-      .select("id,name,price,duration_minutes")
-      .order("name", { ascending: true })
-      .limit(3);
-
-    setPopularServices(
-      (servicesData ?? []).map((service) => ({
-        id: service.id,
-        name: service.name,
-        price: service.price ?? null,
-        durationMinutes: service.duration_minutes ?? null,
-      })),
-    );
 
     if (!bookingData) {
       setUpcoming(null);
@@ -190,11 +158,6 @@ export default function HomeScreen() {
     return timeFormatter.format(date);
   }, [upcoming]);
 
-  const todayLabel = useMemo(() => {
-    const now = new Date();
-    return `${dayFormatter.format(now)}, ${dateFormatter.format(now)}`;
-  }, []);
-
   return (
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <StatusBar style="dark" />
@@ -211,9 +174,6 @@ export default function HomeScreen() {
               <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 Hi{profile?.first_name ? `, ${profile.first_name}` : ""}
               </Text>
-              {isLoading ? (
-                <ActivityIndicator className="ml-3" size="small" />
-              ) : null}
             </View>
             <Text className="text-neutral-500 text-base mt-1">
               Clean lines. Calm day.
@@ -221,14 +181,12 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {isLoading ? (
+          <HomeAppointmentSkeleton />
+        ) : (
         <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white overflow-hidden relative">
           <View className="absolute -left-3 top-24 h-6 w-6 rounded-full bg-neutral-50 border border-neutral-200" />
           <View className="absolute -right-3 top-24 h-6 w-6 rounded-full bg-neutral-50 border border-neutral-200" />
-          {isLoading ? (
-            <View className="p-6 items-center justify-center">
-              <ActivityIndicator size="small" color="#171717" />
-            </View>
-          ) : null}
           {!isLoading ? (
             <>
               <View className="bg-neutral-900 px-6 py-5">
@@ -346,27 +304,7 @@ export default function HomeScreen() {
             </>
           ) : null}
         </View>
-
-        <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white p-4">
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-lg font-semibold text-neutral-900">
-                Available today
-              </Text>
-              <Text className="mt-1 text-sm text-neutral-500">
-                {todayLabel}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push("/(tabs)/booking")}
-              className="rounded-full bg-neutral-900 px-4 py-2.5"
-            >
-              <Text className="text-sm font-semibold text-white">
-                View times
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        )}
 
         <View className="mx-5 mt-6">
           <Text className="text-lg font-semibold text-neutral-900">
@@ -375,7 +313,7 @@ export default function HomeScreen() {
           <View className="mt-3 flex-row gap-3">
             <TouchableOpacity
               onPress={() => router.push("/(tabs)/booking")}
-              className="flex-1 rounded-3xl border border-neutral-200 bg-white p-4"
+              className="flex-1 items-center justify-center rounded-3xl border border-neutral-200 bg-white p-4"
             >
               <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-900">
                 <Ionicons name="calendar-outline" size={18} color="#ffffff" />
@@ -387,7 +325,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               onPress={() => router.push("/(tabs)/ai")}
-              className="flex-1 rounded-3xl border border-neutral-900 bg-neutral-900 p-4"
+              className="flex-1 items-center justify-center rounded-3xl border border-neutral-900 bg-neutral-900 p-4"
             >
               <View className="h-10 w-10 items-center justify-center rounded-full bg-white/10">
                 <Ionicons name="sparkles-outline" size={18} color="#ffffff" />
@@ -399,7 +337,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               disabled
-              className="flex-1 rounded-3xl border border-neutral-200 bg-white p-4 opacity-60"
+              className="flex-1 items-center justify-center rounded-3xl border border-neutral-200 bg-white p-4 opacity-60"
             >
               <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
                 <Ionicons name="people-outline" size={18} color="#525252" />
@@ -411,74 +349,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View className="mx-5 mt-6">
-          <Text className="text-lg font-semibold text-neutral-900">
-            Popular services
-          </Text>
-          <View className="mt-3 gap-3">
-            {(popularServices.length ? popularServices : [
-              {
-                id: "signature-cut",
-                name: "Signature Cut",
-                price: null,
-                durationMinutes: null,
-              },
-              {
-                id: "skin-fade",
-                name: "Skin Fade",
-                price: null,
-                durationMinutes: null,
-              },
-              {
-                id: "beard-line-up",
-                name: "Beard Line-Up",
-                price: null,
-                durationMinutes: null,
-              },
-            ]).map((service) => (
-              <TouchableOpacity
-                key={service.id}
-                onPress={() => router.push("/(tabs)/booking")}
-                className="rounded-3xl border border-neutral-200 bg-white p-4"
-              >
-                <View className="flex-row items-center justify-between">
-                  <View>
-                    <Text className="font-semibold text-neutral-900">
-                      {service.name}
-                    </Text>
-                    <Text className="mt-1 text-sm text-neutral-500">
-                      {service.durationMinutes
-                        ? `${service.durationMinutes} min`
-                        : "Book for details"}
-                    </Text>
-                  </View>
-                  <Text className="font-semibold text-neutral-900">
-                    {service.price ? `RM${service.price}` : ""}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View className="mx-5 mt-6 rounded-3xl border border-neutral-200 bg-white p-4">
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className="text-lg font-semibold text-neutral-900">
-                Shop status
-              </Text>
-              <Text className="mt-1 text-sm text-neutral-500">
-                Check booking times for the latest availability today.
-              </Text>
-              <Text className="mt-3 text-sm text-neutral-500">
-                Total bookings: {totalBookings}
-              </Text>
-            </View>
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-              <Ionicons name="storefront-outline" size={18} color="#525252" />
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );

@@ -10,6 +10,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/server";
+import {
+  BookingPageTransition,
+  BookingStaggerList,
+  BookingStaggerItem,
+} from "@/components/customer/booking-motion";
 
 type BookingRecord = {
   start_at: string;
@@ -99,15 +104,15 @@ async function HomeContent() {
       </header>
 
       <div className="grid gap-4">
-        <div className="flex flex-col gap-6">
+        <BookingStaggerList className="flex flex-col gap-6">
+          <BookingStaggerItem>
           <div
             className="relative flex flex-col gap-0 overflow-hidden rounded-3xl border border-border/60 bg-card"
-            style={{ animationDelay: "80ms" }}
           >
 
             <div className="bg-primary px-6 py-5 text-primary-foreground">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] tracking-[0.2em] text-primary-foreground/70">
+                <p className="text-xs text-primary-foreground/70">
                   Upcoming
                 </p>
                 {upcoming ? (
@@ -146,7 +151,7 @@ async function HomeContent() {
               <div className="px-6 py-5">
                 <div className="flex items-center justify-between gap-6">
                   <div>
-                    <div className="flex items-center gap-2 text-xs tracking-[0.2em] text-muted-foreground">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Scissors className="h-3.5 w-3.5" />
                       Service
                     </div>
@@ -155,7 +160,7 @@ async function HomeContent() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center justify-end gap-2 text-xs tracking-[0.2em] text-muted-foreground">
+                    <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
                       <User className="h-3.5 w-3.5" />
                       Barber
                     </div>
@@ -190,13 +195,12 @@ async function HomeContent() {
               </div>
             )}
           </div>
+          </BookingStaggerItem>
 
-          <section
-            className="grid grid-cols-2 gap-3"
-            style={{ animationDelay: "160ms" }}
-          >
+          <BookingStaggerItem>
+          <section className="grid grid-cols-2 gap-3">
             <div className="text-card-foreground flex flex-col gap-3 rounded-3xl border border-border/60 bg-card px-4 py-4">
-              <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 Next
               </div>
@@ -208,7 +212,7 @@ async function HomeContent() {
               </div>
             </div>
             <div className="flex flex-col gap-3 rounded-3xl border border-border/60 bg-card px-4 py-4">
-              <div className="flex items-center gap-2 text-[10px] tracking-[0.2em] text-muted-foreground">
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
                 Total
               </div>
@@ -218,7 +222,8 @@ async function HomeContent() {
               <div className="text-sm text-muted-foreground">Bookings</div>
             </div>
           </section>
-        </div>
+          </BookingStaggerItem>
+        </BookingStaggerList>
       </div>
     </>
   );
@@ -228,30 +233,46 @@ function HomeSkeleton() {
   return (
     <>
       <header className="space-y-2">
-        <Skeleton className="h-9 w-40" />
-        <Skeleton className="h-4 w-32" />
-      </header>
-      <div className="flex flex-col gap-6">
-        <div className="overflow-hidden rounded-3xl border border-border/60">
-          <div className="bg-primary/20 px-6 py-5 space-y-3">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-8 w-36" />
-            <Skeleton className="h-5 w-48" />
-          </div>
-          <div className="px-6 py-5">
-            <Skeleton className="h-11 w-full rounded-full" />
-          </div>
+        <div className="space-y-1">
+          <Skeleton className="h-9 w-36 lg:h-10" />
+          <Skeleton className="h-4 w-32 lg:h-5" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-3xl border border-border/60 bg-card px-4 py-4 space-y-3">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-5 w-16" />
-            <Skeleton className="h-4 w-20" />
+      </header>
+      <div className="grid gap-4">
+        <div className="flex flex-col gap-6">
+          {/* Booking card */}
+          <div className="overflow-hidden rounded-3xl border border-border/60 bg-card">
+            <div className="bg-primary/20 px-6 py-5 space-y-3">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-8 w-40" />
+              <Skeleton className="h-5 w-52" />
+            </div>
+            <div className="px-6 py-5 space-y-5">
+              <div className="flex items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-14" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                <div className="space-y-2 text-right">
+                  <Skeleton className="h-3 w-14 ml-auto" />
+                  <Skeleton className="h-5 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-11 w-full rounded-full" />
+            </div>
           </div>
-          <div className="rounded-3xl border border-border/60 bg-card px-4 py-4 space-y-3">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-5 w-10" />
-            <Skeleton className="h-4 w-16" />
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-3xl border border-border/60 bg-card px-4 py-4 flex flex-col gap-3">
+              <Skeleton className="h-3 w-10" />
+              <Skeleton className="h-5 w-16 mt-3" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+            <div className="rounded-3xl border border-border/60 bg-card px-4 py-4 flex flex-col gap-3">
+              <Skeleton className="h-3 w-10" />
+              <Skeleton className="h-5 w-8 mt-3" />
+              <Skeleton className="h-4 w-16" />
+            </div>
           </div>
         </div>
       </div>
@@ -261,10 +282,10 @@ function HomeSkeleton() {
 
 export default function HomePage() {
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+    <BookingPageTransition className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <Suspense fallback={<HomeSkeleton />}>
         <HomeContent />
       </Suspense>
-    </div>
+    </BookingPageTransition>
   );
 }

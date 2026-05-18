@@ -1,5 +1,6 @@
 import { Calendar, Clock, User } from "lucide-react";
 import Link from "next/link";
+import { BookingPageTransition, BookingStaggerItem } from "@/components/customer/booking-motion";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -123,7 +124,7 @@ export default async function ReviewBookingPage({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-40">
+    <BookingPageTransition className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-40">
       <div className="flex flex-col gap-4">
         <header className="space-y-4">
           <div className="lg:hidden">
@@ -172,12 +173,13 @@ export default async function ReviewBookingPage({
         </header>
       </div>
 
+      <BookingStaggerItem>
       <section className="">
         <div className="overflow-hidden rounded-3xl border border-border bg-card">
           <div className="relative">
             {/* Header */}
             <div className="bg-primary px-5 py-4 text-primary-foreground">
-              <p className="text-xs font-semibold tracking-[0.2em] text-primary-foreground/70">
+              <p className="text-xs font-semibold text-primary-foreground/70">
                 Booking Details
               </p>
               <p className="mt-2 text-lg font-semibold">{bookingDate}</p>
@@ -188,7 +190,7 @@ export default async function ReviewBookingPage({
 
             {/* Appointment */}
             <div className="px-5 py-4">
-              <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
+              <p className="text-xs font-semibold text-muted-foreground">
                 Appointment
               </p>
 
@@ -229,7 +231,7 @@ export default async function ReviewBookingPage({
 
             {/* Service */}
             <div className="px-5 py-4">
-              <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
+              <p className="text-xs font-semibold text-muted-foreground">
                 Service
               </p>
 
@@ -253,7 +255,7 @@ export default async function ReviewBookingPage({
 
             {/* Summary */}
             <div className="px-5 py-4">
-              <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
+              <p className="text-xs font-semibold text-muted-foreground">
                 Summary
               </p>
 
@@ -278,6 +280,7 @@ export default async function ReviewBookingPage({
           </div>
         </div>
       </section>
+      </BookingStaggerItem>
 
       <div className="fixed bottom-4 left-1/2 z-20 w-[min(480px,calc(100%-2rem))] -translate-x-1/2 lg:bottom-6">
         <div className="text-card-foreground flex flex-col gap-6 rounded-3xl border border-border/60 bg-card/90 shadow-none backdrop-blur">
@@ -298,6 +301,6 @@ export default async function ReviewBookingPage({
           </div>
         </div>
       </div>
-    </div>
+    </BookingPageTransition>
   );
 }

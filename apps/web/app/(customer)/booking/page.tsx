@@ -1,5 +1,10 @@
 import { Suspense } from "react";
-import { Calendar, CalendarCheck, Clock, MapPin, Phone } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone } from "lucide-react";
+import {
+  BookingPageTransition,
+  BookingStaggerList,
+  BookingStaggerItem,
+} from "@/components/customer/booking-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,21 +69,19 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
 
 const formatCurrency = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return "RM0.00";
+    return "RM0";
   }
   return `RM${new Intl.NumberFormat("en-MY", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(value)}`;
 };
 
-const formatTimeRange = (startAt: string, endAt: string) => {
+const formatTime = (startAt: string) => {
   const start = new Date(startAt);
-  const end = new Date(endAt);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+  if (Number.isNaN(start.getTime())) {
     return "";
   }
-  return `${timeFormatter.format(start)} · ${timeFormatter.format(end)}`;
+  return timeFormatter.format(start);
 };
 
 const cancelBooking = async (formData: FormData) => {
@@ -178,7 +181,7 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
 
   const bookingDisabledMessage =
     readParam(params.booking_disabled) === "1" || !bookingEnabled
-      ? "Online booking is currently unavailable. Please walk in to the shop."
+      ? "Online booking is currently paused. Please contact the shop for urgent changes."
       : null;
   const errorMessage =
     readParam(params.error) === "cancel"
@@ -187,19 +190,21 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
 
   if (userError || !user) {
     return (
-      <>
-        <section className="space-y-4" style={{ animationDelay: "80ms" }}>
-          <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
-            Upcoming
-          </p>
-          <div className="flex min-h-45 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
-            <Calendar className="h-8 w-8 text-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Please sign in to view your booking.
+      <BookingStaggerList className="contents">
+        <BookingStaggerItem>
+          <section className="space-y-4">
+            <p className="text-lg font-semibold text-foreground">
+              Upcoming
             </p>
-          </div>
-        </section>
-      </>
+            <div className="flex min-h-45 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border/60 bg-muted/30 p-6 text-center">
+              <Calendar className="h-8 w-8 text-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Please sign in to view your booking.
+              </p>
+            </div>
+          </section>
+        </BookingStaggerItem>
+      </BookingStaggerList>
     );
   }
 
@@ -223,24 +228,23 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
       .join(" ")
       .trim() ||
     "Barber";
-  const timeLabel = booking
-    ? formatTimeRange(booking.start_at, booking.end_at)
-    : "";
+  const timeLabel = booking ? formatTime(booking.start_at) : "";
   const dayLabel = booking?.start_at
-    ? dayFormatter.format(new Date(booking.start_at)).toUpperCase()
+    ? dayFormatter.format(new Date(booking.start_at))
     : "";
   const durationLabel = booking?.service?.duration_minutes
     ? `${booking.service.duration_minutes} min`
     : "N/A";
   const priceLabel = formatCurrency(booking?.service?.base_price);
   const statusLabel =
-    booking?.status === "in_progress" ? "IN PROGRESS" : "SCHEDULED";
+    booking?.status === "in_progress" ? "In progress" : "Scheduled";
 
   return (
-    <>
-      <section className="space-y-4" style={{ animationDelay: "80ms" }}>
+    <BookingStaggerList className="contents">
+      <BookingStaggerItem>
+      <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
+          <p className="text-lg font-semibold text-foreground">
             Upcoming
           </p>
           {hasBooking ? (
@@ -275,7 +279,7 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
               <div className="bg-primary px-6 py-6 text-primary-foreground">
                 <div className="flex items-start justify-between gap-6">
                   <div className="space-y-2">
-                    <p className="text-[11px] tracking-[0.2em] text-primary-foreground/70">
+                    <p className="text-xs text-primary-foreground/70">
                       {dayLabel}
                     </p>
                     <p className="text-2xl font-semibold">{timeLabel}</p>
@@ -283,8 +287,8 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
                       {booking?.service?.name ?? "Service"} · {barberLabel}
                     </p>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-foreground/10">
-                    <CalendarCheck className="h-5 w-5" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/10">
+                    <Calendar className="h-5 w-5" />
                   </div>
                 </div>
               </div>
@@ -295,7 +299,7 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
                       <Clock className="h-4 w-4" />
                     </span>
                     <div>
-                      <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground">
                         Duration
                       </p>
                       <p className="text-base font-semibold text-foreground">
@@ -308,7 +312,7 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
                       <span className="text-xs font-semibold">RM</span>
                     </span>
                     <div>
-                      <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground">
                         Total
                       </p>
                       <p className="text-base font-semibold text-foreground">
@@ -393,6 +397,7 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
           </div>
         ) : null}
       </section>
+      </BookingStaggerItem>
       {errorMessage ? (
         <Dialog defaultOpen>
           <DialogContent>
@@ -409,33 +414,32 @@ async function BookingContent({ params }: { params: BookingSearchParams }) {
         </Dialog>
       ) : null}
       {bookingDisabledMessage ? (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-700">
+        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-5 text-amber-800">
           {bookingDisabledMessage}
         </div>
       ) : null}
-      <section className="space-y-4" style={{ animationDelay: "160ms" }}>
-        <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
-          Quick Pick
-        </p>
-        {bookingEnabled ? (
-          <Button
-            asChild
-            size="lg"
-            className="h-16 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
-          >
-            <Link href="/booking/services">Book appointment</Link>
-          </Button>
-        ) : (
-          <Button
-            size="lg"
-            disabled
-            className="h-16 w-full rounded-full text-base font-semibold"
-          >
-            Booking unavailable
-          </Button>
-        )}
-      </section>
-    </>
+      <BookingStaggerItem>
+        <section>
+          {bookingEnabled ? (
+            <Button
+              asChild
+              size="lg"
+              className="h-16 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Link href="/booking/services">Book now</Link>
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              disabled
+              className="h-16 w-full rounded-full text-base font-semibold"
+            >
+              Paused
+            </Button>
+          )}
+        </section>
+      </BookingStaggerItem>
+    </BookingStaggerList>
   );
 }
 
@@ -443,20 +447,37 @@ function BookingContentSkeleton() {
   return (
     <>
       <section className="space-y-4">
-        <Skeleton className="h-3 w-20" />
-        <div className="overflow-hidden rounded-3xl border border-border/60">
-          <div className="bg-primary/20 px-6 py-6 space-y-2">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-7 w-40" />
-            <Skeleton className="h-4 w-48" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-16" />
+        </div>
+        <div className="overflow-hidden rounded-3xl border border-border/60 bg-card">
+          <div className="space-y-3 bg-primary/20 px-6 py-6">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-5 w-52" />
           </div>
-          <div className="px-6 py-6 space-y-4">
-            <Skeleton className="h-11 w-full rounded-full" />
+          <div className="px-6 py-6 space-y-6">
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-14" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-10" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+              </div>
+            </div>
+            <Skeleton className="h-12 w-full rounded-full" />
           </div>
         </div>
       </section>
-      <section className="space-y-4">
-        <Skeleton className="h-3 w-20" />
+      <section>
         <Skeleton className="h-16 w-full rounded-full" />
       </section>
     </>
@@ -471,7 +492,7 @@ export default async function BookingPage({
   const params = (await searchParams) ?? {};
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+    <BookingPageTransition className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <header className="space-y-2">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
@@ -485,6 +506,6 @@ export default async function BookingPage({
       <Suspense fallback={<BookingContentSkeleton />}>
         <BookingContent params={params} />
       </Suspense>
-    </div>
+    </BookingPageTransition>
   );
 }

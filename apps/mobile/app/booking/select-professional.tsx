@@ -10,7 +10,14 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BarberListSkeleton } from "../../components/booking-skeletons";
+import {
+  BookingPageTransition,
+  BookingStaggerItem,
+  BookingStaggerList,
+} from "../../components/motion";
 import { useBooking } from "../../context/BookingContext";
+import { getBarberRatings } from "../../utils/barber-ratings";
 import { supabase } from "../../utils/supabase";
 
 type BarberRow = {
@@ -24,14 +31,27 @@ type BarberRow = {
   is_active: boolean | null;
 };
 
+const buildInitials = (value: string) =>
+  value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+const formatRating = (average: number) => average.toFixed(1);
+
 export default function SelectProfessionalScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { setBarber } = useBooking();
+  const { selectedBarber, setBarber } = useBooking();
   const [barbers, setBarbers] = useState<BarberRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [ratings, setRatings] = useState(
+    new Map<string, { average: number; count: number }>()
+  );
   const isMountedRef = useRef(true);
 
   const fetchBarbers = useCallback(async () => {
@@ -53,8 +73,16 @@ export default function SelectProfessionalScreen() {
     if (error) {
       setErrorMessage("Unable to load professionals right now.");
       setBarbers([]);
+      setRatings(new Map());
     } else {
-      setBarbers(data ?? []);
+      const barberRows = data ?? [];
+      setBarbers(barberRows);
+      const ratingMap = await getBarberRatings(
+        barberRows.map((barber) => barber.id)
+      );
+      if (isMountedRef.current) {
+        setRatings(ratingMap);
+      }
     }
     setIsLoading(false);
   }, []);
@@ -88,9 +116,11 @@ export default function SelectProfessionalScreen() {
         name: displayName,
         avatarUrl: barber.avatar_url ?? null,
         level: barber.barber_level?.trim() || null,
+        initials: buildInitials(displayName) || "B",
+        rating: ratings.get(barber.id) ?? null,
       };
     });
-  }, [barbers]);
+  }, [barbers, ratings]);
 
   return (
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
@@ -121,20 +151,18 @@ export default function SelectProfessionalScreen() {
           </Pressable>
         </View>
 
-        <View className="px-5 pt-2">
+        <BookingPageTransition className="px-5 pt-2">
           <Text className="text-3xl font-semibold text-neutral-900">
             Select barbers
           </Text>
           <Text className="mt-1 text-base text-neutral-500">
             Choose your preferred barber.
           </Text>
-        </View>
+        </BookingPageTransition>
 
-        <View className="px-5 pt-6 flex-row flex-wrap justify-between">
+        <View className="px-5 pt-6">
           {isLoading ? (
-            <Text className="mt-2 text-sm text-neutral-500">
-              Loading barbers...
-            </Text>
+            <BarberListSkeleton />
           ) : null}
           {errorMessage ? (
             <Text className="mt-2 text-sm text-red-500">{errorMessage}</Text>
@@ -144,44 +172,71 @@ export default function SelectProfessionalScreen() {
               No barbers available right now.
             </Text>
           ) : null}
-          {professionals.map((pro) => (
-            <Pressable
-              key={pro.id}
-              onPress={() => {
-                setBarber({ id: pro.id, displayName: pro.name });
-                router.push("/booking/select-time");
-              }}
-              className="mb-4 w-[48%] items-center rounded-3xl border border-neutral-200 bg-white p-5"
-            >
-              <View className="items-center">
+          <BookingStaggerList>
+          {!isLoading && professionals.map((pro) => (
+            <BookingStaggerItem key={pro.id}>
+              <Pressable
+                onPress={() => {
+                  setBarber({ id: pro.id, displayName: pro.name });
+                  router.push("/booking/select-time");
+                }}
+                className={`mb-4 flex-row items-center rounded-3xl border bg-white px-3 py-3 ${
+                  selectedBarber?.id === pro.id
+                    ? "border-neutral-900"
+                    : "border-neutral-200"
+                }`}
+              >
+              <View className="mr-5">
                 {pro.avatarUrl ? (
                   <Image
                     source={{ uri: pro.avatarUrl }}
-                    className="h-16 w-16 rounded-full"
+                    className="h-20 w-20 rounded-full"
                   />
                 ) : (
-                  <View className="h-16 w-16 items-center justify-center rounded-full bg-neutral-200">
-                    <Text className="text-base font-semibold text-neutral-900">
-                      {pro.name
-                        .split(" ")
-                        .map((part) => part[0])
-                        .slice(0, 2)
-                        .join("")}
+                  <View className="h-20 w-20 items-center justify-center rounded-full bg-neutral-200">
+                    <Text className="text-lg font-semibold text-neutral-900">
+                      {pro.initials}
                     </Text>
                   </View>
                 )}
               </View>
 
-              <Text className="mt-4 text-center text-base font-semibold text-neutral-900">
-                {pro.name}
-              </Text>
-              {pro.level ? (
-                <Text className="mt-1 text-center text-sm text-neutral-500">
-                  {pro.level}
+              <View className="min-w-0 flex-1">
+                <Text className="text-base font-semibold text-neutral-900">
+                  {pro.name}
                 </Text>
-              ) : null}
-            </Pressable>
+                <Text className="mt-1 text-sm text-neutral-500">
+                  {pro.level ?? "Barber"}
+                </Text>
+                {pro.rating ? (
+                  <View className="mt-1.5 flex-row items-center">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Ionicons
+                        key={index}
+                        name={
+                          index < Math.round(pro.rating!.average)
+                            ? "star"
+                            : "star-outline"
+                        }
+                        size={12}
+                        color={
+                          index < Math.round(pro.rating!.average)
+                            ? "#f59e0b"
+                            : "#d4d4d4"
+                        }
+                        style={{ marginRight: 1 }}
+                      />
+                    ))}
+                    <Text className="ml-1 text-xs text-neutral-500">
+                      {formatRating(pro.rating.average)} ({pro.rating.count})
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              </Pressable>
+            </BookingStaggerItem>
           ))}
+          </BookingStaggerList>
         </View>
       </ScrollView>
     </View>

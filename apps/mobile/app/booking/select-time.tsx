@@ -11,7 +11,17 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  BarberListSkeleton,
+  TimeSlotListSkeleton,
+} from "../../components/booking-skeletons";
+import {
+  BookingPageTransition,
+  BookingStaggerItem,
+  BookingStaggerList,
+} from "../../components/motion";
 import { useBooking } from "../../context/BookingContext";
+import { getBarberRatings } from "../../utils/barber-ratings";
 import { getAvailableSlots } from "../../utils/slots";
 import { getClosedDatesMap } from "../../utils/shop-operations";
 import { supabase } from "../../utils/supabase";
@@ -111,8 +121,19 @@ type BarberRow = {
   last_name: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  barber_level: string | null;
   is_active: boolean | null;
 };
+
+const buildInitials = (value: string) =>
+  value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+const formatRating = (average: number) => average.toFixed(1);
 
 export default function SelectTimeScreen() {
   const insets = useSafeAreaInsets();
@@ -129,6 +150,9 @@ export default function SelectTimeScreen() {
   const [barbers, setBarbers] = useState<BarberRow[]>([]);
   const [isLoadingBarbers, setIsLoadingBarbers] = useState(true);
   const [barberError, setBarberError] = useState<string | null>(null);
+  const [ratings, setRatings] = useState(
+    new Map<string, { average: number; count: number }>()
+  );
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [slotError, setSlotError] = useState<string | null>(null);
   const [closedDates, setClosedDates] = useState<ClosedDateMap>({});
@@ -156,7 +180,7 @@ export default function SelectTimeScreen() {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "id,role,first_name,last_name,display_name,avatar_url,is_active"
+        "id,role,first_name,last_name,display_name,avatar_url,barber_level,is_active"
       )
       .eq("is_active", true)
       .eq("role", "barber")
@@ -169,8 +193,16 @@ export default function SelectTimeScreen() {
     if (error) {
       setBarberError("Unable to load professionals right now.");
       setBarbers([]);
+      setRatings(new Map());
     } else {
-      setBarbers(data ?? []);
+      const barberRows = data ?? [];
+      setBarbers(barberRows);
+      const ratingMap = await getBarberRatings(
+        barberRows.map((barber) => barber.id)
+      );
+      if (isMountedRef.current) {
+        setRatings(ratingMap);
+      }
     }
     setIsLoadingBarbers(false);
   }, []);
@@ -270,9 +302,12 @@ export default function SelectTimeScreen() {
         id: barber.id,
         name: displayName,
         avatarUrl: barber.avatar_url ?? null,
+        level: barber.barber_level?.trim() || null,
+        initials: buildInitials(displayName) || "B",
+        rating: ratings.get(barber.id) ?? null,
       };
     });
-  }, [barbers]);
+  }, [barbers, ratings]);
 
   useEffect(() => {
     if (!selectedDate) {
@@ -315,52 +350,62 @@ export default function SelectTimeScreen() {
           </Pressable>
         </View>
 
-        <View className="px-5 pt-2">
+        <BookingPageTransition className="px-5 pt-2">
           <Text className="text-3xl font-semibold text-neutral-900">
             Select time
           </Text>
           <Text className="mt-1 text-base text-neutral-500">
             Pick a slot that fits your day.
           </Text>
-        </View>
+        </BookingPageTransition>
 
-        <View className="px-5 mt-5 flex-row items-center justify-between">
-          <Pressable
-            onPress={() => setIsBarberModalVisible(true)}
-            className="flex-row items-center rounded-full border border-neutral-200 bg-white px-4 py-3"
-          >
-            <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-neutral-200">
-              <Text className="text-xs font-semibold text-neutral-900">
-                {barberName
-                  .split(" ")
-                  .map((part) => part[0])
-                  .slice(0, 2)
-                  .join("")}
-              </Text>
-            </View>
-            <Text className="text-sm font-semibold text-neutral-900">
-              {barberName}
+        <BookingStaggerList>
+        <BookingStaggerItem className="mt-6 gap-6">
+          <View className="px-5">
+            {(() => {
+              const avatarUrl = professionals.find((p) => p.id === selectedBarber?.id)?.avatarUrl ?? null;
+              const initials = barberName
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0]?.toUpperCase())
+                .join("");
+              return (
+                <Pressable
+                  onPress={() => setIsBarberModalVisible(true)}
+                  className="flex-row items-center self-start rounded-full border border-neutral-200 bg-white pl-1.5 pr-4 py-1.5"
+                >
+                  <View className="mr-3 h-10 w-10 overflow-hidden rounded-full bg-neutral-200 items-center justify-center">
+                    {avatarUrl ? (
+                      <Image source={{ uri: avatarUrl }} style={{ width: 40, height: 40 }} resizeMode="cover" />
+                    ) : (
+                      <Text className="text-xs font-semibold text-neutral-900">
+                        {initials || "B"}
+                      </Text>
+                    )}
+                  </View>
+                  <Text className="text-sm font-semibold text-neutral-900">
+                    {barberName}
+                  </Text>
+                  <Ionicons
+                    name="chevron-down"
+                    size={16}
+                    color="#737373"
+                    style={{ marginLeft: 8 }}
+                  />
+                </Pressable>
+              );
+            })()}
+          </View>
+
+          <View className="gap-4">
+            <Text className="px-5 text-base font-semibold text-neutral-900">
+              {monthYearLabel}
             </Text>
-            <Ionicons
-              name="chevron-down"
-              size={16}
-              color="#171717"
-              style={{ marginLeft: 8 }}
-            />
-          </Pressable>
-          <View className="h-12 w-12" />
-        </View>
-
-        <View className="px-5 mt-6">
-          <Text className="text-base font-semibold text-neutral-900">
-            {monthYearLabel}
-          </Text>
-        </View>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="px-5 mt-4"
+          className="px-5"
         >
           <View className="flex-row">
             {dateOptions.map((option) => {
@@ -407,12 +452,13 @@ export default function SelectTimeScreen() {
             })}
           </View>
         </ScrollView>
+          </View>
+        </BookingStaggerItem>
+        </BookingStaggerList>
 
-        <View className="px-5 mt-6">
+        <BookingStaggerList className="px-5 mt-6">
           {isLoadingSlots ? (
-            <Text className="text-sm text-neutral-500">
-              Loading available slots...
-            </Text>
+            <TimeSlotListSkeleton />
           ) : null}
           {slotError ? (
             <Text className="text-sm text-red-500">{slotError}</Text>
@@ -423,36 +469,37 @@ export default function SelectTimeScreen() {
           {!isLoadingSlots && !slotError && timeSlots.length === 0 ? (
             <Text className="text-sm text-neutral-500">No available slots.</Text>
           ) : null}
-          {timeSlots.map((slot) => {
+          {!isLoadingSlots && timeSlots.map((slot, index) => {
             const isSelected = slot.label === selectedSlot?.label;
             return (
-              <Pressable
-                key={slot.label}
-                onPress={() => {
-                  setSlot({
-                    startAt: slot.start_at,
-                    endAt: slot.end_at,
-                    label: slot.label,
-                  });
-                  router.push("/booking/review-confirm");
-                }}
-                className={`mb-4 rounded-3xl border px-4 py-5 ${
-                  isSelected
-                    ? "border-neutral-900 bg-neutral-900"
-                    : "border-neutral-200 bg-white"
-                }`}
-              >
-                <Text
-                  className={`text-base font-semibold ${
-                    isSelected ? "text-white" : "text-neutral-900"
+              <BookingStaggerItem key={slot.label}>
+                <Pressable
+                  onPress={() => {
+                    setSlot({
+                      startAt: slot.start_at,
+                      endAt: slot.end_at,
+                      label: slot.label,
+                    });
+                    router.push("/booking/review-confirm");
+                  }}
+                  className={`mb-4 rounded-3xl border px-4 py-5 ${
+                    isSelected
+                      ? "border-neutral-900 bg-neutral-900"
+                      : "border-neutral-200 bg-white"
                   }`}
                 >
-                  {slot.label}
-                </Text>
-              </Pressable>
+                  <Text
+                    className={`text-base font-semibold ${
+                      isSelected ? "text-white" : "text-neutral-900"
+                    }`}
+                  >
+                    {slot.label}
+                  </Text>
+                </Pressable>
+              </BookingStaggerItem>
             );
           })}
-        </View>
+        </BookingStaggerList>
       </ScrollView>
 
       <Modal
@@ -484,11 +531,9 @@ export default function SelectTimeScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 40 }}
           >
-            <View className="px-5 pt-6 flex-row flex-wrap justify-between">
+            <View className="px-5 pt-6">
               {isLoadingBarbers ? (
-                <Text className="mt-2 text-sm text-neutral-500">
-                  Loading barbers...
-                </Text>
+                <BarberListSkeleton />
               ) : null}
               {barberError ? (
                 <Text className="mt-2 text-sm text-red-500">{barberError}</Text>
@@ -498,38 +543,70 @@ export default function SelectTimeScreen() {
                   No barbers available right now.
                 </Text>
               ) : null}
-              {professionals.map((pro) => (
-                <Pressable
-                  key={pro.id}
-                  onPress={() => {
-                    setBarber({ id: pro.id, displayName: pro.name });
-                    setIsBarberModalVisible(false);
-                  }}
-                  className="mb-4 w-[48%] items-center rounded-3xl border border-neutral-200 bg-white p-5"
-                >
-                  <View className="items-center">
+              <BookingStaggerList>
+              {!isLoadingBarbers && professionals.map((pro) => (
+                <BookingStaggerItem key={pro.id}>
+                  <Pressable
+                    onPress={() => {
+                      setBarber({ id: pro.id, displayName: pro.name });
+                      setIsBarberModalVisible(false);
+                    }}
+                    className={`mb-4 flex-row items-center rounded-3xl border bg-white px-3 py-3 ${
+                      selectedBarber?.id === pro.id
+                        ? "border-neutral-900"
+                        : "border-neutral-200"
+                    }`}
+                  >
+                  <View className="mr-5">
                     {pro.avatarUrl ? (
                       <Image
                         source={{ uri: pro.avatarUrl }}
-                        className="h-16 w-16 rounded-full"
+                        className="h-20 w-20 rounded-full"
                       />
                     ) : (
-                      <View className="h-16 w-16 items-center justify-center rounded-full bg-neutral-200">
-                        <Text className="text-base font-semibold text-neutral-900">
-                          {pro.name
-                            .split(" ")
-                            .map((part) => part[0])
-                            .slice(0, 2)
-                            .join("")}
+                      <View className="h-20 w-20 items-center justify-center rounded-full bg-neutral-200">
+                        <Text className="text-lg font-semibold text-neutral-900">
+                          {pro.initials}
                         </Text>
                       </View>
                     )}
                   </View>
-                  <Text className="mt-4 text-center text-base font-semibold text-neutral-900">
-                    {pro.name}
-                  </Text>
-                </Pressable>
+                  <View className="min-w-0 flex-1">
+                    <Text className="text-base font-semibold text-neutral-900">
+                      {pro.name}
+                    </Text>
+                    <Text className="mt-1 text-sm text-neutral-500">
+                      {pro.level ?? "Barber"}
+                    </Text>
+                    {pro.rating ? (
+                      <View className="mt-1.5 flex-row items-center">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <Ionicons
+                            key={index}
+                            name={
+                              index < Math.round(pro.rating!.average)
+                                ? "star"
+                                : "star-outline"
+                            }
+                            size={12}
+                            color={
+                              index < Math.round(pro.rating!.average)
+                                ? "#f59e0b"
+                                : "#d4d4d4"
+                            }
+                            style={{ marginRight: 1 }}
+                          />
+                        ))}
+                        <Text className="ml-1 text-xs text-neutral-500">
+                          {formatRating(pro.rating.average)} ({pro.rating.count})
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  </Pressable>
+                </BookingStaggerItem>
               ))}
+              </BookingStaggerList>
             </View>
           </ScrollView>
         </View>

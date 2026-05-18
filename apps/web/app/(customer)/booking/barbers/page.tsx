@@ -1,9 +1,14 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  BookingPageTransition,
+  BookingStaggerList,
+  BookingStaggerItem,
+} from "@/components/customer/booking-motion";
 
-import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,6 +21,9 @@ import { BookingSummaryCard } from "@/components/customer/booking-summary-card";
 import { BookingFlowActions } from "@/components/customer/booking-flow-actions";
 import { createClient } from "@/utils/supabase/server";
 import { redirectIfCustomerBookingDisabled } from "../booking-availability";
+import { getBarberRatings } from "@/utils/barber-ratings";
+import { formatRating } from "@/utils/format-rating";
+import { StarRating } from "@/components/ui/star-rating";
 
 type BarberRow = {
   id: string;
@@ -72,16 +80,23 @@ async function BarbersList({ params }: { params: BookingSearchParams }) {
     .eq("is_active", true)
     .eq("role", "barber")
     .order("display_name");
+  const barberIds = (barbersData ?? []).map((b) => b.id);
+  const ratingsMap = await getBarberRatings(barberIds);
+
   const barbers = (barbersData ?? []).map((barber: BarberRow) => {
     const name =
       barber.display_name?.trim() ||
       [barber.first_name, barber.last_name].filter(Boolean).join(" ").trim() ||
       "Barber";
+    const rating = ratingsMap.get(barber.id);
     return {
       id: barber.id,
       name,
       level: barber.barber_level?.trim() || "Barber",
       initials: buildInitials(name) || "B",
+      avatarUrl: barber.avatar_url ?? null,
+      ratingAverage: rating?.average ?? null,
+      ratingCount: rating?.count ?? 0,
     };
   });
 
@@ -96,8 +111,8 @@ async function BarbersList({ params }: { params: BookingSearchParams }) {
   const serviceId = readParam(params.serviceId);
 
   return (
-    <section className="" style={{ animationDelay: "80ms" }}>
-      <div className="space-y-4">
+    <section className="">
+      <BookingStaggerList className="space-y-4">
         {barbersError ? (
           <p className="text-sm text-destructive">
             Unable to load barbers right now.
@@ -130,7 +145,7 @@ async function BarbersList({ params }: { params: BookingSearchParams }) {
           }`;
 
           return (
-            <div key={barber.name}>
+            <BookingStaggerItem key={barber.name}>
               <Link
                 href={`/booking/time${selectionQuery}`}
                 className="block lg:hidden"
@@ -138,12 +153,15 @@ async function BarbersList({ params }: { params: BookingSearchParams }) {
               >
                 <div className={cardClassName}>
                   <div className="px-3 flex items-center gap-5 py-3">
-                    <Badge
-                      variant="secondary"
-                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
-                    >
-                      {barber.initials}
-                    </Badge>
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
+                      {barber.avatarUrl ? (
+                        <Image src={barber.avatarUrl} alt={barber.name} fill className="object-cover" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-foreground">
+                          {barber.initials}
+                        </span>
+                      )}
+                    </div>
                     <div className="space-y-1">
                       <p className="text-base font-semibold text-foreground">
                         {barber.name}
@@ -151,6 +169,14 @@ async function BarbersList({ params }: { params: BookingSearchParams }) {
                       <p className="text-sm text-muted-foreground">
                         {barber.level}
                       </p>
+                      {barber.ratingAverage !== null && (
+                        <div className="flex items-center gap-1.5">
+                          <StarRating value={Math.round(barber.ratingAverage)} readonly size={12} />
+                          <span className="text-xs text-muted-foreground">
+                            {formatRating(barber.ratingAverage)} ({barber.ratingCount})
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -162,12 +188,15 @@ async function BarbersList({ params }: { params: BookingSearchParams }) {
               >
                 <div className={cardClassName}>
                   <div className="px-3 flex items-center gap-5 py-3">
-                    <Badge
-                      variant="secondary"
-                      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-foreground"
-                    >
-                      {barber.initials}
-                    </Badge>
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
+                      {barber.avatarUrl ? (
+                        <Image src={barber.avatarUrl} alt={barber.name} fill className="object-cover" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-foreground">
+                          {barber.initials}
+                        </span>
+                      )}
+                    </div>
                     <div className="space-y-1">
                       <p className="text-base font-semibold text-foreground">
                         {barber.name}
@@ -175,14 +204,22 @@ async function BarbersList({ params }: { params: BookingSearchParams }) {
                       <p className="text-sm text-muted-foreground">
                         {barber.level}
                       </p>
+                      {barber.ratingAverage !== null && (
+                        <div className="flex items-center gap-1.5">
+                          <StarRating value={Math.round(barber.ratingAverage)} readonly size={12} />
+                          <span className="text-xs text-muted-foreground">
+                            {formatRating(barber.ratingAverage)} ({barber.ratingCount})
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </Link>
-            </div>
+            </BookingStaggerItem>
           );
         })}
-      </div>
+      </BookingStaggerList>
     </section>
   );
 }
@@ -191,12 +228,12 @@ function BarbersListSkeleton() {
   return (
     <section className="space-y-4">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-3xl border border-border/60 bg-card/85 px-3 py-3">
-          <div className="flex items-center gap-5">
+        <div key={i} className="rounded-3xl border border-border/60 bg-card/85">
+          <div className="px-3 py-3 flex items-center gap-5">
             <Skeleton className="h-20 w-20 rounded-full shrink-0" />
             <div className="space-y-2">
               <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
             </div>
           </div>
         </div>
@@ -228,7 +265,7 @@ export default async function SelectBarberPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl lg:max-w-300">
+    <BookingPageTransition className="mx-auto w-full max-w-xl lg:max-w-300">
       <div className="pb-12">
         <div className="flex flex-col gap-10 lg:flex lg:flex-row lg:items-start lg:gap-12">
           <div className="flex flex-col gap-6 lg:flex-[1.4] lg:min-w-0">
@@ -309,6 +346,6 @@ export default async function SelectBarberPage({
           </aside>
         </div>
       </div>
-    </div>
+    </BookingPageTransition>
   );
 }

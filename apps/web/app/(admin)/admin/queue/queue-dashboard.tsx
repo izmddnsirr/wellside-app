@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, ExternalLink, Phone, Trash2, Tv, Undo2 } from "lucide-react";
+import { formatMalaysiaPhone } from "@/utils/phone";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -75,7 +76,7 @@ function QueueCard({
         {item.phone && (
           <div className="flex items-center gap-1.5">
             <Phone className="size-3 text-muted-foreground" />
-            <span className="text-[12px] text-muted-foreground">{item.phone}</span>
+            <span className="text-[12px] text-muted-foreground">{formatMalaysiaPhone(item.phone)}</span>
           </div>
         )}
         <p className="text-[12px] text-muted-foreground">{item.serviceLabel}</p>
@@ -198,7 +199,7 @@ function QueueEntryCard({
         <p className="text-[13px] font-semibold text-foreground">{entry.name}</p>
         <div className="flex items-center gap-1.5">
           <Phone className="size-3 text-muted-foreground" />
-          <span className="text-[12px] text-muted-foreground">{entry.phone}</span>
+          <span className="text-[12px] text-muted-foreground">{formatMalaysiaPhone(entry.phone)}</span>
         </div>
         {entry.started_at && (
           <p className="text-[12px] text-muted-foreground">

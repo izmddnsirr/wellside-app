@@ -9,6 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import {
+  BookingPageTransition,
+  BookingStaggerList,
+  BookingStaggerItem,
+} from "@/components/customer/booking-motion";
+import { ProfileAvatarSection } from "./profile-avatar-section";
+import { ReviewDialog } from "./review-dialog";
+import { StarRating } from "@/components/ui/star-rating";
 
 type Profile = {
   id: string;
@@ -16,6 +24,7 @@ type Profile = {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  avatar_url: string | null;
 };
 
 type HistoryItem = {
@@ -25,8 +34,10 @@ type HistoryItem = {
   createdAt: string;
   serviceName: string;
   barberName: string;
+  barberId: string | null;
   price: number | null;
   status: "completed" | "cancelled" | "no_show";
+  review: { rating: number; comment: string | null } | null;
 };
 
 type BookingRecord = {
@@ -35,6 +46,7 @@ type BookingRecord = {
   end_at: string;
   created_at: string;
   status: "completed" | "cancelled" | "no_show";
+  barber_id: string | null;
   service: {
     name: string | null;
     base_price: number | null;
@@ -93,13 +105,13 @@ async function ProfileContent() {
   const [{ data: profileData }, { data: bookingData }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("first_name,last_name,email,phone")
+      .select("first_name,last_name,email,phone,avatar_url")
       .eq("id", user.id)
       .maybeSingle(),
     supabase
       .from("bookings")
       .select(
-        "id,start_at,end_at,created_at,status,service:service_id (name, base_price), barber:barber_id (display_name, first_name, last_name)"
+        "id,start_at,end_at,created_at,status,barber_id,service:service_id (name, base_price), barber:barber_id (display_name, first_name, last_name)"
       )
       .eq("customer_id", user.id)
       .in("status", ["completed", "cancelled", "no_show"])
@@ -107,12 +119,25 @@ async function ProfileContent() {
       .returns<BookingRecord[]>(),
   ]);
 
+  const bookingIds = (bookingData ?? []).map((b) => b.id);
+  const { data: reviewData } = bookingIds.length > 0
+    ? await supabase
+        .from("barber_reviews")
+        .select("booking_id, rating, comment")
+        .in("booking_id", bookingIds)
+    : { data: [] };
+
+  const reviewMap = new Map(
+    (reviewData ?? []).map((r) => [r.booking_id, { rating: r.rating, comment: r.comment }])
+  );
+
   const profile: Profile = {
     id: user.id,
     first_name: profileData?.first_name ?? null,
     last_name: profileData?.last_name ?? null,
     email: profileData?.email ?? user.email ?? null,
     phone: profileData?.phone ?? null,
+    avatar_url: profileData?.avatar_url ?? null,
   };
   const history: HistoryItem[] = (bookingData ?? []).map((booking) => {
     const barberName =
@@ -130,8 +155,10 @@ async function ProfileContent() {
       createdAt: booking.created_at,
       serviceName: booking.service?.name ?? "Service",
       barberName,
+      barberId: booking.barber_id ?? null,
       price: booking.service?.base_price ?? null,
       status: booking.status,
+      review: reviewMap.get(booking.id) ?? null,
     };
   });
   const completedVisits = history.filter(
@@ -145,24 +172,21 @@ async function ProfileContent() {
   }`.toUpperCase();
 
   return (
-    <>
-      <section className="rounded-3xl bg-primary p-5 text-primary-foreground">
-        <div className="flex items-center gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-foreground/10 text-primary-foreground">
-            <span className="text-2xl font-semibold">{initials || "?"}</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-xl font-semibold">{fullName || "Your Profile"}</p>
-            <p className="mt-1 text-base text-primary-foreground/70">
-              {profile.email ?? "—"}
-            </p>
-          </div>
-        </div>
-      </section>
+    <BookingStaggerList className="contents">
+      <BookingStaggerItem>
+        <ProfileAvatarSection
+          uid={profile.id}
+          url={profile.avatar_url}
+          initials={initials || "?"}
+          fullName={fullName}
+          email={profile.email ?? ""}
+        />
+      </BookingStaggerItem>
 
+      <BookingStaggerItem>
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
+          <p className="text-lg font-semibold text-foreground">
             Booking History
           </p>
           <span className="rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground">
@@ -174,14 +198,14 @@ async function ProfileContent() {
             <div>
               <p className="text-xl font-semibold">Recent visits</p>
               <p className="mt-1 text-sm text-primary-foreground/70">
-                Track completed and cancelled appointments
+                Track your appointments history
               </p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-foreground/10">
               <Clock className="h-5 w-5 text-primary-foreground/70" />
             </div>
           </div>
-          <div className="mt-5 space-y-3">
+          <BookingStaggerList className="mt-5 space-y-3">
             {history.length === 0 ? (
               <div className="rounded-2xl border border-primary-foreground/15 bg-primary-foreground/5 px-6 py-10 text-center">
                 <Calendar className="mx-auto h-8 w-8 text-primary-foreground/70" />
@@ -203,10 +227,8 @@ async function ProfileContent() {
                     : `${timeFormatter.format(startDate)} - ${timeFormatter.format(endDate)}`;
 
                 return (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl border border-border bg-background px-4 py-3 text-foreground"
-                  >
+                  <BookingStaggerItem key={item.id}>
+                  <div className="rounded-2xl border border-border bg-background px-4 py-3 text-foreground">
                     <div className="flex items-center justify-between">
                       <p className="text-base font-semibold">{item.serviceName}</p>
                       <span
@@ -233,10 +255,79 @@ async function ProfileContent() {
                         {formatCurrency(item.price)}
                       </span>
                     </div>
+                    {item.status === "completed" && (
+                      <div className="mt-2 pt-2 border-t border-border/60">
+                        {item.review ? (
+                          <div className="flex items-center gap-2">
+                            <StarRating value={item.review.rating} readonly size={13} />
+                            {item.review.comment && (
+                              <p className="text-xs text-muted-foreground truncate">{item.review.comment}</p>
+                            )}
+                          </div>
+                        ) : item.barberId ? (
+                          <ReviewDialog
+                            bookingId={item.id}
+                            barberId={item.barberId}
+                            barberName={item.barberName}
+                          />
+                        ) : null}
+                      </div>
+                    )}
                   </div>
+                  </BookingStaggerItem>
                 );
               })
             )}
+          </BookingStaggerList>
+        </div>
+      </section>
+      </BookingStaggerItem>
+    </BookingStaggerList>
+  );
+}
+
+function ProfileSkeleton() {
+  return (
+    <>
+      {/* Profile header card */}
+      <section className="rounded-3xl bg-primary/20 p-5">
+        <div className="flex items-center gap-5">
+          <Skeleton className="h-16 w-16 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-4 w-48 max-w-full" />
+          </div>
+        </div>
+      </section>
+
+      {/* Booking History section */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-6 w-16 rounded-full" />
+        </div>
+        <div className="rounded-3xl bg-primary/20 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-28" />
+              <Skeleton className="h-4 w-56 max-w-full" />
+            </div>
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+          </div>
+          <div className="mt-5 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border/40 bg-background/60 px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-48 max-w-full" />
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -244,47 +335,16 @@ async function ProfileContent() {
   );
 }
 
-function ProfileSkeleton() {
-  return (
-    <>
-      <div className="rounded-3xl bg-primary/20 p-5">
-        <div className="flex items-center gap-5">
-          <Skeleton className="h-16 w-16 rounded-full shrink-0" />
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-4 w-48" />
-          </div>
-        </div>
-      </div>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-6 w-20 rounded-full" />
-        </div>
-        <div className="rounded-3xl bg-primary/20 p-5 space-y-3">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-56" />
-          <div className="mt-5 space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-2xl" />
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 export default function ProfilePage() {
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-10">
+    <BookingPageTransition className="mx-auto flex w-full max-w-xl flex-col gap-6 pb-10">
       <header className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold text-foreground lg:text-4xl">
             Profile
           </h1>
           <p className="text-sm text-muted-foreground lg:text-base">
-            Customize your profile
+            Customized your profile
           </p>
         </div>
         <form action={logout}>
@@ -301,6 +361,6 @@ export default function ProfilePage() {
       <Suspense fallback={<ProfileSkeleton />}>
         <ProfileContent />
       </Suspense>
-    </div>
+    </BookingPageTransition>
   );
 }

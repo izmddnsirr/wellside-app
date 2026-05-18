@@ -1,8 +1,55 @@
+import { Suspense } from "react";
 import { AdminShell } from "../../components/admin-shell";
 import { createAdminClient } from "@/utils/supabase/server";
 import { ShiftsTable } from "./shifts-table";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function Page() {
+function ShiftsSkeleton() {
+  return (
+    <div className="space-y-4">
+      {/* Filter bar */}
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-9 w-37.5" />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-9 w-45" />
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-8 w-12" />
+          </div>
+        </div>
+      </div>
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-card">
+        {/* Table header */}
+        <div className="flex items-center gap-4 bg-muted/40 border-b border-border/60 px-4 py-3">
+          <Skeleton className="h-3 w-14" />
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-14" />
+          <Skeleton className="ml-auto h-3 w-16" />
+        </div>
+        {/* Table rows */}
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 border-b border-border/60 bg-background px-4 py-3 last:border-0">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="ml-auto h-8 w-8 rounded-md" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+async function ShiftsContent() {
   const supabase = await createAdminClient();
   const { data: shifts } = await supabase
     .from("shifts")
@@ -245,18 +292,26 @@ export default async function Page() {
   );
 
   return (
+    <ShiftsTable
+      shifts={normalizedShifts}
+      salesByShift={salesByShift}
+      cashSalesByShift={cashSalesByShift}
+      ewalletSalesByShift={ewalletSalesByShift}
+      refundedSalesByShift={refundedSalesByShift}
+      ticketsCountByShift={ticketsCountByShift}
+      barberSalesByShift={barberSalesByShift}
+      itemsByShift={itemsByShift}
+    />
+  );
+}
+
+export default function Page() {
+  return (
     <AdminShell title="Shift history">
       <div className="px-4 lg:px-6">
-        <ShiftsTable
-          shifts={normalizedShifts}
-          salesByShift={salesByShift}
-          cashSalesByShift={cashSalesByShift}
-          ewalletSalesByShift={ewalletSalesByShift}
-          refundedSalesByShift={refundedSalesByShift}
-          ticketsCountByShift={ticketsCountByShift}
-          barberSalesByShift={barberSalesByShift}
-          itemsByShift={itemsByShift}
-        />
+        <Suspense fallback={<ShiftsSkeleton />}>
+          <ShiftsContent />
+        </Suspense>
       </div>
     </AdminShell>
   );

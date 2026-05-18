@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ProfileEditFormSkeleton } from "../components/booking-skeletons";
 import { supabase } from "../utils/supabase";
 
 type Profile = {
@@ -177,9 +177,7 @@ export default function ProfileEditScreen() {
         </View>
 
         {isLoading ? (
-          <View className="mt-10 items-center">
-            <ActivityIndicator size="small" color="#171717" />
-          </View>
+          <ProfileEditFormSkeleton />
         ) : (
           <View className="px-5 pt-7">
             <Text className="text-xs font-semibold text-neutral-500 mb-3">

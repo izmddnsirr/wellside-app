@@ -79,13 +79,10 @@ export function CustomerNav() {
             {navItems.map((item, i) => {
               const Icon = item.icon;
               const isActive = i === activeIndex;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className="relative flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold leading-none"
-                >
+              const needsConfirm = isBookingFlow && !isActive && item.href !== "/booking";
+
+              const inner = (
+                <>
                   {isActive && (
                     <motion.span
                       layoutId="desktop-pill"
@@ -105,6 +102,47 @@ export function CustomerNav() {
                   >
                     {item.label}
                   </span>
+                </>
+              );
+
+              if (needsConfirm) {
+                return (
+                  <Dialog key={item.label}>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        aria-current={isActive ? "page" : undefined}
+                        className="relative flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold leading-none"
+                      >
+                        {inner}
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Leave this booking?</DialogTitle>
+                        <DialogDescription>All selections will be lost.</DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline">Stay</Button>
+                        </DialogClose>
+                        <Button asChild>
+                          <Link href={item.href}>Yes, leave</Link>
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className="relative flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold leading-none"
+                >
+                  {inner}
                 </Link>
               );
             })}

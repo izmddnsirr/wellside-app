@@ -2,17 +2,30 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
+import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  Modal,
   RefreshControl,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  ProfileCardSkeleton,
+  ProfileHistorySkeleton,
+} from "../../components/booking-skeletons";
+import {
+  BookingPageTransition,
+  BookingStaggerItem,
+  BookingStaggerList,
+} from "../../components/motion";
 import { supabase } from "../../utils/supabase";
 
 type Profile = {
@@ -21,6 +34,7 @@ type Profile = {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  avatar_url: string | null;
 };
 
 type HistoryItem = {
@@ -30,8 +44,10 @@ type HistoryItem = {
   createdAt: string;
   serviceName: string;
   barberName: string;
+  barberId: string | null;
   basePrice: number | null;
   status: "completed" | "cancelled" | "no_show";
+  review: { rating: number; comment: string | null } | null;
 };
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
@@ -55,6 +71,11 @@ export default function ProfileScreen() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<{ bookingId: string; barberId: string; barberName: string } | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -69,7 +90,7 @@ export default function ProfileScreen() {
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("first_name,last_name,email,phone")
+      .select("first_name,last_name,email,phone,avatar_url")
       .eq("id", authData.user.id)
       .maybeSingle();
 
@@ -84,6 +105,7 @@ export default function ProfileScreen() {
       last_name: profileData?.last_name ?? null,
       email: profileData?.email ?? authData.user.email ?? null,
       phone: profileData?.phone ?? null,
+      avatar_url: profileData?.avatar_url ?? null,
     });
   }, []);
 
@@ -118,20 +140,23 @@ export default function ProfileScreen() {
       new Set((bookingData ?? []).map((b) => b.barber_id).filter(Boolean))
     );
 
-    const [{ data: serviceData }, { data: barberData }] = await Promise.all([
+    const bookingIds = (bookingData ?? []).map((b) => b.id);
+
+    const [{ data: serviceData }, { data: barberData }, { data: reviewData }] = await Promise.all([
       serviceIds.length
-        ? supabase
-            .from("services")
-            .select("id,name,base_price")
-            .in("id", serviceIds)
+        ? supabase.from("services").select("id,name,base_price").in("id", serviceIds)
         : Promise.resolve({ data: [] }),
       barberIds.length
-        ? supabase
-            .from("profiles")
-            .select("id,display_name,first_name,last_name")
-            .in("id", barberIds)
+        ? supabase.from("profiles").select("id,display_name,first_name,last_name").in("id", barberIds)
+        : Promise.resolve({ data: [] }),
+      bookingIds.length
+        ? supabase.from("barber_reviews").select("booking_id,rating,comment").in("booking_id", bookingIds)
         : Promise.resolve({ data: [] }),
     ]);
+
+    const reviewMap = new Map(
+      (reviewData ?? []).map((r) => [r.booking_id, { rating: r.rating, comment: r.comment }])
+    );
 
     const serviceMap = new Map(
       (serviceData ?? []).map((service) => [service.id, service])
@@ -158,8 +183,10 @@ export default function ProfileScreen() {
         createdAt: booking.created_at,
         serviceName: service?.name ?? "Service",
         barberName: barberMap.get(booking.barber_id) ?? "Barber",
+        barberId: booking.barber_id ?? null,
         basePrice: service?.base_price ?? null,
         status: booking.status,
+        review: reviewMap.get(booking.id) ?? null,
       };
     });
 
@@ -192,6 +219,118 @@ export default function ProfileScreen() {
     await Promise.all([fetchProfile(), fetchHistory()]);
     setIsRefreshing(false);
   }, [fetchProfile, fetchHistory]);
+
+  const handleAvatarUpload = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission required", "Please allow photo library access to change your avatar.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      Alert.alert("Upload failed", "Could not read image data.");
+      return;
+    }
+
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const mimeType = asset.mimeType ?? "image/jpeg";
+      const ext = mimeType.split("/")[1] ?? "jpg";
+      const filePath = `${authData.user.id}/avatar.${ext}`;
+
+      // Convert base64 to ArrayBuffer
+      const base64 = asset.base64;
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const arrayBuffer = bytes.buffer;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, arrayBuffer, { upsert: true, contentType: mimeType });
+
+      if (uploadError) {
+        console.error("[Avatar] Upload error:", JSON.stringify(uploadError));
+        throw uploadError;
+      }
+
+      console.log("[Avatar] Upload success:", uploadData);
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      console.log("[Avatar] Public URL:", publicUrl);
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", authData.user.id);
+
+      if (updateError) {
+        console.error("[Avatar] Profile update error:", JSON.stringify(updateError));
+        throw updateError;
+      }
+
+      setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
+      Alert.alert("Success", "Profile picture updated.");
+    } catch (err) {
+      console.error("[Avatar] Failed:", err);
+      Alert.alert("Upload failed", `Error: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewTarget || reviewRating === 0) return;
+    setReviewLoading(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) throw new Error("Not authenticated");
+
+      const { error } = await supabase.from("barber_reviews").insert({
+        booking_id: reviewTarget.bookingId,
+        customer_id: authData.user.id,
+        barber_id: reviewTarget.barberId,
+        rating: reviewRating,
+        comment: reviewComment.trim() || null,
+      });
+
+      if (error) throw error;
+
+      setHistory((prev) =>
+        prev.map((item) =>
+          item.id === reviewTarget.bookingId
+            ? { ...item, review: { rating: reviewRating, comment: reviewComment.trim() || null } }
+            : item
+        )
+      );
+      setReviewTarget(null);
+      setReviewRating(0);
+      setReviewComment("");
+      Alert.alert("Thank you!", "Your review has been submitted.");
+    } catch {
+      Alert.alert("Error", "Failed to submit review. Please try again.");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
 
   const onLogout = async () => {
     Alert.alert("Log out?", "You can sign in again anytime.", [
@@ -235,7 +374,7 @@ export default function ProfileScreen() {
         }
       >
         {/* Greeting Section */}
-        <View className="mx-5 mt-3 flex-row justify-between items-center">
+        <BookingPageTransition className="mx-5 mt-3 flex-row justify-between items-center">
           <View>
             <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Profile
@@ -251,28 +390,48 @@ export default function ProfileScreen() {
             <Ionicons name="log-out-outline" size={16} color="#171717" />
             <Text className="font-semibold text-neutral-900 ml-2">Log out</Text>
           </TouchableOpacity>
-        </View>
+        </BookingPageTransition>
 
+        <BookingStaggerList>
         {/* Card */}
-        <View className="bg-neutral-900 mx-5 mt-6 rounded-3xl p-5 flex-row items-center">
-          <View className="w-16 h-16 rounded-full bg-neutral-200 mr-5 overflow-hidden justify-center items-center">
-            {/* Replace the source URI with user profile image path if available */}
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#171717" />
+        {isLoading ? (
+          <ProfileCardSkeleton />
+        ) : (
+        <BookingStaggerItem className="bg-neutral-900 mx-5 mt-6 rounded-3xl p-5 flex-row items-center">
+          <TouchableOpacity
+            onPress={handleAvatarUpload}
+            disabled={isUploadingAvatar || isLoading}
+            className="mr-5"
+          >
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#e5e5e5", overflow: "hidden", justifyContent: "center", alignItems: "center" }}>
+              {profile?.avatar_url ? (
+                <Image
+                  source={{ uri: profile.avatar_url }}
+                  style={{ position: "absolute", top: 0, left: 0, width: 64, height: 64 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text className="text-2xl text-neutral-900 font-semibold text-center">
+                  {initials || "?"}
+                </Text>
+              )}
+            </View>
+            {isUploadingAvatar ? (
+              <View className="absolute inset-0 rounded-full bg-black/50 justify-center items-center">
+                <ActivityIndicator size="small" color="#ffffff" />
+              </View>
             ) : (
-              <Text className="text-2xl text-neutral-900 font-semibold text-center">
-                {initials || "?"}
-              </Text>
+              <View className="absolute bottom-0 right-0 bg-white rounded-full w-5 h-5 justify-center items-center border border-neutral-200">
+                <Ionicons name="camera" size={11} color="#171717" />
+              </View>
             )}
-            {/* Example for Image: */}
-            {/* <Image source={{ uri: "https://example.com/profile.jpg" }} className="w-16 h-16 rounded-full" /> */}
-          </View>
+          </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text className="text-white font-semibold text-xl">
-              {isLoading ? "Loading..." : fullName || "Your Profile"}
+              {fullName || "Your Profile"}
             </Text>
             <Text className="text-neutral-200 text-base mt-1">
-              {isLoading ? "Fetching details" : profile?.email || "—"}
+              {profile?.email || "—"}
             </Text>
           </View>
           <TouchableOpacity
@@ -281,10 +440,11 @@ export default function ProfileScreen() {
           >
             <Text className="font-semibold text-neutral-900">Edit</Text>
           </TouchableOpacity>
-        </View>
+        </BookingStaggerItem>
+        )}
 
         {/* History */}
-        <View className="mx-5 mt-6">
+        <BookingStaggerItem className="mx-5 mt-6">
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-semibold text-neutral-900">
               Booking History
@@ -313,12 +473,7 @@ export default function ProfileScreen() {
 
             <View className="mt-5">
               {isHistoryLoading ? (
-                <View className="items-center justify-center rounded-2xl border border-neutral-700 bg-neutral-800 px-6 py-8">
-                  <ActivityIndicator size="small" color="#e5e5e5" />
-                  <Text className="text-neutral-300 text-sm mt-3">
-                    Loading your visits
-                  </Text>
-                </View>
+                <ProfileHistorySkeleton />
               ) : null}
               {historyError ? (
                 <View className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-4">
@@ -392,6 +547,39 @@ export default function ProfileScreen() {
                             {item.basePrice ? `RM${item.basePrice}` : "RM0"}
                           </Text>
                         </View>
+                        {item.status === "completed" && (
+                          <View className="mt-2 pt-2 border-t border-neutral-100">
+                            {item.review ? (
+                              <View className="flex-row items-center gap-1.5">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Ionicons
+                                    key={i}
+                                    name={i < item.review!.rating ? "star" : "star-outline"}
+                                    size={13}
+                                    color={i < item.review!.rating ? "#f59e0b" : "#d4d4d4"}
+                                  />
+                                ))}
+                                {item.review.comment ? (
+                                  <Text className="text-xs text-neutral-400 flex-1" numberOfLines={1}>
+                                    {item.review.comment}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ) : item.barberId ? (
+                              <TouchableOpacity
+                                onPress={() => {
+                                  setReviewTarget({ bookingId: item.id, barberId: item.barberId!, barberName: item.barberName });
+                                  setReviewRating(0);
+                                  setReviewComment("");
+                                }}
+                                className="flex-row items-center gap-1"
+                              >
+                                <Ionicons name="star-outline" size={13} color="#a3a3a3" />
+                                <Text className="text-xs text-neutral-400">Rate this visit</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                        )}
                       </View>
                     );
                   })}
@@ -399,10 +587,80 @@ export default function ProfileScreen() {
               ) : null}
             </View>
           </View>
-        </View>
+        </BookingStaggerItem>
+        </BookingStaggerList>
 
         <View className="h-10" />
       </ScrollView>
+
+      {/* Review Modal */}
+      <Modal
+        visible={reviewTarget !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setReviewTarget(null)}
+      >
+        {reviewTarget && (
+          <View className="flex-1 bg-white" style={{ paddingTop: 20 }}>
+            <View className="flex-row items-center justify-between px-5 pb-5">
+              <Text className="text-lg font-bold text-neutral-900">Rate your visit</Text>
+              <TouchableOpacity
+                onPress={() => setReviewTarget(null)}
+                className="h-8 w-8 items-center justify-center rounded-full bg-neutral-100"
+              >
+                <Ionicons name="close" size={16} color="#404040" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="px-5 space-y-5">
+              <Text className="text-sm text-neutral-500">
+                How was your session with <Text className="font-semibold text-neutral-900">{reviewTarget.barberName}</Text>?
+              </Text>
+
+              {/* Stars */}
+              <View className="flex-row justify-center gap-3 py-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <TouchableOpacity key={i} onPress={() => setReviewRating(i + 1)}>
+                    <Ionicons
+                      name={i < reviewRating ? "star" : "star-outline"}
+                      size={36}
+                      color={i < reviewRating ? "#f59e0b" : "#d4d4d4"}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Comment */}
+              <View>
+                <Text className="text-sm font-semibold text-neutral-700 mb-2">Comment (optional)</Text>
+                <TextInput
+                  value={reviewComment}
+                  onChangeText={setReviewComment}
+                  placeholder="Share your experience..."
+                  placeholderTextColor="#a3a3a3"
+                  multiline
+                  numberOfLines={3}
+                  maxLength={300}
+                  className="border border-neutral-200 rounded-xl px-4 py-3 text-sm text-neutral-900 bg-neutral-50"
+                  style={{ textAlignVertical: "top", minHeight: 80 }}
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={handleSubmitReview}
+                disabled={reviewRating === 0 || reviewLoading}
+                className={`rounded-full py-4 items-center ${
+                  reviewRating === 0 ? "bg-neutral-200" : "bg-neutral-900"
+                }`}
+              >
+                <Text className={`font-semibold text-base ${reviewRating === 0 ? "text-neutral-400" : "text-white"}`}>
+                  {reviewLoading ? "Submitting..." : "Submit review"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
