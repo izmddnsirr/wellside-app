@@ -325,7 +325,7 @@ export default function SelectTimeScreen() {
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
@@ -339,10 +339,7 @@ export default function SelectTimeScreen() {
             <Ionicons name="arrow-back" size={22} color="#171717" />
           </Pressable>
           <Pressable
-            onPress={() => {
-              router.dismissAll();
-              router.replace("/(tabs)/booking");
-            }}
+            onPress={() => router.back()}
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
@@ -353,9 +350,6 @@ export default function SelectTimeScreen() {
         <BookingPageTransition className="px-5 pt-2">
           <Text className="text-3xl font-semibold text-neutral-900">
             Select time
-          </Text>
-          <Text className="mt-1 text-base text-neutral-500">
-            Pick a slot that fits your day.
           </Text>
         </BookingPageTransition>
 
@@ -522,14 +516,11 @@ export default function SelectTimeScreen() {
             <Text className="text-3xl font-semibold text-neutral-900">
               Select barber
             </Text>
-            <Text className="mt-1 text-base text-neutral-500">
-              Switch to another barber.
-            </Text>
           </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 40 }}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
           >
             <View className="px-5 pt-6">
               {isLoadingBarbers ? (

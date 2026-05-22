@@ -68,14 +68,13 @@ export default function BookingSuccessScreen() {
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
       >
         <View className="flex-row items-center justify-between px-5 pt-3">
           <View className="h-10 w-10" />
           <Pressable
             onPress={() => {
               resetBooking();
-              router.dismissAll();
               router.replace("/(tabs)/booking");
             }}
             className="h-10 w-10 items-center justify-center"
@@ -88,9 +87,6 @@ export default function BookingSuccessScreen() {
         <View className="px-5 pt-2">
           <Text className="text-3xl font-semibold text-neutral-900">
             Booking confirmed
-          </Text>
-          <Text className="mt-2 text-base text-neutral-500">
-            We’ve locked in your slot. See you soon.
           </Text>
         </View>
 
@@ -156,7 +152,6 @@ export default function BookingSuccessScreen() {
         <Pressable
           onPress={() => {
             resetBooking();
-            router.dismissAll();
             router.replace("/(tabs)/booking");
           }}
           className="rounded-full bg-neutral-900 px-6 py-4 mb-2"

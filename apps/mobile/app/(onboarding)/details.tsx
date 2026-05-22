@@ -138,18 +138,15 @@ export default function DetailsScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 8 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <View>
             {/* Top Header */}
             <View className="mt-3">
-              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
+              <Text className="text-3xl mt-1 mb-6 font-semibold text-neutral-900">
                 Enter Details.
-              </Text>
-              <Text className="text-neutral-500 text-base mt-1 mb-6">
-                Register now to book your seat.
               </Text>
             </View>
 

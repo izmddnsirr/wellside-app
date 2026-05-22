@@ -3,6 +3,8 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -152,9 +154,15 @@ export default function ProfileEditScreen() {
 
   return (
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        keyboardShouldPersistTaps="handled"
       >
         <View className="flex-row items-center justify-between px-5 pt-3">
           <Pressable
@@ -170,9 +178,6 @@ export default function ProfileEditScreen() {
         <View className="px-5 pt-2">
           <Text className="text-3xl font-semibold text-neutral-900">
             Edit profile
-          </Text>
-          <Text className="mt-1 text-base text-neutral-500">
-            Update your details
           </Text>
         </View>
 
@@ -237,6 +242,7 @@ export default function ProfileEditScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

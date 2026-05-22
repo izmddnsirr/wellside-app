@@ -343,9 +343,6 @@ export default function BookingScreen() {
             <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Booking
             </Text>
-            <Text className="text-neutral-500 text-base mt-1">
-              Choose your chair now
-            </Text>
           </View>
         </View>
 

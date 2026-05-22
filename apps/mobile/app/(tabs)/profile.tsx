@@ -1,14 +1,15 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import * as Notifications from "expo-notifications";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -21,11 +22,7 @@ import {
   ProfileCardSkeleton,
   ProfileHistorySkeleton,
 } from "../../components/booking-skeletons";
-import {
-  BookingPageTransition,
-  BookingStaggerItem,
-  BookingStaggerList,
-} from "../../components/motion";
+import { getExpoPushToken } from "../../utils/notifications";
 import { supabase } from "../../utils/supabase";
 
 type Profile = {
@@ -339,9 +336,9 @@ export default function ProfileScreen() {
         text: "Log out",
         style: "destructive",
         onPress: async () => {
-          const tokenData = await Notifications.getExpoPushTokenAsync().catch(() => null);
-          if (tokenData?.data) {
-            await supabase.from("device_tokens").delete().eq("token", tokenData.data);
+          const token = await getExpoPushToken();
+          if (token) {
+            await supabase.from("device_tokens").delete().eq("token", token);
           }
           const { error } = await supabase.auth.signOut();
           if (error) {
@@ -369,18 +366,16 @@ export default function ProfileScreen() {
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
         {/* Greeting Section */}
-        <BookingPageTransition className="mx-5 mt-3 flex-row justify-between items-center">
+        <View className="mx-5 mt-3 flex-row justify-between items-center">
           <View>
             <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Profile
-            </Text>
-            <Text className="text-neutral-500 text-base mt-1">
-              Customized your profile
             </Text>
           </View>
           <TouchableOpacity
@@ -390,14 +385,13 @@ export default function ProfileScreen() {
             <Ionicons name="log-out-outline" size={16} color="#171717" />
             <Text className="font-semibold text-neutral-900 ml-2">Log out</Text>
           </TouchableOpacity>
-        </BookingPageTransition>
+        </View>
 
-        <BookingStaggerList>
         {/* Card */}
         {isLoading ? (
           <ProfileCardSkeleton />
         ) : (
-        <BookingStaggerItem className="bg-neutral-900 mx-5 mt-6 rounded-3xl p-5 flex-row items-center">
+        <View className="bg-neutral-900 mx-5 mt-6 rounded-3xl p-5 flex-row items-center">
           <TouchableOpacity
             onPress={handleAvatarUpload}
             disabled={isUploadingAvatar || isLoading}
@@ -440,11 +434,11 @@ export default function ProfileScreen() {
           >
             <Text className="font-semibold text-neutral-900">Edit</Text>
           </TouchableOpacity>
-        </BookingStaggerItem>
+        </View>
         )}
 
         {/* History */}
-        <BookingStaggerItem className="mx-5 mt-6">
+        <View className="mx-5 mt-6">
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-semibold text-neutral-900">
               Booking History
@@ -587,8 +581,7 @@ export default function ProfileScreen() {
               ) : null}
             </View>
           </View>
-        </BookingStaggerItem>
-        </BookingStaggerList>
+        </View>
 
         <View className="h-10" />
       </ScrollView>
@@ -596,12 +589,17 @@ export default function ProfileScreen() {
       {/* Review Modal */}
       <Modal
         visible={reviewTarget !== null}
-        animationType="slide"
+        animationType="none"
         presentationStyle="pageSheet"
         onRequestClose={() => setReviewTarget(null)}
       >
         {reviewTarget && (
-          <View className="flex-1 bg-white" style={{ paddingTop: 20 }}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            className="flex-1 bg-white"
+            keyboardVerticalOffset={0}
+            style={{ paddingTop: 20 }}
+          >
             <View className="flex-row items-center justify-between px-5 pb-5">
               <Text className="text-lg font-bold text-neutral-900">Rate your visit</Text>
               <TouchableOpacity
@@ -612,7 +610,12 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
 
-            <View className="px-5 space-y-5">
+            <ScrollView
+              className="px-5"
+              contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               <Text className="text-sm text-neutral-500">
                 How was your session with <Text className="font-semibold text-neutral-900">{reviewTarget.barberName}</Text>?
               </Text>
@@ -657,8 +660,8 @@ export default function ProfileScreen() {
                   {reviewLoading ? "Submitting..." : "Submit review"}
                 </Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         )}
       </Modal>
     </View>

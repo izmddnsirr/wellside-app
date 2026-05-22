@@ -68,7 +68,7 @@ export default function ForgotPasswordScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 22 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 22 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -76,9 +76,6 @@ export default function ForgotPasswordScreen() {
             <View className="mt-3">
               <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 Reset password.
-              </Text>
-              <Text className="text-neutral-500 text-base mt-1">
-                Enter your email to receive a reset link.
               </Text>
             </View>
 

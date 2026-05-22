@@ -123,18 +123,15 @@ export default function LoginScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 22 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 22 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <View>
             {/*  */}
             <View className="mt-3">
-              <Text className="text-3xl mt-1 font-semibold text-neutral-900">
+              <Text className="text-3xl mt-1 mb-6 font-semibold text-neutral-900">
                 Welcome back.
-              </Text>
-              <Text className="text-neutral-500 text-base mt-1 mb-6">
-                Sign in with email and password.
               </Text>
             </View>
 

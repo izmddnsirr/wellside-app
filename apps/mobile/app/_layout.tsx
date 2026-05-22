@@ -74,19 +74,19 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: false,
-              animation: "slide_from_right",
+              animation: "none",
             }}
           >
             <Stack.Screen
               name="index"
               options={{
-                animation: "slide_from_right",
+                animation: "none",
               }}
             />
             <Stack.Screen
               name="(auth)"
               options={{
-                animation: "slide_from_right",
+                animation: "none",
               }}
             />
             <Stack.Screen
@@ -98,7 +98,13 @@ export default function RootLayout() {
             <Stack.Screen
               name="(onboarding)"
               options={{
-                animation: "slide_from_right",
+                animation: "none",
+              }}
+            />
+            <Stack.Screen
+              name="booking"
+              options={{
+                animation: "none",
               }}
             />
           </Stack>

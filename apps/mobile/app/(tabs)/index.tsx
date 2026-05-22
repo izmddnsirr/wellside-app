@@ -175,9 +175,6 @@ export default function HomeScreen() {
                 Hi{profile?.first_name ? `, ${profile.first_name}` : ""}
               </Text>
             </View>
-            <Text className="text-neutral-500 text-base mt-1">
-              Clean lines. Calm day.
-            </Text>
           </View>
         </View>
 

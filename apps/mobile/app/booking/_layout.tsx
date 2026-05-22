@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 
 export default function BookingLayout() {
   return (
-    <Stack>
+    <Stack screenOptions={{ animation: "slide_from_right" }}>
       <Stack.Screen name="select-service" options={{ headerShown: false }} />
       <Stack.Screen name="select-professional" options={{ headerShown: false }} />
       <Stack.Screen name="select-time" options={{ headerShown: false }} />

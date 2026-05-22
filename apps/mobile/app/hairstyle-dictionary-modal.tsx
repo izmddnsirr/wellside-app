@@ -3,6 +3,8 @@ import { useState, useMemo } from "react";
 import {
   Linking,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -94,11 +96,15 @@ export default function HairstyleDictionaryModal({ visible, onClose }: Props) {
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <View style={{ flex: 1, backgroundColor: "#ffffff", paddingTop: 20 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+        style={{ flex: 1, backgroundColor: "#ffffff", paddingTop: 20 }}
+      >
 
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 16 }}>
@@ -241,6 +247,7 @@ export default function HairstyleDictionaryModal({ visible, onClose }: Props) {
         {/* List */}
         <ScrollView
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 32, gap: 12 }}
         >
           {filtered.length === 0 ? (
@@ -315,7 +322,7 @@ export default function HairstyleDictionaryModal({ visible, onClose }: Props) {
             ))
           )}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

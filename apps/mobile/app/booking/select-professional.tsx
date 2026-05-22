@@ -126,7 +126,7 @@ export default function SelectProfessionalScreen() {
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
@@ -140,10 +140,7 @@ export default function SelectProfessionalScreen() {
             <Ionicons name="arrow-back" size={22} color="#171717" />
           </Pressable>
           <Pressable
-            onPress={() => {
-              router.dismissAll();
-              router.replace("/(tabs)/booking");
-            }}
+            onPress={() => router.back()}
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
@@ -154,9 +151,6 @@ export default function SelectProfessionalScreen() {
         <BookingPageTransition className="px-5 pt-2">
           <Text className="text-3xl font-semibold text-neutral-900">
             Select barbers
-          </Text>
-          <Text className="mt-1 text-base text-neutral-500">
-            Choose your preferred barber.
           </Text>
         </BookingPageTransition>
 

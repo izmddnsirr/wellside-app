@@ -3,11 +3,22 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 export default function TabLayout() {
   return (
     <NativeTabs
+      backgroundColor="#ffffff"
       iconColor={{
-        default: "#a3a3a3",
-        selected: "#262626",
+        default: "#737373",
+        selected: "#000000",
       }}
-      tintColor="#262626"
+      labelStyle={{
+        default: {
+          color: "#737373",
+          fontWeight: "500",
+        },
+        selected: {
+          color: "#000000",
+          fontWeight: "700",
+        },
+      }}
+      tintColor="#000000"
     >
       <NativeTabs.Trigger name="index">
         <Label hidden>Home</Label>

@@ -142,6 +142,15 @@ Deno.serve(async (req) => {
               text:
                 "You are a Malaysian hairstyle advisor. Analyze this person's face shape, visible hair type, and apparent gender from the photo.\n\n" +
                 "GENDER DETECTION: Determine if the person appears to be male or female based on visual cues. This affects which hairstyle suggestions to give.\n\n" +
+                "FACE SHAPE DETECTION — follow these steps precisely:\n" +
+                "1. Measure visually: forehead width, cheekbone width, jawline width, and face length.\n" +
+                "2. Apply these rules strictly:\n" +
+                "   - ROUND: face length ≈ face width, soft rounded jawline, no strong angles — wide cheeks dominate\n" +
+                "   - SQUARE: forehead, cheekbones, and jaw are roughly equal width, jaw is angular and strong\n" +
+                "   - HEART: forehead noticeably wider than jaw, chin is narrow/pointed\n" +
+                "   - OBLONG: face length clearly greater than width, forehead and jaw roughly equal, face appears long and narrow\n" +
+                "   - OVAL: face length moderately greater than width, forehead slightly wider than jaw, jaw gently rounded — this is the least common shape, not a default\n" +
+                "3. Be precise and critical. Most people are NOT oval. Only return oval if the proportions genuinely and clearly match. If uncertain between two shapes, pick the one whose defining features are more prominent.\n\n" +
                 "SPECIAL CASES:\n" +
                 "- If the person is bald, clean-shaven scalp, or has a fully shaved head with no visible hair texture: return hair_type as \"bald\" and suggest grooming styles suitable for bald/shaved-head looks.\n" +
                 "- If hair is covered by a hijab, tudung, cap, hat, scarf, or any head covering: detect face shape if possible, return hair_type as \"covered\", and return an empty suggestions array.\n" +
@@ -158,7 +167,7 @@ Deno.serve(async (req) => {
       ],
       inferenceConfig: {
         maxTokens: 1024,
-        temperature: 0.4,
+        temperature: 0.15,
       },
     };
 

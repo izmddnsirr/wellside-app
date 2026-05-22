@@ -1,6 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Notifications from "expo-notifications";
 import { useCallback, useState } from "react";
 import {
   Modal,
@@ -10,13 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NotificationListSkeleton } from "../../components/booking-skeletons";
-import {
-  BookingPageTransition,
-  BookingStaggerItem,
-} from "../../components/motion";
+import { clearNotificationBadge } from "../../utils/notifications";
 import { supabase } from "../../utils/supabase";
 
 type Notification = {
@@ -51,8 +46,6 @@ function timeAgo(isoString: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   return dateTimeFormatter.format(new Date(isoString));
 }
-
-const CARD_HEIGHT = 80;
 
 export default function NotificationScreen() {
   const insets = useSafeAreaInsets();
@@ -113,7 +106,7 @@ export default function NotificationScreen() {
         if (isMounted) {
           setIsLoading(false);
           markAllRead();
-          Notifications.setBadgeCountAsync(0);
+          clearNotificationBadge();
         }
       };
 
@@ -129,7 +122,7 @@ export default function NotificationScreen() {
             if (isMounted) {
               fetchNotifications().then(() => {
                 markAllRead();
-                Notifications.setBadgeCountAsync(0);
+                clearNotificationBadge();
               });
             }
           }
@@ -149,8 +142,6 @@ export default function NotificationScreen() {
     setIsRefreshing(false);
   }, [fetchNotifications]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
   return (
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
@@ -158,17 +149,12 @@ export default function NotificationScreen() {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
       >
-        <BookingPageTransition className="mx-5 mt-3 flex-row justify-between items-center">
+        <View className="mx-5 mt-3 flex-row justify-between items-center">
           <View>
             <Text className="text-3xl mt-1 font-semibold text-neutral-900">
               Notifications
-            </Text>
-            <Text className="text-neutral-500 text-base mt-1">
-              {unreadCount > 0
-                ? `${unreadCount} unread`
-                : "You're all caught up"}
             </Text>
           </View>
           {!isLoading && notifications.length > 0 ? (
@@ -181,12 +167,13 @@ export default function NotificationScreen() {
               <Text className="font-semibold text-neutral-900 ml-2">Clear all</Text>
             </TouchableOpacity>
           ) : null}
-        </BookingPageTransition>
+        </View>
 
-        <BookingStaggerItem className="mx-5 mt-6 gap-3">
+        <View className="mx-5 mt-6 gap-3">
           {!isLoading && notifications.length === 0 ? (
-            <View className="rounded-3xl border border-dashed border-neutral-200 bg-white p-6">
-              <Text className="text-neutral-500 text-base">
+            <View className="min-h-[270px] items-center justify-center rounded-[28px] border border-dashed border-neutral-300 bg-neutral-50 px-6">
+              <Ionicons name="notifications-outline" size={42} color="#171717" />
+              <Text className="mt-5 text-center text-base text-neutral-600">
                 No notifications yet.
               </Text>
             </View>
@@ -195,30 +182,14 @@ export default function NotificationScreen() {
           {isLoading ? <NotificationListSkeleton /> : null}
 
           {notifications.map((item) => (
-            <ReanimatedSwipeable
+            <View
               key={item.id}
-              renderRightActions={(_progress, _translation, _swipeable) => (
-                <TouchableOpacity
-                  style={{ height: CARD_HEIGHT }}
-                  className="justify-center items-center bg-red-500 rounded-3xl w-20 ml-2"
-                  onPress={() => deleteNotification(item.id)}
-                  activeOpacity={0.8}
-                >
-                  <Text className="text-white text-xs font-semibold">
-                    Delete
-                  </Text>
-                </TouchableOpacity>
-              )}
-              onSwipeableOpen={(direction: string) => {
-                if (direction === "left") deleteNotification(item.id);
-              }}
-              rightThreshold={80}
-              overshootRight={false}
+              className="flex-row items-stretch gap-2"
             >
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => setSelected(item)}
-                className={`rounded-3xl border overflow-hidden flex-row ${
+                className={`flex-1 rounded-3xl border overflow-hidden flex-row ${
                   item.read ? "bg-white border-neutral-200" : "bg-neutral-50 border-neutral-200"
                 }`}
               >
@@ -244,14 +215,23 @@ export default function NotificationScreen() {
                   </Text>
                 </View>
               </TouchableOpacity>
-            </ReanimatedSwipeable>
+              <View className="justify-center">
+                <TouchableOpacity
+                  className="h-12 w-12 justify-center items-center bg-red-500 rounded-full"
+                  onPress={() => deleteNotification(item.id)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            </View>
           ))}
-        </BookingStaggerItem>
+        </View>
       </ScrollView>
 
       <Modal
         visible={selected !== null}
-        animationType="slide"
+        animationType="none"
         presentationStyle="pageSheet"
         onRequestClose={() => setSelected(null)}
       >

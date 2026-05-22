@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Notifications from "expo-notifications";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBooking } from "../../context/BookingContext";
+import { scheduleAppointmentReminder } from "../../utils/notifications";
 import { supabase } from "../../utils/supabase";
 import {
   evaluateShopDateStatus,
@@ -203,16 +203,7 @@ export default function ConfirmingBookingScreen() {
       const reminderTime = new Date(appointmentTime - 60 * 60 * 1000);
       if (reminderTime > new Date()) {
         try {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Appointment reminder",
-              body: `Your ${serviceName} is in 1 hour. Get ready!`,
-            },
-            trigger: {
-              type: Notifications.SchedulableTriggerInputTypes.DATE,
-              date: reminderTime,
-            },
-          });
+          await scheduleAppointmentReminder(serviceName, reminderTime);
         } catch {
           // Notification permission may not be granted — fail silently
         }
@@ -572,10 +563,7 @@ export default function ConfirmingBookingScreen() {
           <Ionicons name="arrow-back" size={22} color="#171717" />
         </Pressable>
         <Pressable
-          onPress={() => {
-            router.dismissAll();
-            router.replace("/(tabs)/booking");
-          }}
+          onPress={handleCancel}
           className="h-10 w-10 items-center justify-center"
           hitSlop={10}
         >
@@ -586,9 +574,6 @@ export default function ConfirmingBookingScreen() {
       <View className="px-5 pt-2">
         <Text className="text-3xl font-semibold text-neutral-900">
           Confirming booking
-        </Text>
-        <Text className="mt-2 text-base text-neutral-500">
-          Confirming your booking… You have 5 seconds to cancel.
         </Text>
       </View>
 

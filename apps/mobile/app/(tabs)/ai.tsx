@@ -8,7 +8,9 @@ import {
   Alert,
   Animated,
   Image,
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -17,11 +19,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  BookingPageTransition,
-  BookingStaggerItem,
-  BookingStaggerList,
-} from "../../components/motion";
 import { supabase } from "../../utils/supabase";
 
 type HairstyleSuggestion = {
@@ -197,6 +194,8 @@ export default function AIScreen() {
     null
   );
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+  const analysisRunRef = useRef(0);
+  const glowAnim = useRef(new Animated.Value(0)).current;
   const imageMediaTypes: ImagePicker.MediaType[] = ["images"];
   const isBusy = isPicking || isAnalyzing || isGeneratingSuggestions;
   const hasImage = Boolean(imageUri);
@@ -216,35 +215,51 @@ export default function AIScreen() {
 
   const [isDictionaryVisible, setIsDictionaryVisible] = useState(false);
 
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseLoop = useRef<Animated.CompositeAnimation | null>(null);
-
   useEffect(() => {
-    if (isAnalyzing) {
-      pulseLoop.current = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 0.45,
-            duration: 850,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 850,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulseLoop.current.start();
-    } else {
-      pulseLoop.current?.stop();
-      Animated.timing(pulseAnim, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
+    if (!isAnalyzing) {
+      glowAnim.stopAnimation();
+      glowAnim.setValue(0);
+      return;
     }
-  }, [isAnalyzing, pulseAnim]);
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1400,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 1400,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [glowAnim, isAnalyzing]);
+
+  const glowColor = glowAnim.interpolate({
+    inputRange: [0, 0.33, 0.66, 1],
+    outputRange: ["#06b6d4", "#8b5cf6", "#ec4899", "#22c55e"],
+  });
+
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.28, 0.55, 0.34],
+  });
+
+  const glowBorderColor = glowAnim.interpolate({
+    inputRange: [0, 0.33, 0.66, 1],
+    outputRange: [
+      "rgba(103,232,249,0.75)",
+      "rgba(196,181,253,0.85)",
+      "rgba(249,168,212,0.85)",
+      "rgba(134,239,172,0.75)",
+    ],
+  });
 
   const clearImage = () => {
     setImageUri(null);
@@ -348,11 +363,14 @@ export default function AIScreen() {
   const analyzeHairstyle = async () => {
     if (!imageUri || !selectedImage || isBusy) return;
 
+    const analysisRunId = analysisRunRef.current + 1;
+    analysisRunRef.current = analysisRunId;
     setIsAnalyzing(true);
     setAnalysisResult(null);
 
     try {
       const preparedImage = await prepareImageForBedrock(selectedImage);
+      if (analysisRunRef.current !== analysisRunId) return;
 
       const { data: presignedData, error: presignedError } =
         await supabase.functions.invoke<PresignedUrlResponse>(
@@ -373,8 +391,11 @@ export default function AIScreen() {
           )
         );
       }
+      if (analysisRunRef.current !== analysisRunId) return;
 
       const imageBlob = await fetch(preparedImage.uri).then((r) => r.blob());
+      if (analysisRunRef.current !== analysisRunId) return;
+
       const uploadResponse = await fetch(presignedData.presignedUrl, {
         method: "PUT",
         headers: { "Content-Type": preparedImage.fileType },
@@ -382,6 +403,7 @@ export default function AIScreen() {
       });
 
       if (!uploadResponse.ok) throw new Error("Image upload failed.");
+      if (analysisRunRef.current !== analysisRunId) return;
 
       const { data: analysisData, error: analysisError } =
         await supabase.functions.invoke<HairAnalysisResult | string>(
@@ -402,6 +424,7 @@ export default function AIScreen() {
           )
         );
       }
+      if (analysisRunRef.current !== analysisRunId) return;
 
       const parsedResult =
         typeof analysisData === "string"
@@ -414,6 +437,7 @@ export default function AIScreen() {
       setChatInput("");
       setSelectedManualHairType(null);
     } catch (error) {
+      if (analysisRunRef.current !== analysisRunId) return;
       console.warn("Hair analysis failed:", error);
       Alert.alert(
         "Analysis failed",
@@ -422,8 +446,15 @@ export default function AIScreen() {
           : "Please try again with another photo."
       );
     } finally {
-      setIsAnalyzing(false);
+      if (analysisRunRef.current === analysisRunId) {
+        setIsAnalyzing(false);
+      }
     }
+  };
+
+  const cancelAnalysis = () => {
+    analysisRunRef.current += 1;
+    setIsAnalyzing(false);
   };
 
   const selectedSuggestion =
@@ -555,10 +586,16 @@ export default function AIScreen() {
   };
 
   return (
-    <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
+    <KeyboardAvoidingView
+      className="flex-1 bg-neutral-50"
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+      style={{ paddingTop: insets.top }}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -570,14 +607,11 @@ export default function AIScreen() {
         }
       >
         {/* Header */}
-        <BookingPageTransition className="mx-5 mt-3">
+        <View className="mx-5 mt-3">
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
               <Text className="text-3xl mt-1 font-semibold text-neutral-900">
                 AI Style Studio
-              </Text>
-              <Text className="text-neutral-500 text-base mt-1">
-                Upload a photo for tailored cut suggestions.
               </Text>
             </View>
             <TouchableOpacity
@@ -589,47 +623,60 @@ export default function AIScreen() {
               <Text className="font-semibold text-neutral-900 ml-2">MY Styles</Text>
             </TouchableOpacity>
           </View>
-        </BookingPageTransition>
+        </View>
 
         <HairstyleDictionaryModal
           visible={isDictionaryVisible}
           onClose={() => setIsDictionaryVisible(false)}
         />
 
-        <BookingStaggerList>
         {/* Upload */}
-        <BookingStaggerItem className="mx-5 mt-6">
+        <View className="mx-5 mt-6">
           {/* Image area */}
+          <Animated.View
+            style={[
+              isAnalyzing && imageUri
+                ? {
+                    borderRadius: 16,
+                    shadowColor: glowColor,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: glowOpacity,
+                    shadowRadius: 22,
+                    elevation: 12,
+                  }
+                : null,
+            ]}
+          >
           <TouchableOpacity
             onPress={pickFromGallery}
             disabled={isBusy}
             activeOpacity={0.9}
-            className={`overflow-hidden rounded-2xl ${
+            className={`overflow-hidden ${
               imageUri
-                ? "border border-neutral-200 bg-white"
-                : "border-2 border-dashed border-neutral-200 bg-neutral-50"
+                ? `rounded-2xl border bg-white ${
+                    isAnalyzing ? "border-cyan-300" : "border-neutral-200"
+                  }`
+                : "rounded-3xl border border-dashed border-neutral-300 bg-neutral-100"
             } items-center justify-center relative`}
             style={{ height: imageUri ? undefined : 200 }}
           >
             {imageUri ? (
               <>
-                <Animated.View style={{ opacity: pulseAnim, width: "100%" }}>
-                  <Image
-                    source={{ uri: imageUri }}
-                    className="w-full"
-                    resizeMode="cover"
-                    style={
-                      imageAspectRatio
-                        ? {
-                            aspectRatio: Math.max(
-                              0.78,
-                              Math.min(1.25, imageAspectRatio)
-                            ),
-                          }
-                        : { height: 320 }
-                    }
-                  />
-                </Animated.View>
+                <Image
+                  source={{ uri: imageUri }}
+                  className="w-full"
+                  resizeMode="cover"
+                  style={
+                    imageAspectRatio
+                      ? {
+                          aspectRatio: Math.max(
+                            0.78,
+                            Math.min(1.25, imageAspectRatio)
+                          ),
+                        }
+                      : { height: 320 }
+                  }
+                />
 
                 <TouchableOpacity
                   onPress={clearImage}
@@ -641,7 +688,7 @@ export default function AIScreen() {
 
                 {/* Analysing overlay */}
                 {isAnalyzing ? (
-                  <View
+                  <Animated.View
                     style={{
                       position: "absolute",
                       top: 0,
@@ -650,15 +697,29 @@ export default function AIScreen() {
                       bottom: 0,
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: "rgba(10,10,10,0.62)",
+                      backgroundColor: "rgba(10,10,10,0.5)",
                       borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: glowBorderColor,
                     }}
                   >
-                    <ActivityIndicator size="large" color="#ffffff" />
-                    <Text className="mt-2.5 text-sm font-semibold text-white">
-                      Analysing your style...
-                    </Text>
-                  </View>
+                    <View className="items-center rounded-3xl border border-cyan-200/40 bg-black/45 px-6 py-5">
+                      <View className="h-12 w-12 items-center justify-center rounded-full bg-cyan-300/20">
+                        <Ionicons name="sparkles" size={24} color="#a5f3fc" />
+                      </View>
+                      <Text className="mt-3 text-base font-semibold text-white">
+                        Analysing face
+                      </Text>
+                      <Text className="mt-1 text-center text-xs font-medium text-cyan-100">
+                        Reading face shape and hair texture
+                      </Text>
+                      <ActivityIndicator
+                        size="small"
+                        color="#a5f3fc"
+                        style={{ marginTop: 12 }}
+                      />
+                    </View>
+                  </Animated.View>
                 ) : (
                   <View
                     style={{
@@ -704,7 +765,7 @@ export default function AIScreen() {
                 <Text className="mt-3 text-base font-semibold text-neutral-900">
                   Tap to add a photo
                 </Text>
-                <Text className="mt-1 text-center text-sm text-neutral-500">
+                <Text className="mt-1 text-center text-sm text-neutral-700">
                   Front or side profile works best.
                 </Text>
               </View>
@@ -739,6 +800,7 @@ export default function AIScreen() {
               </View>
             ) : null}
           </TouchableOpacity>
+          </Animated.View>
 
           {/* Camera / Gallery buttons */}
           <View className="mt-4 flex-row gap-3">
@@ -774,28 +836,30 @@ export default function AIScreen() {
 
           {/* Analyse button */}
           <TouchableOpacity
-            onPress={analyzeHairstyle}
-            disabled={!hasImage || isBusy}
-            className={`mt-4 rounded-full bg-neutral-900 px-4 py-3.5 ${
-              !hasImage || isBusy ? "opacity-40" : ""
+            onPress={isAnalyzing ? cancelAnalysis : analyzeHairstyle}
+            disabled={!hasImage || isPicking || isGeneratingSuggestions}
+            className={`mt-4 rounded-full px-4 py-3.5 ${
+              isAnalyzing ? "bg-red-500" : "bg-neutral-900"
+            } ${
+              !hasImage || isPicking || isGeneratingSuggestions ? "opacity-40" : ""
             }`}
           >
             <View className="flex-row items-center justify-center gap-2">
               {isAnalyzing ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <Ionicons name="close-outline" size={17} color="#ffffff" />
               ) : (
                 <Ionicons name="sparkles-outline" size={17} color="#ffffff" />
               )}
               <Text className="text-center font-semibold text-white">
-                {isAnalyzing ? "Analysing..." : "Get suggestions"}
+                {isAnalyzing ? "Cancel" : "Get suggestions"}
               </Text>
             </View>
           </TouchableOpacity>
-        </BookingStaggerItem>
+        </View>
 
         {/* Results */}
         {analysisResult ? (
-          <BookingStaggerItem className="mx-5 mt-6">
+          <View className="mx-5 mt-6">
             <Text className="text-lg font-semibold text-neutral-900">
               {hasUsableAnalysis
                 ? "Recommended cuts"
@@ -1054,10 +1118,9 @@ export default function AIScreen() {
                 )}
               </View>
             )}
-          </BookingStaggerItem>
+          </View>
         ) : null}
-        </BookingStaggerList>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

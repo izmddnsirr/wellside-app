@@ -121,7 +121,7 @@ export default function ReviewConfirmScreen() {
     <View className="flex-1 bg-neutral-50" style={{ paddingTop: insets.top }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
       >
         <View className="flex-row items-center justify-between px-5 pt-3">
           <Pressable
@@ -132,10 +132,7 @@ export default function ReviewConfirmScreen() {
             <Ionicons name="arrow-back" size={22} color="#171717" />
           </Pressable>
           <Pressable
-            onPress={() => {
-              router.dismissAll();
-              router.replace("/(tabs)/booking");
-            }}
+            onPress={() => router.back()}
             className="h-10 w-10 items-center justify-center"
             hitSlop={10}
           >
