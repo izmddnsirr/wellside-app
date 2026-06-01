@@ -49,14 +49,27 @@ function ShiftsSkeleton() {
   );
 }
 
+type ShiftStats = {
+  shift_id: string;
+  total_sales: number;
+  cash_sales: number;
+  ewallet_sales: number;
+  refunded_sales: number;
+  ticket_count: number;
+  items: { key: string; label: string; type: "service" | "product"; qty: number; total: number }[];
+  barber_sales: { key: string; label: string; total: number }[];
+};
+
 async function ShiftsContent() {
   const supabase = await createAdminClient();
-  const { data: shifts } = await supabase
-    .from("shifts")
-    .select(
-      "id, shift_code, label, start_at, end_at, status, opened_by, profiles:opened_by (first_name, last_name)"
-    )
-    .order("start_at", { ascending: false });
+
+  const [{ data: shifts }, { data: statsRows }] = await Promise.all([
+    supabase
+      .from("shifts")
+      .select("id, shift_code, label, start_at, end_at, status, opened_by, profiles:opened_by (first_name, last_name)")
+      .order("start_at", { ascending: false }),
+    supabase.rpc("get_shift_stats"),
+  ]);
 
   const normalizedShifts = (shifts ?? []).map((shift) => ({
     ...shift,
@@ -65,231 +78,28 @@ async function ShiftsContent() {
       : shift.profiles ?? null,
   }));
 
-  const shiftIds = normalizedShifts.map((shift) => shift.id);
-  const { data: tickets } =
-    shiftIds.length > 0
-      ? await supabase
-          .from("tickets")
-          .select(
-            `
-            shift_id,
-            total_amount,
-            payment_status,
-            payment_method,
-            barber:barber_id (display_name, first_name, last_name),
-            ticket_items (
-              qty,
-              unit_price,
-              services:service_id (name, base_price),
-              products:product_id (name, base_price)
-            )
-          `
-          )
-          .in("shift_id", shiftIds)
-      : { data: [] };
-  const normalizedTickets = (tickets ?? []).map((ticket) => ({
-    ...ticket,
-    barber: Array.isArray(ticket.barber)
-      ? ticket.barber[0] ?? null
-      : ticket.barber ?? null,
-    ticket_items:
-      ticket.ticket_items?.map((item) => ({
-        ...item,
-        services: Array.isArray(item.services)
-          ? item.services[0] ?? null
-          : item.services ?? null,
-        products: Array.isArray(item.products)
-          ? item.products[0] ?? null
-          : item.products ?? null,
-      })) ?? null,
-  }));
-
-  const paidTickets = normalizedTickets.filter(
-    (ticket) => (ticket.payment_status ?? "").toLowerCase() === "paid"
-  );
-
-  const salesByShift = paidTickets.reduce<Record<string, number>>(
-    (acc, ticket) => {
-      if (!ticket.shift_id) {
-        return acc;
-      }
-      acc[ticket.shift_id] =
-        (acc[ticket.shift_id] ?? 0) + Number(ticket.total_amount ?? 0);
-      return acc;
-    },
+  const statsByShift = ((statsRows ?? []) as ShiftStats[]).reduce<Record<string, ShiftStats>>(
+    (acc, row) => { acc[row.shift_id] = row; return acc; },
     {}
   );
 
-  const refundedTickets = normalizedTickets.filter(
-    (ticket) => (ticket.payment_status ?? "").toLowerCase() === "refunded"
-  );
+  const salesByShift: Record<string, number> = {};
+  const cashSalesByShift: Record<string, number> = {};
+  const ewalletSalesByShift: Record<string, number> = {};
+  const refundedSalesByShift: Record<string, number> = {};
+  const ticketsCountByShift: Record<string, number> = {};
+  const itemsByShift: Record<string, ShiftStats["items"]> = {};
+  const barberSalesByShift: Record<string, ShiftStats["barber_sales"]> = {};
 
-  const cashSalesByShift = paidTickets.reduce<Record<string, number>>(
-    (acc, ticket) => {
-      if (!ticket.shift_id) {
-        return acc;
-      }
-      const method = (ticket.payment_method ?? "").toLowerCase();
-      if (method !== "cash") {
-        return acc;
-      }
-      acc[ticket.shift_id] =
-        (acc[ticket.shift_id] ?? 0) + Number(ticket.total_amount ?? 0);
-      return acc;
-    },
-    {}
-  );
-
-  const ewalletSalesByShift = paidTickets.reduce<Record<string, number>>(
-    (acc, ticket) => {
-      if (!ticket.shift_id) {
-        return acc;
-      }
-      const method = (ticket.payment_method ?? "").toLowerCase();
-      if (method !== "ewallet") {
-        return acc;
-      }
-      acc[ticket.shift_id] =
-        (acc[ticket.shift_id] ?? 0) + Number(ticket.total_amount ?? 0);
-      return acc;
-    },
-    {}
-  );
-
-  const refundedSalesByShift = refundedTickets.reduce<Record<string, number>>(
-    (acc, ticket) => {
-      if (!ticket.shift_id) {
-        return acc;
-      }
-      acc[ticket.shift_id] =
-        (acc[ticket.shift_id] ?? 0) + Number(ticket.total_amount ?? 0);
-      return acc;
-    },
-    {}
-  );
-
-  const ticketsCountByShift = normalizedTickets.reduce<Record<string, number>>(
-    (acc, ticket) => {
-      if (!ticket.shift_id) {
-        return acc;
-      }
-      acc[ticket.shift_id] = (acc[ticket.shift_id] ?? 0) + 1;
-      return acc;
-    },
-    {}
-  );
-
-  const itemsByShiftMap = normalizedTickets.reduce<
-    Record<
-      string,
-      Map<
-        string,
-        { key: string; label: string; type: "service" | "product"; qty: number; total: number }
-      >
-    >
-  >((acc, ticket) => {
-    if (!ticket.shift_id || !ticket.ticket_items) {
-      return acc;
-    }
-    const shiftItems = acc[ticket.shift_id] ?? new Map();
-    ticket.ticket_items.forEach((item) => {
-      const detail = item.services ?? item.products;
-      if (!detail?.name) {
-        return;
-      }
-      const type = item.services ? "service" : "product";
-      const key = `${type}:${detail.name}`;
-      const qty = item.qty ?? 0;
-      const price =
-        typeof item.unit_price === "number"
-          ? item.unit_price
-          : detail.base_price ?? 0;
-      const existing =
-        shiftItems.get(key) ?? {
-          key,
-          label: detail.name,
-          type,
-          qty: 0,
-          total: 0,
-        };
-      existing.qty += qty;
-      existing.total += qty * price;
-      shiftItems.set(key, existing);
-    });
-    acc[ticket.shift_id] = shiftItems;
-    return acc;
-  }, {});
-
-  const itemsByShift = Object.fromEntries(
-    Object.entries(itemsByShiftMap).map(([shiftId, items]) => [
-      shiftId,
-      Array.from(items.values()).sort((a, b) =>
-        a.total === b.total ? a.label.localeCompare(b.label) : b.total - a.total
-      ),
-    ])
-  );
-
-  const barberSalesByShiftMap = paidTickets.reduce<
-    Record<
-      string,
-      Map<
-        string,
-        {
-          key: string;
-          label: string;
-          total: number;
-        }
-      >
-    >
-  >((acc, ticket) => {
-    if (!ticket.shift_id || !ticket.ticket_items?.length) {
-      return acc;
-    }
-
-    const barberName =
-      ticket.barber?.display_name ||
-      [ticket.barber?.first_name, ticket.barber?.last_name]
-        .filter(Boolean)
-        .join(" ") ||
-      "Unknown";
-
-    const shiftBarberSales = acc[ticket.shift_id] ?? new Map();
-    const serviceTotal = ticket.ticket_items.reduce((sum, item) => {
-      if (!item.services) {
-        return sum;
-      }
-      const qty = item.qty ?? 0;
-      const price =
-        typeof item.unit_price === "number"
-          ? item.unit_price
-          : item.services.base_price ?? 0;
-      return sum + qty * price;
-    }, 0);
-
-    if (serviceTotal <= 0) {
-      acc[ticket.shift_id] = shiftBarberSales;
-      return acc;
-    }
-
-    const existing = shiftBarberSales.get(barberName) ?? {
-      key: barberName,
-      label: barberName,
-      total: 0,
-    };
-    existing.total += serviceTotal;
-    shiftBarberSales.set(barberName, existing);
-    acc[ticket.shift_id] = shiftBarberSales;
-    return acc;
-  }, {});
-
-  const barberSalesByShift = Object.fromEntries(
-    Object.entries(barberSalesByShiftMap).map(([shiftId, barbers]) => [
-      shiftId,
-      Array.from(barbers.values()).sort((a, b) =>
-        a.total === b.total ? a.label.localeCompare(b.label) : b.total - a.total
-      ),
-    ])
-  );
+  for (const [id, s] of Object.entries(statsByShift)) {
+    salesByShift[id] = Number(s.total_sales);
+    cashSalesByShift[id] = Number(s.cash_sales);
+    ewalletSalesByShift[id] = Number(s.ewallet_sales);
+    refundedSalesByShift[id] = Number(s.refunded_sales);
+    ticketsCountByShift[id] = Number(s.ticket_count);
+    itemsByShift[id] = s.items;
+    barberSalesByShift[id] = s.barber_sales;
+  }
 
   return (
     <ShiftsTable

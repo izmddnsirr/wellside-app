@@ -196,7 +196,7 @@ async function AppUsersList() {
                 <div key={user.uid} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
                     {user.avatarUrl ? (
-                      <Image src={user.avatarUrl} alt="" fill className="object-cover" />
+                      <Image src={user.avatarUrl} alt="" fill sizes="32px" className="object-cover" />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">
                         {initials || "?"}

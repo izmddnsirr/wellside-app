@@ -44,15 +44,12 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-type TicketRow = {
-  total_amount: number | null;
-  paid_at: string | null;
-};
-
-type SalesSummaryRow = {
-  total_amount: number | null;
-  paid_at: string | null;
-  payment_method: string | null;
+type SalesChartRow = {
+  paid_date: string;
+  sales: number;
+  ticket_count: number;
+  cash_sales: number;
+  ewallet_sales: number;
 };
 
 type TodayPaymentRow = {
@@ -122,23 +119,8 @@ export async function DashboardContent() {
       .select("*", { count: "exact", head: true })
       .gte("created_at", todayStartTimestamp)
       .lte("created_at", todayEndTimestamp),
-    supabase
-      .from("tickets")
-      .select("total_amount, paid_at, payment_method")
-      .eq("payment_status", "paid")
-      .gte("paid_at", rangeStartTimestamp)
-      .lte("paid_at", monthEndTimestamp),
-    supabase
-      .from("tickets")
-      .select(
-        `
-        total_amount,
-        paid_at
-      `,
-      )
-      .eq("payment_status", "paid")
-      .gte("paid_at", monthStartTimestamp)
-      .lte("paid_at", monthEndTimestamp),
+    supabase.rpc("get_sales_chart_data", { p_from: rangeStartTimestamp, p_to: monthEndTimestamp }),
+    supabase.rpc("get_sales_chart_data", { p_from: monthStartTimestamp, p_to: monthEndTimestamp }),
     supabase
       .from("bookings")
       .select("*", { count: "exact", head: true })
@@ -193,8 +175,8 @@ export async function DashboardContent() {
   const totalBookingsToday = bookingsCount ?? 0;
   const totalTicketsToday = ticketsTodayCount ?? 0;
 
-  const salesTickets = (salesMonthData ?? []) as unknown as TicketRow[];
-  const rangeTickets = (salesRangeData ?? []) as unknown as SalesSummaryRow[];
+  const rangeRows = (salesRangeData ?? []) as unknown as SalesChartRow[];
+  const monthRows = (salesMonthData ?? []) as unknown as SalesChartRow[];
   const prevMonthSales = ((prevMonthSalesData ?? []) as { total_amount: number | null }[])
     .reduce((sum, t) => sum + (t.total_amount ?? 0), 0);
   const prevBookings = prevMonthBookingsCount ?? 0;
@@ -208,20 +190,11 @@ export async function DashboardContent() {
   const todayPayments = (todayPaymentsData ?? []) as TodayPaymentRow[];
   const todayBarberBookings = (todayBarberBookingsData ?? []) as TodayBarberBookingRow[];
   const lowStockProducts = (lowStockProductsData ?? []) as LowStockRow[];
-  const totalSalesToday = salesTickets.reduce((total, ticket) => {
-    if (!ticket.paid_at) {
-      return total;
-    }
-    const paidDate = getMalaysiaDateString(new Date(ticket.paid_at));
-    if (paidDate !== todayDate) {
-      return total;
-    }
-    return total + (ticket.total_amount ?? 0);
-  }, 0);
-  const totalSalesThisMonth = salesTickets.reduce(
-    (total, ticket) => total + (ticket.total_amount ?? 0),
-    0,
-  );
+
+  const todayRow = rangeRows.find((r) => r.paid_date === todayDate);
+  const totalSalesToday = todayRow ? Number(todayRow.sales) : 0;
+  const totalSalesThisMonth = monthRows.reduce((sum, r) => sum + Number(r.sales), 0);
+
   const normalizePaymentMethod = (value: string | null) =>
     (value ?? "").toLowerCase().replace(/[^a-z]/g, "");
   const cancelledToday = cancelledTodayCount ?? 0;
@@ -241,57 +214,21 @@ export async function DashboardContent() {
     .filter((ticket) => normalizePaymentMethod(ticket.payment_method) === "ewallet")
     .reduce((sum, ticket) => sum + (ticket.total_amount ?? 0), 0);
 
-  const rangeSummaryMap = new Map<
-    string,
-    {
-      sales: number;
-      totalTicket: number;
-      totalCash: number;
-      totalEwallet: number;
-    }
-  >();
-  rangeTickets.forEach((ticket) => {
-    if (!ticket.paid_at) {
-      return;
-    }
-    const dateKey = getMalaysiaDateString(new Date(ticket.paid_at));
-    const current = rangeSummaryMap.get(dateKey) ?? {
-      sales: 0,
-      totalTicket: 0,
-      totalCash: 0,
-      totalEwallet: 0,
-    };
-    const amount = ticket.total_amount ?? 0;
-    const method = normalizePaymentMethod(ticket.payment_method);
-
-    current.sales += amount;
-    current.totalTicket += 1;
-    if (method === "cash") {
-      current.totalCash += amount;
-    }
-    if (method === "ewallet") {
-      current.totalEwallet += amount;
-    }
-
-    rangeSummaryMap.set(dateKey, current);
+  const rangeSummaryMap = new Map<string, { sales: number; totalTicket: number; totalCash: number; totalEwallet: number }>();
+  rangeRows.forEach((row) => {
+    rangeSummaryMap.set(row.paid_date, {
+      sales: Number(row.sales),
+      totalTicket: Number(row.ticket_count),
+      totalCash: Number(row.cash_sales ?? 0),
+      totalEwallet: Number(row.ewallet_sales ?? 0),
+    });
   });
   const currentYearMonths = Array.from(
     { length: 12 },
     (_, index) => `${year}-${pad2(index + 1)}`,
   );
   const dataMonths = Array.from(
-    new Set(
-      rangeTickets
-        .filter((ticket) => ticket.paid_at)
-        .map((ticket) => {
-          const paidDate = new Date(ticket.paid_at as string);
-          if (Number.isNaN(paidDate.getTime())) {
-            return "";
-          }
-          return `${paidDate.getFullYear()}-${pad2(paidDate.getMonth() + 1)}`;
-        })
-        .filter(Boolean),
-    ),
+    new Set(rangeRows.map((row) => row.paid_date.slice(0, 7))),
   ).sort();
   const dataYears = Array.from(
     new Set(dataMonths.map((value) => Number(value.split("-")[0]))),
@@ -328,57 +265,16 @@ export async function DashboardContent() {
     }),
   );
 
-  const yearSalesMap = new Map<
-    number,
-    Map<
-      string,
-      {
-        sales: number;
-        totalTicket: number;
-        totalCash: number;
-        totalEwallet: number;
-      }
-    >
-  >();
-  rangeTickets.forEach((ticket) => {
-    if (!ticket.paid_at) {
-      return;
-    }
-    const paidDate = new Date(ticket.paid_at);
-    if (Number.isNaN(paidDate.getTime())) {
-      return;
-    }
-    const paidYear = paidDate.getFullYear();
-    const monthKey = `${paidYear}-${pad2(paidDate.getMonth() + 1)}`;
-    const yearBucket =
-      yearSalesMap.get(paidYear) ??
-      new Map<
-        string,
-        {
-          sales: number;
-          totalTicket: number;
-          totalCash: number;
-          totalEwallet: number;
-        }
-      >();
-    const current = yearBucket.get(monthKey) ?? {
-      sales: 0,
-      totalTicket: 0,
-      totalCash: 0,
-      totalEwallet: 0,
-    };
-    const amount = ticket.total_amount ?? 0;
-    const method = normalizePaymentMethod(ticket.payment_method);
-
-    current.sales += amount;
-    current.totalTicket += 1;
-    if (method === "cash") {
-      current.totalCash += amount;
-    }
-    if (method === "ewallet") {
-      current.totalEwallet += amount;
-    }
-
+  const yearSalesMap = new Map<number, Map<string, { sales: number; totalTicket: number; totalCash: number; totalEwallet: number }>>();
+  rangeRows.forEach((row) => {
+    const paidYear = Number(row.paid_date.slice(0, 4));
+    const monthKey = row.paid_date.slice(0, 7);
+    const yearBucket = yearSalesMap.get(paidYear) ?? new Map();
+    const current = yearBucket.get(monthKey) ?? { sales: 0, totalTicket: 0, totalCash: 0, totalEwallet: 0 };
+    current.sales += Number(row.sales);
+    current.totalTicket += Number(row.ticket_count);
+    current.totalCash += Number(row.cash_sales ?? 0);
+    current.totalEwallet += Number(row.ewallet_sales ?? 0);
     yearBucket.set(monthKey, current);
     yearSalesMap.set(paidYear, yearBucket);
   });

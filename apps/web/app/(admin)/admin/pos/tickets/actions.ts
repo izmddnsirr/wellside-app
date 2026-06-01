@@ -20,6 +20,8 @@ export const deleteTicket = async (ticketId: string) => {
       };
     }
 
+    revalidatePath("/admin");
+    revalidatePath("/admin/pos/shifts");
     revalidatePath("/admin/pos/tickets");
     return { ok: true };
   } catch (error) {
@@ -81,6 +83,8 @@ export const refundTicket = async (ticketId: string) => {
       };
     }
 
+    revalidatePath("/admin");
+    revalidatePath("/admin/pos/shifts");
     revalidatePath("/admin/pos/tickets");
     return { ok: true };
   } catch (error) {

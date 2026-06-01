@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 
-import { createAdminClient } from "@/utils/supabase/server";
+import { createAdminClient, createClient } from "@/utils/supabase/server";
 import { AppSidebarClient } from "./app-sidebar-client";
 import type { Sidebar } from "@/components/ui/sidebar";
 
@@ -13,19 +13,19 @@ const fallbackUser = {
 type SidebarProps = ComponentProps<typeof Sidebar>;
 
 export async function AppSidebar(props: SidebarProps) {
-  const supabase = await createAdminClient();
+  const [sessionClient, adminClient] = await Promise.all([createClient(), createAdminClient()]);
 
   const [
     { data: { user: authUser } },
     { count: activeBookingsCount },
     { count: lowStockCount },
   ] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase
+    sessionClient.auth.getUser(),
+    adminClient
       .from("bookings")
       .select("id", { count: "exact", head: true })
       .in("status", ["scheduled", "in_progress"]),
-    supabase
+    adminClient
       .from("products")
       .select("id", { count: "exact", head: true })
       .not("stock_qty", "is", null)
@@ -45,7 +45,7 @@ export async function AppSidebar(props: SidebarProps) {
     );
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await adminClient
     .from("profiles")
     .select("first_name,last_name,avatar_url")
     .eq("id", authUser.id)

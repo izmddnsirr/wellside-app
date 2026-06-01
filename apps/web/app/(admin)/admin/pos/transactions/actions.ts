@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/utils/supabase/server";
 
 type TicketItemInput = {
@@ -131,6 +132,9 @@ export const payTicket = async (input: PayTicketInput) => {
       return { ok: false, error: "Ticket is already paid or refunded." };
     }
 
+    revalidatePath("/admin");
+    revalidatePath("/admin/pos/shifts");
+    revalidatePath("/admin/pos/tickets");
     return { ok: true };
   } catch (error) {
     console.error("Failed to pay ticket", error);

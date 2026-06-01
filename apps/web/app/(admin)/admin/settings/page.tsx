@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AdminShell } from "../components/admin-shell";
 import { createAdminAuthClient } from "@/utils/supabase/admin";
-import { createAdminClient } from "@/utils/supabase/server";
+import { createAdminClient, createClient } from "@/utils/supabase/server";
 import { loadShopOperatingRules } from "@/utils/shop-operations";
 import { OperationsSettingsPanel } from "./operations-settings-panel";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,8 +72,7 @@ function SettingsSkeleton() {
 }
 
 async function SettingsContent() {
-  const supabase = await createAdminClient();
-  const adminSupabase = createAdminAuthClient();
+  const [supabase, adminSupabase] = await Promise.all([createClient(), Promise.resolve(createAdminAuthClient())]);
   const operatingRules = await loadShopOperatingRules(adminSupabase);
   const {
     data: { user },

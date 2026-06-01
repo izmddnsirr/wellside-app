@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AdminShell } from "../components/admin-shell";
-import { createAdminClient } from "@/utils/supabase/server";
+import { createAdminClient, createClient } from "@/utils/supabase/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -107,16 +107,16 @@ const buildInitials = (value: string) =>
     .join("");
 
 async function AccountContent() {
-  const supabase = await createAdminClient();
+  const [sessionClient, adminClient] = await Promise.all([createClient(), createAdminClient()]);
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await sessionClient.auth.getUser();
 
   if (!user) {
     redirect("/staff");
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await adminClient
     .from("profiles")
     .select("first_name,last_name,email,phone,avatar_url")
     .eq("id", user.id)

@@ -961,6 +961,7 @@ export function BarbersCard({
                               src={barber.avatar_url}
                               alt=""
                               fill
+                              sizes="32px"
                               className="object-cover"
                             />
                           ) : (
