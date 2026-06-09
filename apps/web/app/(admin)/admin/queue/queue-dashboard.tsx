@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, ExternalLink, Phone, Trash2, Tv, Undo2 } from "lucide-react";
 import { formatMalaysiaPhone } from "@/utils/phone";
@@ -17,33 +17,8 @@ import type { QueueDashboardData, QueueListItem } from "@/utils/queue";
 import type { QueueEntry } from "@/utils/queue-entries";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { toast } from "sonner";
-import { createClient } from "@/utils/supabase/client";
 import { serveBooking, completeBooking, cancelBooking, checkInBooking, undoCheckIn, undoServeBooking } from "./actions";
 import { serveQueueEntry, completeQueueEntry, removeQueueEntry, undoServeQueueEntry } from "./queue-entry-actions";
-
-type CallEvent =
-  | { type: "booking"; num: number; label: string; name: string }
-  | { type: "walkin"; num: number };
-
-function useBroadcastCall() {
-  const broadcastCall = useCallback(async (event: CallEvent) => {
-    const supabase = createClient();
-    const ch = supabase.channel("queue-announcements");
-    await new Promise<void>((resolve) => {
-      ch.subscribe((status) => {
-        if (status === "SUBSCRIBED") resolve();
-      });
-    });
-    await ch.send({
-      type: "broadcast",
-      event: "call",
-      payload: event,
-    });
-    supabase.removeChannel(ch);
-  }, []);
-
-  return { broadcastCall };
-}
 
 type QueueDashboardProps = {
   data: QueueDashboardData;
@@ -63,12 +38,10 @@ function QueueCard({
   item,
   index,
   mode,
-  onCall,
 }: {
   item: QueueListItem;
   index: number;
   mode: "upcoming" | "waiting" | "serving";
-  onCall: (event: CallEvent) => void;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -143,13 +116,63 @@ function QueueCard({
             size="sm"
             className="h-8 rounded-lg text-[12px]"
             onClick={() => {
+              if (!("speechSynthesis" in window)) return;
+              window.speechSynthesis.cancel();
               const num = item.queueNumber ?? (index + 1);
               const label = String(num).padStart(2, "0");
-              onCall({ type: "booking", num, label, name: item.name });
+              const getPreferredVoice = () => {
+                const voices = window.speechSynthesis.getVoices();
+                return voices.find(v =>
+                  v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+                ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+              };
+              const speak = (text: string, rate: number, pitch: number) => {
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
+                const preferred = getPreferredVoice();
+                if (preferred) u.voice = preferred;
+                return u;
+              };
+              const ctx = new AudioContext();
+              const chimeDuration = 1.2;
+              const playBookingChime = () => {
+                [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+                  const osc = ctx.createOscillator();
+                  const gainNode = ctx.createGain();
+                  osc.connect(gainNode); gainNode.connect(ctx.destination);
+                  osc.type = "sine"; osc.frequency.value = freq;
+                  gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
+                  gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+                  osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
+                });
+              };
+              ctx.resume().then(playBookingChime).catch(playBookingChime);
               toast.info(`Calling B${label} — ${item.name}`, { duration: 4000 });
+              // Broadcast to TV display immediately
               const bc = new BroadcastChannel("tv_calling_booking");
               bc.postMessage({ type: "calling_booking_number", value: num });
               bc.close();
+
+              setTimeout(() => {
+                const digits = label.split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
+                const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+                  for (let i = 0; i < utterances.length - 1; i++) {
+                    const next = utterances[i + 1];
+                    utterances[i].onend = () => window.speechSynthesis.speak(next);
+                  }
+                  window.speechSynthesis.speak(utterances[0]);
+                };
+                const u1 = speak(`Booking number,`, 0.7, 1.05);
+                const bDigits1 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const bDigits2 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+                u1.onend = () => {
+                  const last1 = bDigits1[bDigits1.length - 1];
+                  last1.onend = () => setTimeout(() => speakChain([...bDigits2, uEnd]), 600);
+                  speakChain(bDigits1);
+                };
+                window.speechSynthesis.speak(u1);
+              }, chimeDuration * 1000);
             }}
           >
             Call
@@ -205,10 +228,8 @@ function QueueCard({
 
 function QueueEntryCard({
   entry,
-  onCall,
 }: {
   entry: QueueEntry;
-  onCall: (event: CallEvent) => void;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -274,12 +295,74 @@ function QueueEntryCard({
           size="sm"
           className="h-8 rounded-lg text-[12px]"
           onClick={() => {
+            if (!("speechSynthesis" in window)) return;
+            window.speechSynthesis.cancel();
+
             const num = entry.queue_number;
-            onCall({ type: "walkin", num });
+
+            // Play chime then speak after it finishes
+            const playChimeThenSpeak = () => {
+              const ctx = new AudioContext();
+              const chimeDuration = 1.2;
+              const playWalkinChime = () => {
+                [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+                  const osc = ctx.createOscillator();
+                  const gainNode = ctx.createGain();
+                  osc.connect(gainNode);
+                  gainNode.connect(ctx.destination);
+                  osc.type = "sine";
+                  osc.frequency.value = freq;
+                  gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
+                  gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+                  osc.start(ctx.currentTime + start);
+                  osc.stop(ctx.currentTime + start + 0.7);
+                });
+              };
+              ctx.resume().then(playWalkinChime).catch(playWalkinChime);
+
+              setTimeout(() => {
+                const speak = (text: string, rate: number, pitch: number) => {
+                  const u = new SpeechSynthesisUtterance(text);
+                  u.lang = "en-US";
+                  u.rate = rate;
+                  u.pitch = pitch;
+                  u.volume = 1;
+                  const voices = window.speechSynthesis.getVoices();
+                  const preferred = voices.find(v =>
+                    v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+                  ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+                  if (preferred) u.voice = preferred;
+                  return u;
+                };
+
+                const digits = String(num).padStart(2, "0").split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
+                const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+                  for (let i = 0; i < utterances.length - 1; i++) {
+                    const next = utterances[i + 1];
+                    utterances[i].onend = () => window.speechSynthesis.speak(next);
+                  }
+                  window.speechSynthesis.speak(utterances[0]);
+                };
+                const u1 = speak(`Queue number,`, 0.7, 1.05);
+                const wDigits1 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const wDigits2 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+                u1.onend = () => {
+                  const last1 = wDigits1[wDigits1.length - 1];
+                  last1.onend = () => setTimeout(() => speakChain([...wDigits2, uEnd]), 600);
+                  speakChain(wDigits1);
+                };
+                window.speechSynthesis.speak(u1);
+              }, chimeDuration * 1000);
+            };
+
             toast.info(`Calling W${String(num).padStart(2, "0")}`, { duration: 4000 });
+            // Broadcast to TV display
             const bc = new BroadcastChannel("tv_calling_walkin");
             bc.postMessage({ type: "calling_number", value: num });
             bc.close();
+
+            playChimeThenSpeak();
           }}
         >
           Call
@@ -323,11 +406,6 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
   const router = useRouter();
   const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
   const [copied, setCopied] = useState(false);
-  const { broadcastCall } = useBroadcastCall();
-
-  const handleCall = useCallback((event: CallEvent) => {
-    broadcastCall(event);
-  }, [broadcastCall]);
 
   useEffect(() => {
     refreshRef.current = setInterval(() => router.refresh(), 5_000);
@@ -402,7 +480,7 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
               </Empty>
             ) : (
               data.upcomingBookings.slice(0, 10).map((item, i) => (
-                <QueueCard key={item.id} item={item} index={i} mode="upcoming" onCall={handleCall} />
+                <QueueCard key={item.id} item={item} index={i} mode="upcoming" />
               ))
             )}
           </CardContent>
@@ -435,10 +513,10 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
                 ) : (
                   <>
                     {waitingBookings.map((item, i) => (
-                      <QueueCard key={item.id} item={item} index={i} mode="waiting" onCall={handleCall} />
+                      <QueueCard key={item.id} item={item} index={i} mode="waiting" />
                     ))}
                     {waitingEntries.map((entry) => (
-                      <QueueEntryCard key={entry.id} entry={entry} onCall={handleCall} />
+                      <QueueEntryCard key={entry.id} entry={entry} />
                     ))}
                   </>
                 )}
@@ -493,8 +571,8 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
 
               return all.map((s, i) =>
                 s.kind === "booking"
-                  ? <QueueCard key={s.item.id} item={s.item} index={i} mode="serving" onCall={handleCall} />
-                  : <QueueEntryCard key={s.entry.id} entry={s.entry} onCall={handleCall} />
+                  ? <QueueCard key={s.item.id} item={s.item} index={i} mode="serving" />
+                  : <QueueEntryCard key={s.entry.id} entry={s.entry} />
               );
             })()}
           </CardContent>
