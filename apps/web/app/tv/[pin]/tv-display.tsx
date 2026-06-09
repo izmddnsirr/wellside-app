@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QueueListItem } from "@/utils/queue";
 import type { QueueEntry } from "@/utils/queue-entries";
@@ -140,15 +140,14 @@ function BookingPanel({ items, callingNumber, visible }: { items: QueueListItem[
   );
 }
 
-function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) {
+function useTvCalling() {
   const [callingWalkin, setCallingWalkin] = useState<number | null>(null);
   const [callingBooking, setCallingBooking] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
   const walkinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bookingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const announceRef = useRef<(type: "booking" | "walkin", num: number) => void>(() => {});
 
-  const startBlink = useCallback((
+  const startBlink = (
     setter: (v: number | null) => void,
     intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
     num: number,
@@ -167,73 +166,17 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
         setVisible(true);
       }
     }, 750);
-  }, []);
-
-  // Keep announceRef current so useEffect closure always calls latest version
-  useEffect(() => {
-    announceRef.current = (type: "booking" | "walkin", num: number) => {
-      const chimeDuration = 1.2;
-      const ctx = audioCtxRef.current;
-      if (!ctx) return;
-      const playChime = () => {
-        [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain); gain.connect(ctx.destination);
-          osc.type = "sine"; osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.5, ctx.currentTime + start);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
-          osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
-        });
-      };
-      ctx.resume().then(playChime).catch(playChime);
-
-      setTimeout(() => {
-        if (!("speechSynthesis" in window)) return;
-        window.speechSynthesis.cancel();
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(v =>
-          v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
-        ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
-        const speak = (text: string, rate: number, pitch: number) => {
-          const u = new SpeechSynthesisUtterance(text);
-          u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
-          if (preferred) u.voice = preferred;
-          return u;
-        };
-        const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
-          for (let i = 0; i < utterances.length - 1; i++) {
-            const next = utterances[i + 1];
-            utterances[i].onend = () => window.speechSynthesis.speak(next);
-          }
-          window.speechSynthesis.speak(utterances[0]);
-        };
-        const letterMap: Record<string, string> = { "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine" };
-        const digits = String(num).padStart(2, "0").split("");
-        const prefix = type === "booking" ? "Booking" : "Queue";
-        const letter = type === "booking" ? "B" : "W";
-        const u1 = speak(`${prefix} number,`, 0.7, 1.05);
-        const set1 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0))];
-        const set2 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0))];
-        const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
-        u1.onend = () => {
-          set1[set1.length - 1].onend = () => setTimeout(() => speakChain([...set2, uEnd]), 600);
-          speakChain(set1);
-        };
-        window.speechSynthesis.speak(u1);
-      }, chimeDuration * 1000);
-    };
-  });
+  };
 
   useEffect(() => {
     // Same-device fallback via BroadcastChannel
     const bcWalkin = new BroadcastChannel("tv_calling_walkin");
     const bcBooking = new BroadcastChannel("tv_calling_booking");
     bcWalkin.onmessage = (e) => {
-      if (e.data?.type === "calling_number") { startBlink(setCallingWalkin, walkinIntervalRef, e.data.value); announceRef.current("walkin", e.data.value); }
+      if (e.data?.type === "calling_number") startBlink(setCallingWalkin, walkinIntervalRef, e.data.value);
     };
     bcBooking.onmessage = (e) => {
-      if (e.data?.type === "calling_booking_number") { startBlink(setCallingBooking, bookingIntervalRef, e.data.value); announceRef.current("booking", e.data.value); }
+      if (e.data?.type === "calling_booking_number") startBlink(setCallingBooking, bookingIntervalRef, e.data.value);
     };
 
     // Cross-device via Supabase Realtime
@@ -245,7 +188,6 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
       } else {
         startBlink(setCallingWalkin, walkinIntervalRef, payload.num);
       }
-      announceRef.current(payload.type, payload.num);
     }).subscribe();
 
     return () => {
@@ -255,7 +197,7 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
       if (walkinIntervalRef.current) clearInterval(walkinIntervalRef.current);
       if (bookingIntervalRef.current) clearInterval(bookingIntervalRef.current);
     };
-  }, [startBlink]);
+  }, []);
 
   return { callingWalkin, callingBooking, visible };
 }
@@ -454,17 +396,7 @@ export function TvDisplay({
 }: TvDisplayProps) {
   const router = useRouter();
   const now = useClock();
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const { callingWalkin, callingBooking, visible: callingVisible } = useTvCalling(audioCtxRef);
-
-  const unlockAudio = () => {
-    if (audioCtxRef.current) return;
-    const ctx = new AudioContext();
-    ctx.resume();
-    audioCtxRef.current = ctx;
-    setAudioUnlocked(true);
-  };
+  const { callingWalkin, callingBooking, visible: callingVisible } = useTvCalling();
   const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
   const prevQueueCountRef = useRef<number | null>(null);
   const prevBookingIdsRef = useRef<string | null>(null);
@@ -483,20 +415,21 @@ export function TvDisplay({
   useEffect(() => {
     const waitingCount = queueEntries.filter(e => e.status === "waiting").length;
     if (prevQueueCountRef.current !== null && waitingCount > prevQueueCountRef.current) {
-      const ctx = audioCtxRef.current;
-      if (ctx) {
-        ctx.resume().then(() => {
-          [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            osc.connect(gainNode); gainNode.connect(ctx.destination);
-            osc.type = "sine"; osc.frequency.value = freq;
-            gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
-            osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
-          });
+      try {
+        const ctx = new AudioContext();
+        [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+          const osc = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          osc.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
+          osc.start(ctx.currentTime + start);
+          osc.stop(ctx.currentTime + start + 0.7);
         });
-      }
+      } catch {}
     }
     prevQueueCountRef.current = waitingCount;
   }, [queueEntries]);
@@ -508,37 +441,28 @@ export function TvDisplay({
       const prevIds = new Set(prevBookingIdsRef.current.split(","));
       const hasNew = checkedInBookings.some(b => !prevIds.has(b.id));
       if (hasNew) {
-        const ctx = audioCtxRef.current;
-        if (ctx) {
-          ctx.resume().then(() => {
-            [[784, 0], [659, 0.2], [523, 0.4]].forEach(([freq, start]) => {
-              const osc = ctx.createOscillator();
-              const gainNode = ctx.createGain();
-              osc.connect(gainNode); gainNode.connect(ctx.destination);
-              osc.type = "sine"; osc.frequency.value = freq;
-              gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
-              gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
-              osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
-            });
+        try {
+          const ctx = new AudioContext();
+          [[784, 0], [659, 0.2], [523, 0.4]].forEach(([freq, start]) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + 0.7);
           });
-        }
+        } catch {}
       }
     }
     prevBookingIdsRef.current = currentIds;
   }, [checkedInBookings]);
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] flex flex-col text-white select-none overflow-hidden" onClick={unlockAudio}>
-      {!audioUnlocked && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer" onClick={unlockAudio}>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="size-12 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-            </svg>
-            <p className="text-xl font-semibold text-white/80">Tap anywhere to enable audio</p>
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen bg-[#0d0d0d] flex flex-col text-white select-none overflow-hidden">
       {/* Header */}
       <header className="grid grid-cols-3 items-center px-8 py-3 border-b border-white/10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
