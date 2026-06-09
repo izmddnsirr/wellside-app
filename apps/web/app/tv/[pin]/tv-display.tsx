@@ -140,7 +140,7 @@ function BookingPanel({ items, callingNumber, visible }: { items: QueueListItem[
   );
 }
 
-function useTvCalling() {
+function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) {
   const [callingWalkin, setCallingWalkin] = useState<number | null>(null);
   const [callingBooking, setCallingBooking] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
@@ -170,7 +170,8 @@ function useTvCalling() {
 
   const announce = (type: "booking" | "walkin", num: number) => {
     const chimeDuration = 1.2;
-    const ctx = new AudioContext();
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
     const playChime = () => {
       [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
         const osc = ctx.createOscillator();
@@ -449,7 +450,17 @@ export function TvDisplay({
 }: TvDisplayProps) {
   const router = useRouter();
   const now = useClock();
-  const { callingWalkin, callingBooking, visible: callingVisible } = useTvCalling();
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const { callingWalkin, callingBooking, visible: callingVisible } = useTvCalling(audioCtxRef);
+
+  const unlockAudio = () => {
+    if (audioCtxRef.current) return;
+    const ctx = new AudioContext();
+    ctx.resume();
+    audioCtxRef.current = ctx;
+    setAudioUnlocked(true);
+  };
   const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
   const prevQueueCountRef = useRef<number | null>(null);
   const prevBookingIdsRef = useRef<string | null>(null);
@@ -468,21 +479,20 @@ export function TvDisplay({
   useEffect(() => {
     const waitingCount = queueEntries.filter(e => e.status === "waiting").length;
     if (prevQueueCountRef.current !== null && waitingCount > prevQueueCountRef.current) {
-      try {
-        const ctx = new AudioContext();
-        [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
-          const osc = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-          osc.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          osc.type = "sine";
-          osc.frequency.value = freq;
-          gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
-          gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
-          osc.start(ctx.currentTime + start);
-          osc.stop(ctx.currentTime + start + 0.7);
+      const ctx = audioCtxRef.current;
+      if (ctx) {
+        ctx.resume().then(() => {
+          [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            osc.connect(gainNode); gainNode.connect(ctx.destination);
+            osc.type = "sine"; osc.frequency.value = freq;
+            gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
+            osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
+          });
         });
-      } catch {}
+      }
     }
     prevQueueCountRef.current = waitingCount;
   }, [queueEntries]);
@@ -494,28 +504,37 @@ export function TvDisplay({
       const prevIds = new Set(prevBookingIdsRef.current.split(","));
       const hasNew = checkedInBookings.some(b => !prevIds.has(b.id));
       if (hasNew) {
-        try {
-          const ctx = new AudioContext();
-          [[784, 0], [659, 0.2], [523, 0.4]].forEach(([freq, start]) => {
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            osc.type = "sine";
-            osc.frequency.value = freq;
-            gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
-            osc.start(ctx.currentTime + start);
-            osc.stop(ctx.currentTime + start + 0.7);
+        const ctx = audioCtxRef.current;
+        if (ctx) {
+          ctx.resume().then(() => {
+            [[784, 0], [659, 0.2], [523, 0.4]].forEach(([freq, start]) => {
+              const osc = ctx.createOscillator();
+              const gainNode = ctx.createGain();
+              osc.connect(gainNode); gainNode.connect(ctx.destination);
+              osc.type = "sine"; osc.frequency.value = freq;
+              gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
+              gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
+              osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
+            });
           });
-        } catch {}
+        }
       }
     }
     prevBookingIdsRef.current = currentIds;
   }, [checkedInBookings]);
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] flex flex-col text-white select-none overflow-hidden">
+    <div className="min-h-screen bg-[#0d0d0d] flex flex-col text-white select-none overflow-hidden" onClick={unlockAudio}>
+      {!audioUnlocked && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-pointer" onClick={unlockAudio}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="size-12 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+            <p className="text-xl font-semibold text-white/80">Tap anywhere to enable audio</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="grid grid-cols-3 items-center px-8 py-3 border-b border-white/10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
