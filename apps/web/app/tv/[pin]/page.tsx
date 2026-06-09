@@ -49,7 +49,7 @@ export default async function TvPage({ params }: PageProps) {
       id: b.id,
       numberLabel: b.queueNumber != null ? `B${String(b.queueNumber).padStart(2, "0")}` : "B--",
       name: b.name,
-      startedAt: null,
+      startedAt: b.startedAt,
     })),
     ...servingEntries.map(e => ({
       id: e.id,
