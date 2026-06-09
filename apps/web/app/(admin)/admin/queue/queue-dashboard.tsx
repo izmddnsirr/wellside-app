@@ -26,22 +26,20 @@ type CallEvent =
   | { type: "walkin"; num: number };
 
 function useBroadcastCall() {
-  const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
-
-  useEffect(() => {
+  const broadcastCall = useCallback(async (event: CallEvent) => {
     const supabase = createClient();
     const ch = supabase.channel("queue-announcements");
-    ch.subscribe();
-    channelRef.current = ch;
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-
-  const broadcastCall = useCallback(async (event: CallEvent) => {
-    await channelRef.current?.send({
+    await new Promise<void>((resolve) => {
+      ch.subscribe((status) => {
+        if (status === "SUBSCRIBED") resolve();
+      });
+    });
+    await ch.send({
       type: "broadcast",
       event: "call",
       payload: event,
     });
+    supabase.removeChannel(ch);
   }, []);
 
   return { broadcastCall };
