@@ -157,44 +157,50 @@ function announce(audioCtx: AudioContext | null, type: "booking" | "walkin", num
     audioCtx.resume().then(playChime).catch(playChime);
   }
 
-  // Speech — pause utterance acts as delay so speak() is called immediately (Chrome-safe)
+  // Speech after chime (~1.2s)
   if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const voices = window.speechSynthesis.getVoices();
-  const preferred = voices.find(v =>
-    v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
-  ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
-  const speak = (text: string, rate: number, pitch: number, vol = 1) => {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = vol;
-    if (preferred) u.voice = preferred;
-    return u;
-  };
-  const label = String(num).padStart(2, "0");
-  const digitMap: Record<string, string> = { "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine" };
-  const digits = label.split("").map(d => digitMap[d] ?? d);
-  const prefix = type === "booking" ? "Booking" : "Queue";
-  const letter = type === "booking" ? "B" : "W";
-  const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
-    for (let i = 0; i < utterances.length - 1; i++) {
-      const next = utterances[i + 1];
-      utterances[i].onend = () => window.speechSynthesis.speak(next);
-    }
-    window.speechSynthesis.speak(utterances[0]);
-  };
-  const pause = speak(".", 0.1, 1, 0);
-  const u1 = speak(`${prefix} number,`, 0.7, 1.05);
-  const set1 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
-  const set2 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
-  const uEnd = speak("Please proceed to the counter.", 0.72, 1.05);
-  pause.onend = () => {
+  const doSpeak = () => {
+    window.speechSynthesis.cancel();
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+    ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+    const speak = (text: string, rate: number, pitch: number) => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
+      if (preferred) u.voice = preferred;
+      return u;
+    };
+    const label = String(num).padStart(2, "0");
+    const digitMap: Record<string, string> = { "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine" };
+    const digits = label.split("").map(d => digitMap[d] ?? d);
+    const prefix = type === "booking" ? "Booking" : "Queue";
+    const letter = type === "booking" ? "B" : "W";
+    const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+      for (let i = 0; i < utterances.length - 1; i++) {
+        const next = utterances[i + 1];
+        utterances[i].onend = () => window.speechSynthesis.speak(next);
+      }
+      window.speechSynthesis.speak(utterances[0]);
+    };
+    const u1 = speak(`${prefix} number,`, 0.7, 1.05);
+    const set1 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+    const set2 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+    const uEnd = speak("Please proceed to the counter.", 0.72, 1.05);
     u1.onend = () => {
       set1[set1.length - 1].onend = () => setTimeout(() => speakChain([...set2, uEnd]), 600);
       speakChain(set1);
     };
     window.speechSynthesis.speak(u1);
   };
-  window.speechSynthesis.speak(pause);
+
+  // Wait for voices to load if not ready, then delay for chime to finish
+  const runAfterChime = () => setTimeout(doSpeak, 1200);
+  if (window.speechSynthesis.getVoices().length > 0) {
+    runAfterChime();
+  } else {
+    window.speechSynthesis.addEventListener("voiceschanged", runAfterChime, { once: true });
+  }
 }
 
 function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) {
@@ -226,21 +232,6 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
   };
 
   useEffect(() => {
-    const bcWalkin = new BroadcastChannel("tv_calling_walkin");
-    const bcBooking = new BroadcastChannel("tv_calling_booking");
-    bcWalkin.onmessage = (e) => {
-      if (e.data?.type === "calling_number") {
-        startBlink(setCallingWalkin, walkinIntervalRef, e.data.value);
-        announce(audioCtxRef.current, "walkin", e.data.value);
-      }
-    };
-    bcBooking.onmessage = (e) => {
-      if (e.data?.type === "calling_booking_number") {
-        startBlink(setCallingBooking, bookingIntervalRef, e.data.value);
-        announce(audioCtxRef.current, "booking", e.data.value);
-      }
-    };
-
     const supabase = createClient();
     const realtimeChannel = supabase.channel("queue-announcements");
     realtimeChannel.on("broadcast", { event: "call" }, ({ payload }: { payload: { type: "booking" | "walkin"; num: number } }) => {
@@ -253,8 +244,6 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
     }).subscribe();
 
     return () => {
-      bcWalkin.close();
-      bcBooking.close();
       supabase.removeChannel(realtimeChannel);
       if (walkinIntervalRef.current) clearInterval(walkinIntervalRef.current);
       if (bookingIntervalRef.current) clearInterval(bookingIntervalRef.current);
