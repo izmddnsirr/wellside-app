@@ -16,6 +16,7 @@ import {
 import type { QueueDashboardData, QueueListItem } from "@/utils/queue";
 import type { QueueEntry } from "@/utils/queue-entries";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { toast } from "sonner";
 import { serveBooking, completeBooking, cancelBooking, checkInBooking, undoCheckIn, undoServeBooking } from "./actions";
 import { serveQueueEntry, completeQueueEntry, removeQueueEntry, undoServeQueueEntry } from "./queue-entry-actions";
 
@@ -146,6 +147,7 @@ function QueueCard({
                 });
               };
               ctx.resume().then(playBookingChime).catch(playBookingChime);
+              toast.info(`Calling B${label} — ${item.name}`, { duration: 4000 });
               // Broadcast to TV display immediately
               const bc = new BroadcastChannel("tv_calling_booking");
               bc.postMessage({ type: "calling_booking_number", value: num });
@@ -354,6 +356,7 @@ function QueueEntryCard({
               }, chimeDuration * 1000);
             };
 
+            toast.info(`Calling W${String(num).padStart(2, "0")}`, { duration: 4000 });
             // Broadcast to TV display
             const bc = new BroadcastChannel("tv_calling_walkin");
             bc.postMessage({ type: "calling_number", value: num });
