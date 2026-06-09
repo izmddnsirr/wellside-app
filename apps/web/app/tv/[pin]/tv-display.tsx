@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QueueListItem } from "@/utils/queue";
 import type { QueueEntry } from "@/utils/queue-entries";
@@ -146,8 +146,9 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
   const [visible, setVisible] = useState(true);
   const walkinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bookingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const announceRef = useRef<(type: "booking" | "walkin", num: number) => void>(() => {});
 
-  const startBlink = (
+  const startBlink = useCallback((
     setter: (v: number | null) => void,
     intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
     num: number,
@@ -166,70 +167,73 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
         setVisible(true);
       }
     }, 750);
-  };
+  }, []);
 
-  const announce = (type: "booking" | "walkin", num: number) => {
-    const chimeDuration = 1.2;
-    const ctx = audioCtxRef.current;
-    if (!ctx) return;
-    const playChime = () => {
-      [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = "sine"; osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.5, ctx.currentTime + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
-        osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
-      });
+  // Keep announceRef current so useEffect closure always calls latest version
+  useEffect(() => {
+    announceRef.current = (type: "booking" | "walkin", num: number) => {
+      const chimeDuration = 1.2;
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+      const playChime = () => {
+        [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.type = "sine"; osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.5, ctx.currentTime + start);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+          osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
+        });
+      };
+      ctx.resume().then(playChime).catch(playChime);
+
+      setTimeout(() => {
+        if (!("speechSynthesis" in window)) return;
+        window.speechSynthesis.cancel();
+        const voices = window.speechSynthesis.getVoices();
+        const preferred = voices.find(v =>
+          v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+        ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+        const speak = (text: string, rate: number, pitch: number) => {
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
+          if (preferred) u.voice = preferred;
+          return u;
+        };
+        const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+          for (let i = 0; i < utterances.length - 1; i++) {
+            const next = utterances[i + 1];
+            utterances[i].onend = () => window.speechSynthesis.speak(next);
+          }
+          window.speechSynthesis.speak(utterances[0]);
+        };
+        const letterMap: Record<string, string> = { "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine" };
+        const digits = String(num).padStart(2, "0").split("");
+        const prefix = type === "booking" ? "Booking" : "Queue";
+        const letter = type === "booking" ? "B" : "W";
+        const u1 = speak(`${prefix} number,`, 0.7, 1.05);
+        const set1 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0))];
+        const set2 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0))];
+        const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+        u1.onend = () => {
+          set1[set1.length - 1].onend = () => setTimeout(() => speakChain([...set2, uEnd]), 600);
+          speakChain(set1);
+        };
+        window.speechSynthesis.speak(u1);
+      }, chimeDuration * 1000);
     };
-    ctx.resume().then(playChime).catch(playChime);
-
-    setTimeout(() => {
-      if (!("speechSynthesis" in window)) return;
-      window.speechSynthesis.cancel();
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v =>
-        v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
-      ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
-      const speak = (text: string, rate: number, pitch: number) => {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
-        if (preferred) u.voice = preferred;
-        return u;
-      };
-      const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
-        for (let i = 0; i < utterances.length - 1; i++) {
-          const next = utterances[i + 1];
-          utterances[i].onend = () => window.speechSynthesis.speak(next);
-        }
-        window.speechSynthesis.speak(utterances[0]);
-      };
-      const letterMap: Record<string, string> = { "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine" };
-      const digits = String(num).padStart(2, "0").split("");
-      const prefix = type === "booking" ? "Booking" : "Queue";
-      const letter = type === "booking" ? "B" : "W";
-      const u1 = speak(`${prefix} number,`, 0.7, 1.05);
-      const set1 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0))];
-      const set2 = [speak(`${letter},`, 0.6, 1.0), ...digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0))];
-      const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
-      u1.onend = () => {
-        set1[set1.length - 1].onend = () => setTimeout(() => speakChain([...set2, uEnd]), 600);
-        speakChain(set1);
-      };
-      window.speechSynthesis.speak(u1);
-    }, chimeDuration * 1000);
-  };
+  });
 
   useEffect(() => {
     // Same-device fallback via BroadcastChannel
     const bcWalkin = new BroadcastChannel("tv_calling_walkin");
     const bcBooking = new BroadcastChannel("tv_calling_booking");
     bcWalkin.onmessage = (e) => {
-      if (e.data?.type === "calling_number") { startBlink(setCallingWalkin, walkinIntervalRef, e.data.value); announce("walkin", e.data.value); }
+      if (e.data?.type === "calling_number") { startBlink(setCallingWalkin, walkinIntervalRef, e.data.value); announceRef.current("walkin", e.data.value); }
     };
     bcBooking.onmessage = (e) => {
-      if (e.data?.type === "calling_booking_number") { startBlink(setCallingBooking, bookingIntervalRef, e.data.value); announce("booking", e.data.value); }
+      if (e.data?.type === "calling_booking_number") { startBlink(setCallingBooking, bookingIntervalRef, e.data.value); announceRef.current("booking", e.data.value); }
     };
 
     // Cross-device via Supabase Realtime
@@ -241,7 +245,7 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
       } else {
         startBlink(setCallingWalkin, walkinIntervalRef, payload.num);
       }
-      announce(payload.type, payload.num);
+      announceRef.current(payload.type, payload.num);
     }).subscribe();
 
     return () => {
@@ -251,7 +255,7 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
       if (walkinIntervalRef.current) clearInterval(walkinIntervalRef.current);
       if (bookingIntervalRef.current) clearInterval(bookingIntervalRef.current);
     };
-  }, []);
+  }, [startBlink]);
 
   return { callingWalkin, callingBooking, visible };
 }
