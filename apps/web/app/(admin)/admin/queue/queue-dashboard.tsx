@@ -372,7 +372,6 @@ function QueueEntryCard({
               }
             });
 
-            playChimeThenSpeak();
           }}
         >
           Call
