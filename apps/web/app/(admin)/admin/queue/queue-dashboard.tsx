@@ -119,27 +119,33 @@ function QueueCard({
               window.speechSynthesis.cancel();
               const num = item.queueNumber ?? (index + 1);
               const label = String(num).padStart(2, "0");
-              const voices = window.speechSynthesis.getVoices();
-              const preferred = voices.find(v =>
-                v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
-              ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+              const getPreferredVoice = () => {
+                const voices = window.speechSynthesis.getVoices();
+                return voices.find(v =>
+                  v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+                ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+              };
               const speak = (text: string, rate: number, pitch: number) => {
                 const u = new SpeechSynthesisUtterance(text);
                 u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
+                const preferred = getPreferredVoice();
                 if (preferred) u.voice = preferred;
                 return u;
               };
               const ctx = new AudioContext();
               const chimeDuration = 1.2;
-              [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
-                const osc = ctx.createOscillator();
-                const gainNode = ctx.createGain();
-                osc.connect(gainNode); gainNode.connect(ctx.destination);
-                osc.type = "sine"; osc.frequency.value = freq;
-                gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
-                osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
-              });
+              const playBookingChime = () => {
+                [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+                  const osc = ctx.createOscillator();
+                  const gainNode = ctx.createGain();
+                  osc.connect(gainNode); gainNode.connect(ctx.destination);
+                  osc.type = "sine"; osc.frequency.value = freq;
+                  gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
+                  gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+                  osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
+                });
+              };
+              ctx.resume().then(playBookingChime).catch(playBookingChime);
               // Broadcast to TV display immediately
               const bc = new BroadcastChannel("tv_calling_booking");
               bc.postMessage({ type: "calling_booking_number", value: num });
@@ -296,31 +302,33 @@ function QueueEntryCard({
             const playChimeThenSpeak = () => {
               const ctx = new AudioContext();
               const chimeDuration = 1.2;
-              [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
-                const osc = ctx.createOscillator();
-                const gainNode = ctx.createGain();
-                osc.connect(gainNode);
-                gainNode.connect(ctx.destination);
-                osc.type = "sine";
-                osc.frequency.value = freq;
-                gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
-                osc.start(ctx.currentTime + start);
-                osc.stop(ctx.currentTime + start + 0.7);
-              });
+              const playWalkinChime = () => {
+                [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+                  const osc = ctx.createOscillator();
+                  const gainNode = ctx.createGain();
+                  osc.connect(gainNode);
+                  gainNode.connect(ctx.destination);
+                  osc.type = "sine";
+                  osc.frequency.value = freq;
+                  gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
+                  gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+                  osc.start(ctx.currentTime + start);
+                  osc.stop(ctx.currentTime + start + 0.7);
+                });
+              };
+              ctx.resume().then(playWalkinChime).catch(playWalkinChime);
 
               setTimeout(() => {
-                const voices = window.speechSynthesis.getVoices();
-                const preferred = voices.find(v =>
-                  v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
-                ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
-
                 const speak = (text: string, rate: number, pitch: number) => {
                   const u = new SpeechSynthesisUtterance(text);
                   u.lang = "en-US";
                   u.rate = rate;
                   u.pitch = pitch;
                   u.volume = 1;
+                  const voices = window.speechSynthesis.getVoices();
+                  const preferred = voices.find(v =>
+                    v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+                  ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
                   if (preferred) u.voice = preferred;
                   return u;
                 };
