@@ -133,6 +133,11 @@ function QueueCard({
                 if (preferred) u.voice = preferred;
                 return u;
               };
+              // Ensure voices are loaded before speaking
+              const withVoices = (fn: () => void) => {
+                if (window.speechSynthesis.getVoices().length > 0) { fn(); return; }
+                window.speechSynthesis.addEventListener("voiceschanged", fn, { once: true });
+              };
               const ctx = new AudioContext();
               const chimeDuration = 1.2;
               const playBookingChime = () => {
@@ -154,24 +159,26 @@ function QueueCard({
               bc.close();
 
               setTimeout(() => {
-                const digits = label.split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
-                const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
-                  for (let i = 0; i < utterances.length - 1; i++) {
-                    const next = utterances[i + 1];
-                    utterances[i].onend = () => window.speechSynthesis.speak(next);
-                  }
-                  window.speechSynthesis.speak(utterances[0]);
-                };
-                const u1 = speak(`Booking number,`, 0.7, 1.05);
-                const bDigits1 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
-                const bDigits2 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
-                const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
-                u1.onend = () => {
-                  const last1 = bDigits1[bDigits1.length - 1];
-                  last1.onend = () => setTimeout(() => speakChain([...bDigits2, uEnd]), 600);
-                  speakChain(bDigits1);
-                };
-                window.speechSynthesis.speak(u1);
+                withVoices(() => {
+                  const digits = label.split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
+                  const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+                    for (let i = 0; i < utterances.length - 1; i++) {
+                      const next = utterances[i + 1];
+                      utterances[i].onend = () => window.speechSynthesis.speak(next);
+                    }
+                    window.speechSynthesis.speak(utterances[0]);
+                  };
+                  const u1 = speak(`Booking number,`, 0.7, 1.05);
+                  const bDigits1 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                  const bDigits2 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                  const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+                  u1.onend = () => {
+                    const last1 = bDigits1[bDigits1.length - 1];
+                    last1.onend = () => setTimeout(() => speakChain([...bDigits2, uEnd]), 600);
+                    speakChain(bDigits1);
+                  };
+                  window.speechSynthesis.speak(u1);
+                });
               }, chimeDuration * 1000);
             }}
           >
@@ -320,39 +327,46 @@ function QueueEntryCard({
               };
               ctx.resume().then(playWalkinChime).catch(playWalkinChime);
 
-              setTimeout(() => {
-                const speak = (text: string, rate: number, pitch: number) => {
-                  const u = new SpeechSynthesisUtterance(text);
-                  u.lang = "en-US";
-                  u.rate = rate;
-                  u.pitch = pitch;
-                  u.volume = 1;
-                  const voices = window.speechSynthesis.getVoices();
-                  const preferred = voices.find(v =>
-                    v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
-                  ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
-                  if (preferred) u.voice = preferred;
-                  return u;
-                };
+              const withVoices = (fn: () => void) => {
+                if (window.speechSynthesis.getVoices().length > 0) { fn(); return; }
+                window.speechSynthesis.addEventListener("voiceschanged", fn, { once: true });
+              };
 
-                const digits = String(num).padStart(2, "0").split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
-                const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
-                  for (let i = 0; i < utterances.length - 1; i++) {
-                    const next = utterances[i + 1];
-                    utterances[i].onend = () => window.speechSynthesis.speak(next);
-                  }
-                  window.speechSynthesis.speak(utterances[0]);
-                };
-                const u1 = speak(`Queue number,`, 0.7, 1.05);
-                const wDigits1 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
-                const wDigits2 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
-                const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
-                u1.onend = () => {
-                  const last1 = wDigits1[wDigits1.length - 1];
-                  last1.onend = () => setTimeout(() => speakChain([...wDigits2, uEnd]), 600);
-                  speakChain(wDigits1);
-                };
-                window.speechSynthesis.speak(u1);
+              setTimeout(() => {
+                withVoices(() => {
+                  const speak = (text: string, rate: number, pitch: number) => {
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.lang = "en-US";
+                    u.rate = rate;
+                    u.pitch = pitch;
+                    u.volume = 1;
+                    const voices = window.speechSynthesis.getVoices();
+                    const preferred = voices.find(v =>
+                      v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+                    ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+                    if (preferred) u.voice = preferred;
+                    return u;
+                  };
+
+                  const digits = String(num).padStart(2, "0").split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
+                  const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+                    for (let i = 0; i < utterances.length - 1; i++) {
+                      const next = utterances[i + 1];
+                      utterances[i].onend = () => window.speechSynthesis.speak(next);
+                    }
+                    window.speechSynthesis.speak(utterances[0]);
+                  };
+                  const u1 = speak(`Queue number,`, 0.7, 1.05);
+                  const wDigits1 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                  const wDigits2 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                  const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+                  u1.onend = () => {
+                    const last1 = wDigits1[wDigits1.length - 1];
+                    last1.onend = () => setTimeout(() => speakChain([...wDigits2, uEnd]), 600);
+                    speakChain(wDigits1);
+                  };
+                  window.speechSynthesis.speak(u1);
+                });
               }, chimeDuration * 1000);
             };
 
