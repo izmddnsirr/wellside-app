@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 import { Copy, ExternalLink, Phone, Trash2, Tv, Undo2 } from "lucide-react";
 import { formatMalaysiaPhone } from "@/utils/phone";
 import { Button } from "@/components/ui/button";
@@ -153,10 +154,18 @@ function QueueCard({
               };
               ctx.resume().then(playBookingChime).catch(playBookingChime);
               toast.info(`Calling B${label} — ${item.name}`, { duration: 4000 });
-              // Broadcast to TV display immediately
+              // Broadcast to TV display — same device via BroadcastChannel, cross-device via Supabase
               const bc = new BroadcastChannel("tv_calling_booking");
               bc.postMessage({ type: "calling_booking_number", value: num });
               bc.close();
+              const supabase = createClient();
+              const ch = supabase.channel("queue-announcements");
+              ch.subscribe((status) => {
+                if (status === "SUBSCRIBED") {
+                  ch.send({ type: "broadcast", event: "call", payload: { type: "booking", num } });
+                  setTimeout(() => supabase.removeChannel(ch), 2000);
+                }
+              });
 
               setTimeout(() => {
                 withVoices(() => {
@@ -371,10 +380,18 @@ function QueueEntryCard({
             };
 
             toast.info(`Calling W${String(num).padStart(2, "0")}`, { duration: 4000 });
-            // Broadcast to TV display
+            // Broadcast to TV display — same device via BroadcastChannel, cross-device via Supabase
             const bc = new BroadcastChannel("tv_calling_walkin");
             bc.postMessage({ type: "calling_number", value: num });
             bc.close();
+            const supabase = createClient();
+            const ch = supabase.channel("queue-announcements");
+            ch.subscribe((status) => {
+              if (status === "SUBSCRIBED") {
+                ch.send({ type: "broadcast", event: "call", payload: { type: "walkin", num } });
+                setTimeout(() => supabase.removeChannel(ch), 2000);
+              }
+            });
 
             playChimeThenSpeak();
           }}
