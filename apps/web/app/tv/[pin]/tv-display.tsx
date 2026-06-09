@@ -398,8 +398,6 @@ export function TvDisplay({
   const now = useClock();
   const { callingWalkin, callingBooking, visible: callingVisible } = useTvCalling();
   const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
-  const prevQueueCountRef = useRef<number | null>(null);
-  const prevBookingIdsRef = useRef<string | null>(null);
 
   useEffect(() => {
     refreshRef.current = setInterval(() => {
@@ -410,56 +408,6 @@ export function TvDisplay({
       if (refreshRef.current) clearInterval(refreshRef.current);
     };
   }, [router]);
-
-  // Play sound when a new walk-in joins the queue
-  useEffect(() => {
-    const waitingCount = queueEntries.filter(e => e.status === "waiting").length;
-    if (prevQueueCountRef.current !== null && waitingCount > prevQueueCountRef.current) {
-      try {
-        const ctx = new AudioContext();
-        [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
-          const osc = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-          osc.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          osc.type = "sine";
-          osc.frequency.value = freq;
-          gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
-          gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
-          osc.start(ctx.currentTime + start);
-          osc.stop(ctx.currentTime + start + 0.7);
-        });
-      } catch {}
-    }
-    prevQueueCountRef.current = waitingCount;
-  }, [queueEntries]);
-
-  // Play sound when a new booking appears
-  useEffect(() => {
-    const currentIds = checkedInBookings.map(b => b.id).sort().join(",");
-    if (prevBookingIdsRef.current !== null && currentIds !== prevBookingIdsRef.current) {
-      const prevIds = new Set(prevBookingIdsRef.current.split(","));
-      const hasNew = checkedInBookings.some(b => !prevIds.has(b.id));
-      if (hasNew) {
-        try {
-          const ctx = new AudioContext();
-          [[784, 0], [659, 0.2], [523, 0.4]].forEach(([freq, start]) => {
-            const osc = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(ctx.destination);
-            osc.type = "sine";
-            osc.frequency.value = freq;
-            gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
-            osc.start(ctx.currentTime + start);
-            osc.stop(ctx.currentTime + start + 0.7);
-          });
-        } catch {}
-      }
-    }
-    prevBookingIdsRef.current = currentIds;
-  }, [checkedInBookings]);
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] flex flex-col text-white select-none overflow-hidden">
