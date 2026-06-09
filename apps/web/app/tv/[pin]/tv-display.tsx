@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QueueListItem } from "@/utils/queue";
 import type { QueueEntry } from "@/utils/queue-entries";
+import { createClient } from "@/utils/supabase/client";
 
 type FifoSlot = {
   id: string;
@@ -77,8 +78,7 @@ function useClock() {
   return now;
 }
 
-function BookingPanel({ items }: { items: QueueListItem[] }) {
-  const { callingNumber, visible } = useCallingBookingNumber();
+function BookingPanel({ items, callingNumber, visible }: { items: QueueListItem[]; callingNumber: number | null; visible: boolean }) {
 
   return (
     <div className="flex flex-col h-full">
@@ -140,78 +140,69 @@ function BookingPanel({ items }: { items: QueueListItem[] }) {
   );
 }
 
-function useCallingNumber() {
-  const [callingNumber, setCallingNumber] = useState<number | null>(null);
+function useTvCalling() {
+  const [callingWalkin, setCallingWalkin] = useState<number | null>(null);
+  const [callingBooking, setCallingBooking] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const walkinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const bookingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startBlink = (
+    setter: (v: number | null) => void,
+    intervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
+    num: number,
+  ) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setter(num);
+    setVisible(true);
+    let count = 0;
+    intervalRef.current = setInterval(() => {
+      setVisible(v => !v);
+      count++;
+      if (count >= 20) {
+        clearInterval(intervalRef.current!);
+        intervalRef.current = null;
+        setter(null);
+        setVisible(true);
+      }
+    }, 750);
+  };
 
   useEffect(() => {
-    const channel = new BroadcastChannel("tv_calling_walkin");
-    const startBlink = (num: number) => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      setCallingNumber(num);
-      setVisible(true);
-      let count = 0;
-      intervalRef.current = setInterval(() => {
-        setVisible(v => !v);
-        count++;
-        if (count >= 20) {
-          clearInterval(intervalRef.current!);
-          intervalRef.current = null;
-          setCallingNumber(null);
-          setVisible(true);
-        }
-      }, 750);
+    // Same-device fallback via BroadcastChannel
+    const bcWalkin = new BroadcastChannel("tv_calling_walkin");
+    const bcBooking = new BroadcastChannel("tv_calling_booking");
+    bcWalkin.onmessage = (e) => {
+      if (e.data?.type === "calling_number") startBlink(setCallingWalkin, walkinIntervalRef, e.data.value);
     };
-    channel.onmessage = (e) => {
-      if (e.data?.type === "calling_number") startBlink(e.data.value);
+    bcBooking.onmessage = (e) => {
+      if (e.data?.type === "calling_booking_number") startBlink(setCallingBooking, bookingIntervalRef, e.data.value);
     };
+
+    // Cross-device via Supabase Realtime
+    const supabase = createClient();
+    const realtimeChannel = supabase.channel("queue-announcements");
+    realtimeChannel.on("broadcast", { event: "call" }, ({ payload }: { payload: { type: "booking" | "walkin"; num: number } }) => {
+      if (payload.type === "booking") {
+        startBlink(setCallingBooking, bookingIntervalRef, payload.num);
+      } else {
+        startBlink(setCallingWalkin, walkinIntervalRef, payload.num);
+      }
+    }).subscribe();
+
     return () => {
-      channel.close();
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      bcWalkin.close();
+      bcBooking.close();
+      supabase.removeChannel(realtimeChannel);
+      if (walkinIntervalRef.current) clearInterval(walkinIntervalRef.current);
+      if (bookingIntervalRef.current) clearInterval(bookingIntervalRef.current);
     };
   }, []);
 
-  return { callingNumber, visible };
+  return { callingWalkin, callingBooking, visible };
 }
 
-function useCallingBookingNumber() {
-  const [callingNumber, setCallingNumber] = useState<number | null>(null);
-  const [visible, setVisible] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    const channel = new BroadcastChannel("tv_calling_booking");
-    const startBlink = (num: number) => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      setCallingNumber(num);
-      setVisible(true);
-      let count = 0;
-      intervalRef.current = setInterval(() => {
-        setVisible(v => !v);
-        count++;
-        if (count >= 20) {
-          clearInterval(intervalRef.current!);
-          intervalRef.current = null;
-          setCallingNumber(null);
-          setVisible(true);
-        }
-      }, 750);
-    };
-    channel.onmessage = (e) => {
-      if (e.data?.type === "calling_booking_number") startBlink(e.data.value);
-    };
-    return () => {
-      channel.close();
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  return { callingNumber, visible };
-}
-
-function QueuePanel({ items }: { items: QueueEntry[] }) {
-  const { callingNumber, visible } = useCallingNumber();
+function QueuePanel({ items, callingNumber, visible }: { items: QueueEntry[]; callingNumber: number | null; visible: boolean }) {
 
   return (
     <div className="flex flex-col h-full">
@@ -405,6 +396,7 @@ export function TvDisplay({
 }: TvDisplayProps) {
   const router = useRouter();
   const now = useClock();
+  const { callingWalkin, callingBooking, visible: callingVisible } = useTvCalling();
   const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
   const prevQueueCountRef = useRef<number | null>(null);
   const prevBookingIdsRef = useRef<string | null>(null);
@@ -485,12 +477,12 @@ export function TvDisplay({
       <main className="grid grid-cols-3 flex-1 divide-x divide-white/10 overflow-hidden">
         {/* Booking */}
         <section className="px-8 py-6">
-          <BookingPanel items={checkedInBookings} />
+          <BookingPanel items={checkedInBookings} callingNumber={callingBooking} visible={callingVisible} />
         </section>
 
         {/* Queue */}
         <section className="px-8 py-6">
-          <QueuePanel items={queueEntries.filter(e => e.status === "waiting")} />
+          <QueuePanel items={queueEntries.filter(e => e.status === "waiting")} callingNumber={callingWalkin} visible={callingVisible} />
         </section>
 
         {/* Serving + QR */}
