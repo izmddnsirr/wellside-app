@@ -25,7 +25,75 @@ type CallEvent =
   | { type: "booking"; num: number; label: string; name: string }
   | { type: "walkin"; num: number };
 
-function useBroadcastCall() {
+function playChime(ctx: AudioContext) {
+  [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "sine"; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.5, ctx.currentTime + start);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+    osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
+  });
+}
+
+function speakAnnouncement(prefix: string, label: string, digits: string[]) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v =>
+    v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+  ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+  const speak = (text: string, rate: number, pitch: number) => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
+    if (preferred) u.voice = preferred;
+    return u;
+  };
+  const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+    for (let i = 0; i < utterances.length - 1; i++) {
+      const next = utterances[i + 1];
+      utterances[i].onend = () => window.speechSynthesis.speak(next);
+    }
+    window.speechSynthesis.speak(utterances[0]);
+  };
+  const letterMap: Record<string, string> = { "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine" };
+  const digitUtterances = digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0));
+  const u1 = speak(`${prefix} number,`, 0.7, 1.05);
+  const set1 = [speak(`${label},`, 0.6, 1.0), ...digitUtterances];
+  const set2 = [speak(`${label},`, 0.6, 1.0), ...digits.map(d => speak(letterMap[d] ?? d, 0.55, 1.0))];
+  const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+  u1.onend = () => {
+    set1[set1.length - 1].onend = () => setTimeout(() => speakChain([...set2, uEnd]), 600);
+    speakChain(set1);
+  };
+  window.speechSynthesis.speak(u1);
+}
+
+function useQueueAnnouncer() {
+  const announce = useCallback((event: CallEvent) => {
+    const ctx = new AudioContext();
+    const chimeDuration = 1.2;
+    const afterChime = () => {
+      const digits = String(event.num).padStart(2, "0").split("");
+      if (event.type === "booking") {
+        speakAnnouncement("Booking", "B", digits);
+      } else {
+        speakAnnouncement("Queue", "W", digits);
+      }
+    };
+    ctx.resume().then(() => { playChime(ctx); setTimeout(afterChime, chimeDuration * 1000); }).catch(() => { playChime(ctx); setTimeout(afterChime, chimeDuration * 1000); });
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase.channel("queue-announcements");
+    channel.on("broadcast", { event: "call" }, ({ payload }: { payload: CallEvent }) => {
+      announce(payload);
+    }).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [announce]);
+
   const broadcastCall = useCallback(async (event: CallEvent) => {
     const supabase = createClient();
     await supabase.channel("queue-announcements").send({
@@ -35,7 +103,7 @@ function useBroadcastCall() {
     });
   }, []);
 
-  return { broadcastCall };
+  return { announce, broadcastCall };
 }
 
 type QueueDashboardProps = {
@@ -316,11 +384,12 @@ export function QueueDashboard({ data, queueEntries }: QueueDashboardProps) {
   const router = useRouter();
   const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
   const [copied, setCopied] = useState(false);
-  const { broadcastCall } = useBroadcastCall();
+  const { announce, broadcastCall } = useQueueAnnouncer();
 
   const handleCall = useCallback((event: CallEvent) => {
+    announce(event);
     broadcastCall(event);
-  }, [broadcastCall]);
+  }, [announce, broadcastCall]);
 
   useEffect(() => {
     refreshRef.current = setInterval(() => router.refresh(), 5_000);
