@@ -39,8 +39,9 @@ import {
   saveWeeklySchedule,
   updateBookingAvailability,
 } from "./actions";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
@@ -93,6 +94,16 @@ const formatTimeLabel12h = (value: string) => {
     timeZone: "UTC",
   }).format(date);
 };
+
+function BookingToggleButton({ bookingEnabled }: { bookingEnabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant={bookingEnabled ? "destructive" : "default"} disabled={pending}>
+      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {bookingEnabled ? "Turn off booking" : "Turn on booking"}
+    </Button>
+  );
+}
 
 export function OperationsSettingsPanel({
   weeklySchedule,
@@ -223,9 +234,7 @@ export function OperationsSettingsPanel({
                 name="enabled"
                 value={bookingEnabled ? "0" : "1"}
               />
-              <Button type="submit" variant={bookingEnabled ? "destructive" : "default"}>
-                {bookingEnabled ? "Turn off booking" : "Turn on booking"}
-              </Button>
+              <BookingToggleButton bookingEnabled={bookingEnabled} />
             </form>
           </div>
         </CardContent>

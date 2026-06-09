@@ -42,6 +42,7 @@ type HistoryItem = {
   serviceName: string;
   barberName: string;
   barberId: string | null;
+  barberAvatar: string | null;
   basePrice: number | null;
   status: "completed" | "cancelled" | "no_show";
   review: { rating: number; comment: string | null } | null;
@@ -69,7 +70,7 @@ export default function ProfileScreen() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [reviewTarget, setReviewTarget] = useState<{ bookingId: string; barberId: string; barberName: string } | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<{ bookingId: string; barberId: string; barberName: string; barberAvatar: string | null } | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewLoading, setReviewLoading] = useState(false);
@@ -144,7 +145,7 @@ export default function ProfileScreen() {
         ? supabase.from("services").select("id,name,base_price").in("id", serviceIds)
         : Promise.resolve({ data: [] }),
       barberIds.length
-        ? supabase.from("profiles").select("id,display_name,first_name,last_name").in("id", barberIds)
+        ? supabase.from("profiles").select("id,display_name,first_name,last_name,avatar_url").in("id", barberIds)
         : Promise.resolve({ data: [] }),
       bookingIds.length
         ? supabase.from("barber_reviews").select("booking_id,rating,comment").in("booking_id", bookingIds)
@@ -167,7 +168,7 @@ export default function ProfileScreen() {
             .join(" ")
             .trim() ||
           "Barber";
-        return [barber.id, barberName];
+        return [barber.id, { name: barberName, avatar: barber.avatar_url ?? null }];
       })
     );
 
@@ -179,8 +180,9 @@ export default function ProfileScreen() {
         endAt: booking.end_at,
         createdAt: booking.created_at,
         serviceName: service?.name ?? "Service",
-        barberName: barberMap.get(booking.barber_id) ?? "Barber",
+        barberName: barberMap.get(booking.barber_id)?.name ?? "Barber",
         barberId: booking.barber_id ?? null,
+        barberAvatar: barberMap.get(booking.barber_id)?.avatar ?? null,
         basePrice: service?.base_price ?? null,
         status: booking.status,
         review: reviewMap.get(booking.id) ?? null,
@@ -562,7 +564,7 @@ export default function ProfileScreen() {
                             ) : item.barberId ? (
                               <TouchableOpacity
                                 onPress={() => {
-                                  setReviewTarget({ bookingId: item.id, barberId: item.barberId!, barberName: item.barberName });
+                                  setReviewTarget({ bookingId: item.id, barberId: item.barberId!, barberName: item.barberName, barberAvatar: item.barberAvatar });
                                   setReviewRating(0);
                                   setReviewComment("");
                                 }}
@@ -616,8 +618,22 @@ export default function ProfileScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <Text className="text-sm text-neutral-500">
-                How was your session with <Text className="font-semibold text-neutral-900">{reviewTarget.barberName}</Text>?
+              <View className="items-center mb-5">
+                {reviewTarget.barberAvatar ? (
+                  <Image
+                    source={{ uri: reviewTarget.barberAvatar }}
+                    className="h-24 w-24 rounded-full"
+                    style={{ borderWidth: 3, borderColor: "#e5e5e5" }}
+                  />
+                ) : (
+                  <View className="h-24 w-24 rounded-full bg-neutral-200 items-center justify-center" style={{ borderWidth: 3, borderColor: "#e5e5e5" }}>
+                    <Ionicons name="person" size={40} color="#a3a3a3" />
+                  </View>
+                )}
+                <Text className="mt-3 text-base font-semibold text-neutral-900">{reviewTarget.barberName}</Text>
+              </View>
+              <Text className="text-sm text-neutral-500 text-center">
+                How was your session?
               </Text>
 
               {/* Stars */}
@@ -652,7 +668,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 onPress={handleSubmitReview}
                 disabled={reviewRating === 0 || reviewLoading}
-                className={`rounded-full py-4 items-center ${
+                className={`mt-6 rounded-full py-4 items-center ${
                   reviewRating === 0 ? "bg-neutral-200" : "bg-neutral-900"
                 }`}
               >

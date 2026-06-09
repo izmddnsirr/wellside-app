@@ -2,8 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Dimensions,
+  Image,
   RefreshControl,
   ScrollView,
   Text,
@@ -18,6 +20,23 @@ type Profile = {
   first_name: string | null;
 };
 
+type Barber = {
+  id: string;
+  name: string;
+  level: string | null;
+  avatar_url: string | null;
+  rating: number | null;
+  reviewCount: number;
+};
+
+type LastVisit = {
+  startAt: string;
+  serviceName: string;
+  serviceId: string;
+  barberName: string;
+  barberId: string;
+};
+
 type UpcomingBooking = {
   startAt: string;
   serviceName: string;
@@ -26,6 +45,11 @@ type UpcomingBooking = {
 };
 
 const TIME_ZONE = "Asia/Kuala_Lumpur";
+
+const getDaysSince = (dateStr: string) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+};
 const dayFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
   weekday: "long",
@@ -48,6 +72,16 @@ export default function HomeScreen() {
   const [upcoming, setUpcoming] = useState<UpcomingBooking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [lastVisit, setLastVisit] = useState<LastVisit | null>(null);
+  const [activeBarberIndex, setActiveBarberIndex] = useState(0);
+  const barberScrollRef = useRef<ScrollView>(null);
+  const isUserScrolling = useRef(false);
+  const SCREEN_WIDTH = Dimensions.get("window").width;
+  const CARD_MARGIN = 20;
+  const CARD_GAP = 12;
+  const CARDS_VISIBLE = 2;
+  const CARD_WIDTH = (SCREEN_WIDTH - CARD_MARGIN * 2 - CARD_GAP) / CARDS_VISIBLE;
 
   const fetchHome = useCallback(async () => {
     const { data: authData } = await supabase.auth.getUser();
@@ -57,15 +91,59 @@ export default function HomeScreen() {
       return;
     }
 
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("first_name")
-      .eq("id", authData.user.id)
-      .maybeSingle();
+    const [{ data: profileData }, { data: barberData }, { data: lastVisitData }, { data: reviewData }] = await Promise.all([
+      supabase.from("profiles").select("first_name").eq("id", authData.user.id).maybeSingle(),
+      supabase.from("profiles").select("id,display_name,first_name,last_name,avatar_url,barber_level").eq("role", "barber").eq("is_active", true),
+      supabase.from("bookings").select("start_at,service_id,barber_id").eq("customer_id", authData.user.id).eq("status", "completed").order("start_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("barber_reviews").select("barber_id,rating"),
+    ]);
 
     setProfile({
       first_name: profileData?.first_name ?? null,
     });
+
+    const reviewsByBarber = (reviewData ?? []).reduce<Record<string, number[]>>((acc, r) => {
+      if (!acc[r.barber_id]) acc[r.barber_id] = [];
+      acc[r.barber_id].push(r.rating);
+      return acc;
+    }, {});
+
+    setBarbers(
+      (barberData ?? []).map((b) => {
+        const ratings = reviewsByBarber[b.id] ?? [];
+        const avg = ratings.length ? ratings.reduce((s, r) => s + r, 0) / ratings.length : null;
+        return {
+          id: b.id,
+          name:
+            b.display_name?.trim() ||
+            [b.first_name, b.last_name].filter(Boolean).join(" ").trim() ||
+            "Barber",
+          level: b.barber_level ?? null,
+          avatar_url: b.avatar_url ?? null,
+          rating: avg,
+          reviewCount: ratings.length,
+        };
+      })
+    );
+
+    if (lastVisitData) {
+      const [{ data: lvService }, { data: lvBarber }] = await Promise.all([
+        supabase.from("services").select("name").eq("id", lastVisitData.service_id).maybeSingle(),
+        supabase.from("profiles").select("display_name,first_name,last_name").eq("id", lastVisitData.barber_id).maybeSingle(),
+      ]);
+      setLastVisit({
+        startAt: lastVisitData.start_at,
+        serviceName: lvService?.name ?? "Service",
+        serviceId: lastVisitData.service_id,
+        barberName:
+          lvBarber?.display_name?.trim() ||
+          [lvBarber?.first_name, lvBarber?.last_name].filter(Boolean).join(" ").trim() ||
+          "Barber",
+        barberId: lastVisitData.barber_id,
+      });
+    } else {
+      setLastVisit(null);
+    }
 
     const { data: bookingData } = await supabase
       .from("bookings")
@@ -81,7 +159,7 @@ export default function HomeScreen() {
       return;
     }
 
-    const [{ data: serviceData }, { data: barberData }] = await Promise.all([
+    const [{ data: serviceData }, { data: bookingBarberData }] = await Promise.all([
       supabase
         .from("services")
         .select("name")
@@ -95,8 +173,8 @@ export default function HomeScreen() {
     ]);
 
     const barberName =
-      barberData?.display_name?.trim() ||
-      [barberData?.first_name, barberData?.last_name]
+      bookingBarberData?.display_name?.trim() ||
+      [bookingBarberData?.first_name, bookingBarberData?.last_name]
         .filter(Boolean)
         .join(" ")
         .trim() ||
@@ -129,6 +207,22 @@ export default function HomeScreen() {
       };
     }, [fetchHome]),
   );
+
+  useEffect(() => {
+    if (barbers.length <= 1) return;
+    const interval = setInterval(() => {
+      if (isUserScrolling.current) return;
+      setActiveBarberIndex((prev) => {
+        const next = (prev + 1) % barbers.length;
+        barberScrollRef.current?.scrollTo({
+          x: next * (CARD_WIDTH + CARD_GAP),
+          animated: true,
+        });
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [barbers.length, CARD_WIDTH, CARD_GAP]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -345,6 +439,120 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {barbers.length > 0 && (
+          <View className="mt-6">
+            <Text className="mx-5 text-lg font-semibold text-neutral-900">
+              Meet the barbers
+            </Text>
+            <ScrollView
+              ref={barberScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingHorizontal: CARD_MARGIN, paddingTop: 12, gap: CARD_GAP }}
+              onScrollBeginDrag={() => { isUserScrolling.current = true; }}
+              onMomentumScrollEnd={(e) => {
+                isUserScrolling.current = false;
+                const index = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_GAP));
+                setActiveBarberIndex(index);
+              }}
+            >
+              {barbers.map((barber) => (
+                <TouchableOpacity
+                  key={barber.id}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/booking",
+                      params: { barberId: barber.id },
+                    })
+                  }
+                  activeOpacity={0.85}
+                  style={{ width: CARD_WIDTH }}
+                  className="items-center rounded-3xl border border-neutral-200 bg-white p-4"
+                >
+                  {barber.avatar_url ? (
+                    <Image
+                      source={{ uri: barber.avatar_url }}
+                      className="h-20 w-20 rounded-full"
+                      style={{ borderWidth: 2, borderColor: "#e5e5e5" }}
+                    />
+                  ) : (
+                    <View
+                      className="h-20 w-20 items-center justify-center rounded-full bg-neutral-100"
+                      style={{ borderWidth: 2, borderColor: "#e5e5e5" }}
+                    >
+                      <Ionicons name="person" size={30} color="#a3a3a3" />
+                    </View>
+                  )}
+                  <Text className="mt-3 text-center text-sm font-semibold text-neutral-900" numberOfLines={1}>
+                    {barber.name}
+                  </Text>
+                  {barber.level ? (
+                    <Text className="mt-0.5 text-center text-xs text-neutral-400" numberOfLines={1}>
+                      {barber.level}
+                    </Text>
+                  ) : null}
+                  <View className="mt-3 flex-row items-center gap-1">
+                    <Ionicons name="star" size={11} color={barber.rating ? "#f59e0b" : "#d4d4d4"} />
+                    <Text className="text-xs font-medium text-neutral-500">
+                      {barber.rating ? barber.rating.toFixed(1) : "—"}
+                    </Text>
+                    {barber.reviewCount > 0 && (
+                      <Text className="text-xs text-neutral-400">({barber.reviewCount})</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {lastVisit && (
+          <View className="mx-5 mt-6">
+            <Text className="text-lg font-semibold text-neutral-900">Last visit</Text>
+            <View className="mt-3 rounded-3xl border border-neutral-200 bg-white p-5">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-2">
+                  <View className="h-9 w-9 items-center justify-center rounded-full bg-neutral-100">
+                    <Ionicons name="time-outline" size={17} color="#525252" />
+                  </View>
+                  <View>
+                    <Text className="text-xs text-neutral-400">
+                      {(() => {
+                        const days = getDaysSince(lastVisit.startAt);
+                        if (days === 0) return "Today";
+                        if (days === 1) return "Yesterday";
+                        return `${days} days ago`;
+                      })()}
+                    </Text>
+                    <Text className="text-sm font-semibold text-neutral-900">
+                      {lastVisit.serviceName}
+                    </Text>
+                  </View>
+                </View>
+                <Text className="text-xs text-neutral-400">with {lastVisit.barberName}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/booking",
+                    params: {
+                      serviceId: lastVisit.serviceId,
+                      barberId: lastVisit.barberId,
+                    },
+                  })
+                }
+                className="mt-4 flex-row items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 py-3"
+              >
+                <Ionicons name="refresh-outline" size={15} color="#171717" />
+                <Text className="ml-2 text-sm font-semibold text-neutral-900">Book again</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
       </ScrollView>
     </View>

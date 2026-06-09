@@ -1,9 +1,10 @@
-# Wellside
+# Wellside+
 
 ![Banner](./assets/banner.png)
 
 [![Monorepo](https://img.shields.io/badge/monorepo-Turborepo-blue)](https://turbo.build/repo)
 [![Frontend](https://img.shields.io/badge/frontend-Next.js%2016-black)](https://nextjs.org/)
+[![Mobile](https://img.shields.io/badge/mobile-Expo%2054-white)](https://expo.dev/)
 [![Database](https://img.shields.io/badge/database-Supabase-3ECF8E)](https://supabase.com/)
 [![UI](https://img.shields.io/badge/ui-Tailwind%20CSS%204-38B2AC)](https://tailwindcss.com/)
 [![Status](https://img.shields.io/badge/status-active-brightgreen)](#project-overview)
@@ -18,204 +19,193 @@
 - [Environment Variables](#environment-variables)
 - [Development](#development)
 - [Database / Supabase Notes](#database--supabase-notes)
-- [Screenshots](#screenshots)
-- [Current Implementation Notes](#current-implementation-notes)
 
 ## Project Overview
 
-Wellside is a monorepo for a barbershop booking and shop-management system. It combines a customer-facing booking experience with staff portals for admins and barbers, plus supporting Supabase-backed workflows for scheduling, bookings, operations, point-of-sale, and transactional email.
+Wellside+ is a full-stack barbershop booking and management system built as a monorepo. It combines a customer-facing booking experience (web + mobile) with staff portals for admins and barbers, backed by Supabase for scheduling, bookings, POS, and transactional email.
 
-Based on the current codebase, the project is built to solve several operational problems for a barbershop in one system:
+The system covers:
 
-- Let customers register, log in, book appointments, review upcoming bookings, cancel bookings, and see booking history.
-- Let admins manage services, products, customers, barbers, bookings, operating days, temporary closures, reports, and POS records.
-- Let barbers see their daily workload and update appointment statuses.
-- Enforce booking rules such as shop closures, barber working hours, overlap prevention, and active-booking checks.
-- Send booking confirmation and cancellation emails through Resend.
-
-The repository currently centers on `apps/web`, the Next.js application used by customers, admins, and barbers.
+- Customers booking appointments via web or mobile app, with AI-powered hairstyle recommendations.
+- Admins managing services, products, customers, barbers, bookings, POS, queue, and reports.
+- Barbers viewing their daily schedule and updating appointment statuses.
+- A TV queue display for the shop floor, accessible via a PIN.
+- Booking rule enforcement: shop closures, barber working hours, overlap prevention, and break windows.
+- Transactional emails for booking confirmations and cancellations via Resend.
 
 ## Features
 
-### Customer application
+### Customer (Web & Mobile)
 
-- Landing page with service listing, barber listing, availability preview, and login/logout entry points.
-- Customer registration with a 2-step onboarding flow:
-  - Step 1: email + password validation
-  - Step 2: first name, last name, and Malaysian phone number capture
-- Email/password login for customers.
-- Password recovery and password reset flows through Supabase auth callback handling.
-- Customer home dashboard showing:
-  - next active booking
-  - total booking count
-- Multi-step booking flow:
-  - select service
-  - select barber
-  - select date/time
-  - review booking
-  - confirm booking
-- Slot generation that respects:
-  - barber working hours
-  - existing bookings
-  - shop weekly schedule
-  - temporary closures
-  - past-time exclusion
-  - a fixed break window from `19:00` to `20:00`
-- Booking confirmation page with booking reference details.
-- Booking management page for viewing the current booking and cancelling it.
-- Profile page with completed/cancelled/no-show booking history.
+- Registration with 2-step onboarding (email/password → personal details)
+- Email/password login, password recovery and reset
+- Home dashboard showing next active booking and booking count
+- Multi-step booking flow: service → barber → date/time slot → review → confirm
+- Slot generation respecting barber hours, existing bookings, shop schedule, temporary closures, and break windows
+- Booking management: view current booking, cancel booking
+- Booking history (completed, cancelled, no-show)
+- Notifications
+- AI-powered hairstyle analysis — upload a photo to get face shape detection and personalised hairstyle suggestions
+- Hairstyle dictionary modal
+- Profile management
 
-### Admin application
+### Admin Dashboard
 
-- Admin dashboard with operational metrics pulled from Supabase, including:
-  - today’s bookings
-  - today’s ticket count
-  - today’s sales
-  - monthly sales
-  - cancellation and no-show counts
-  - barber utilization
-  - low-stock products
-- Booking management with active/past/calendar views and status updates.
-- Manual booking creation for staff-managed appointments.
-- Service management:
-  - create
-  - update
-  - activate/deactivate
-- Product management:
-  - create
-  - update
-  - activate/deactivate
-- Customer management with active/inactive status changes.
-- Barber management with staff account creation or conversion into barber accounts, including:
-  - working hours
-  - barber level
-  - phone normalization/validation
-- Operations settings for:
-  - weekly open/closed schedule
-  - temporary closures with date ranges and reason
-- Reporting screens for booking/ticket/sales analysis by month.
-- POS workflows:
-  - active shift detection
-  - transaction cart for services and products
-  - unpaid ticket creation through Supabase RPC
-  - payment handling for cash and e-wallet
-  - ticket history
-  - refunds
-  - shift history summaries
+- Operational metrics: today's bookings, ticket count, sales, monthly sales, cancellations, no-shows, barber utilization, low-stock products
+- Booking management: active/past/calendar views, status updates, manual booking creation
+- Service management: create, update, activate/deactivate
+- Product management: create, update, activate/deactivate
+- Customer management: view, active/inactive status
+- Barber/staff management: account creation, working hours, barber level, phone validation
+- POS: shift management, transaction cart (services + products), unpaid ticket creation, cash/e-wallet payment, ticket history, refunds, shift summaries
+- Queue management: live queue dashboard, queue entry actions
+- TV display: generate PIN for shop floor queue screen
+- Monthly reports with PDF and Excel export
+- Shop settings: weekly schedule, temporary closures, booking availability, rest windows
+- Notifications
 
-### Barber application
+### Barber Portal
 
-- Barber dashboard with:
-  - today’s booking count
-  - projected earnings
-  - today’s upcoming schedule
-- Barber bookings page for reviewing assigned appointments and updating status.
+- Daily schedule overview: booking count, projected earnings, upcoming appointments
+- Appointment management: view assigned bookings, update status
+
+### TV Queue Display
+
+- Public queue screen at `/tv`
+- PIN-based access (6-digit PIN generated from Admin dashboard)
+- Real-time queue updates via Supabase subscriptions
 
 ## Usage
 
 ### Customer flow
 
-1. Open the public site.
-2. Register a customer account or log in.
-3. Start a booking from the booking entry screen.
-4. Choose a service, barber, and available time slot.
-5. Review the booking summary and confirm it.
-6. View the confirmed appointment on `/booking` or the home dashboard.
-7. Cancel the booking if needed from the booking page.
+1. Open `https://wellside.my` and register or log in.
+2. Start a booking and choose a service, barber, and available time slot.
+3. Review and confirm the booking.
+4. View or cancel the booking from `/booking`.
+5. Use the AI tab to upload a photo for hairstyle recommendations.
 
 ### Staff flow
 
-- Admin users log in through `/staff` and are redirected to `/admin`.
-- Barber users log in through `/staff` and are redirected to `/barber`.
-- Admins can manage bookings, services, products, customers, barbers, reports, and POS data.
-- Barbers can monitor their assigned schedule and update booking progress/status.
+- Admin and barber users log in via the staff login page and are redirected to their respective portals.
+- Admins access `/admin` for full shop management.
+- Barbers access `/barber` for their daily schedule and status updates.
 
 ## Project Structure
 
 ```text
-.
-├── apps
-│   ├── mobile-ios
-│   └── web       # Next.js app for customer, admin, and barber interfaces
-├── packages      # Workspace directory (currently empty)
-├── package.json  # Root workspace + Turbo scripts
-└── turbo.json    # Turborepo task configuration
+wellside-app/
+├── apps/
+│   ├── web/                    # Next.js web app (customer, admin, barber)
+│   │   └── app/
+│   │       ├── (customer)/     # Customer booking portal
+│   │       │   ├── home/
+│   │       │   ├── booking/
+│   │       │   ├── notification/
+│   │       │   ├── ai/
+│   │       │   └── profile/
+│   │       ├── (admin)/        # Admin management dashboard
+│   │       │   └── admin/
+│   │       │       ├── dashboard/
+│   │       │       ├── bookings/
+│   │       │       ├── services/
+│   │       │       ├── products/
+│   │       │       ├── customers/
+│   │       │       ├── barbers/
+│   │       │       ├── pos/
+│   │       │       ├── queue/
+│   │       │       ├── report/
+│   │       │       ├── notifications/
+│   │       │       └── settings/
+│   │       ├── (barber)/       # Barber staff portal
+│   │       │   └── barber/
+│   │       │       └── bookings/
+│   │       ├── (auth)/         # Auth flows (login, register, reset)
+│   │       ├── tv/             # TV queue display (PIN-based)
+│   │       └── queue/          # Queue management
+│   └── mobile/                 # React Native / Expo mobile app
+│       └── app/
+│           ├── (tabs)/         # Home, Booking, AI, Notifications, Profile
+│           ├── (auth)/         # Mobile auth screens
+│           └── (onboarding)/   # Onboarding screens
+└── packages/
+    └── lib/                    # Shared business logic (@wellside/lib)
+        ├── slots.ts            # Booking slot generation algorithm
+        ├── shop-operations.ts  # Shop schedule and closure parsing
+        ├── booking-status.ts   # Booking state constants
+        └── booking-email-payloads.ts
 ```
-
-Key web route groups:
-
-- `(customer)` for public/customer journeys
-- `(auth)` for login, registration, staff login, password recovery
-- `(admin)` for admin operations and POS
-- `(barber)` for barber dashboard and bookings
 
 ## Tech Stack
 
 ### Monorepo and tooling
 
-- npm workspaces
-- Turborepo
+- npm workspaces + Turborepo
 - TypeScript
 - ESLint
 
-### Frontend (`apps/web`)
+### Web (`apps/web`)
 
-- Next.js 16 App Router
-- React 19
-- Tailwind CSS 4
-- shadcn/ui component setup
-- Radix UI primitives
-- Lucide React
-- Sonner
+- Next.js 16 App Router, React 19
+- Tailwind CSS 4 (PostCSS, no config file)
+- shadcn/ui (new-york style) + Radix UI primitives
+- Framer Motion
 - Recharts
 - TanStack Table
-- React Hook Form
-- Zod
-- `@hookform/resolvers`
-- `next-themes`
-- `@vercel/speed-insights`
+- React Hook Form + Zod
+- DnD Kit (drag-and-drop schedule management)
+- react-day-picker
 - Embla Carousel
-- DnD Kit
-- `react-day-picker`
-- `three`
-- `vaul`
-- `class-variance-authority`
-- `clsx`
-- `tailwind-merge`
-- `tw-animate-css`
+- Sonner (toast notifications)
+- Lucide React + HugeIcons
+- xlsx (Excel export)
+- QRCode
+- next-themes
+- `@vercel/speed-insights`
+- vaul
 
-### Shared platform/services used by both apps
+### Mobile (`apps/mobile`)
 
-- Supabase
-  - `@supabase/ssr`
-  - `@supabase/supabase-js`
-- Resend
-- React Email rendering via `@react-email/render`
+- Expo ~54, Expo Router
+- React Native 0.81, React 19
+- NativeWind (Tailwind for React Native)
+- React Native Reanimated + Gesture Handler
+- expo-notifications (push notifications)
+- expo-image-picker + expo-image-manipulator (AI photo upload)
+- expo-linear-gradient
+- HugeIcons React Native
+- Lucide React Native
 
-### Data and platform assumptions visible in code
+### Shared (`packages/lib`)
 
-- Supabase is the primary database/auth platform.
-- Role-based access is implemented through a `profiles` table with at least `customer`, `admin`, and `barber` roles.
-- POS, bookings, services, products, shifts, and operating rules are stored in Supabase tables/RPCs.
-- Time-sensitive logic is normalized to `Asia/Kuala_Lumpur`.
+- Pure TypeScript business logic shared between web and mobile
+- Imported as `@wellside/lib`
+
+### Backend and services
+
+- Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions)
+  - `@supabase/ssr`, `@supabase/supabase-js`
+- Resend + React Email (transactional emails)
+- Vercel (hosting)
 
 ## Environment Variables
 
-The code references these environment variables:
-
 ```bash
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+
+# Email
 RESEND_API_KEY=
+
+# App
 NEXT_PUBLIC_SITE_URL=
 ```
 
-Notes:
-
-- `SUPABASE_SERVICE_ROLE_KEY` is required for admin-level operations.
-- `RESEND_API_KEY` is required for booking confirmation/cancellation emails and the email test route.
+`SUPABASE_SERVICE_ROLE_KEY` is required for admin-level operations (user creation, role assignment).  
+`RESEND_API_KEY` is required for booking confirmation and cancellation emails.
 
 ## Development
 
@@ -225,55 +215,31 @@ Install dependencies from the repository root:
 npm install
 ```
 
-Start the web app from the monorepo root:
+### Web app
 
 ```bash
-npm run dev
+npm run dev          # Start web dev server (turbo dev --filter=web)
+npm run build        # Build all packages
+npm run lint         # Lint all packages
 ```
 
-That root script runs:
+### Mobile app
 
 ```bash
-turbo dev --filter=web
-```
-
-Other useful commands:
-
-```bash
-npm run build
-npm run lint
-npm run start
+npm start -w mobile        # expo start
+npm run ios -w mobile      # Run on iOS simulator
+npm run android -w mobile  # Run on Android emulator
 ```
 
 ## Database / Supabase Notes
 
-- The repository includes `apps/web/utils/sql/shop-operations.sql` to create the weekly-schedule and temporary-closure tables used by the operations/settings features.
-- The POS flow depends on existing Supabase tables and RPC functions, including `create_unpaid_ticket_with_items`.
-- Booking status updates also rely on Supabase RPCs such as `admin_update_booking_status`, `barber_update_booking_status`, and `cancel_booking`.
-
-## Screenshots
-
-### Customer Booking Flow
-
-![Customer Booking Screenshot](./assets/customer-booking.png)
-
-### Admin Dashboard
-
-![Admin Dashboard Screenshot](./assets/admin-dashboard.png)
-
-### POS Transactions
-
-![POS Transactions Screenshot](./assets/pos-transactions.png)
-
-### Barber Dashboard
-
-![Barber Dashboard Screenshot](./assets/barber-dashboard.png)
-
-## Current Implementation Notes
-
-These routes exist but currently render no UI:
-
-- `/notification`
-- `/ai`
-
-Some admin account/settings areas are present as UI scaffolding but explicitly marked in code as not fully wired yet, such as profile saving and some notification/system preferences.
+- SQL DDL for scheduling tables lives in `apps/web/utils/sql/`.
+- Complex operations use Supabase RPC functions:
+  - `create_unpaid_ticket_with_items` — POS ticket creation
+  - `admin_update_booking_status` — Admin booking status updates
+  - `barber_update_booking_status` — Barber booking status updates
+  - `cancel_booking` — Customer-initiated cancellation
+- Core tables: `profiles`, `bookings`, `services`, `products`, `barbers`, `customers`, `tickets`, `shifts`, `shop_weekly_schedule`, `shop_temporary_closures`, `shop_rest_windows`, `shop_booking_settings`
+- Real-time UI updates via Supabase subscriptions (queue display, notifications)
+- Server-side caching via `unstable_cache()` for relatively static data (active services)
+- All time operations are normalised to `Asia/Kuala_Lumpur`

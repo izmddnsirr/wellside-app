@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
+import Reanimated, { FadeInDown } from "react-native-reanimated";
 import HairstyleDictionaryModal from "../hairstyle-dictionary-modal";
 import {
   ActivityIndicator,
@@ -155,6 +156,21 @@ const isUnknownValue = (value?: string) => {
   );
 };
 
+const renderBoldText = (text: string, baseStyle: object) => {
+  const parts = text.split(/\*\*(.*?)\*\*/g);
+  return (
+    <Text style={baseStyle}>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <Text key={i} style={{ fontWeight: "700" }}>{part}</Text>
+        ) : (
+          part
+        )
+      )}
+    </Text>
+  );
+};
+
 const isCoveredHairValue = (value?: string) =>
   value?.toLowerCase().trim() === "covered";
 
@@ -248,7 +264,7 @@ export default function AIScreen() {
 
   const glowOpacity = glowAnim.interpolate({
     inputRange: [0, 0.5, 1],
-    outputRange: [0.28, 0.55, 0.34],
+    outputRange: [0.6, 1, 0.7],
   });
 
   const glowBorderColor = glowAnim.interpolate({
@@ -635,14 +651,16 @@ export default function AIScreen() {
           {/* Image area */}
           <Animated.View
             style={[
+              { borderRadius: 16 },
               isAnalyzing && imageUri
                 ? {
-                    borderRadius: 16,
+                    borderWidth: 2,
+                    borderColor: glowBorderColor,
                     shadowColor: glowColor,
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: glowOpacity,
-                    shadowRadius: 22,
-                    elevation: 12,
+                    shadowRadius: 32,
+                    elevation: 20,
                   }
                 : null,
             ]}
@@ -653,9 +671,7 @@ export default function AIScreen() {
             activeOpacity={0.9}
             className={`overflow-hidden ${
               imageUri
-                ? `rounded-2xl border bg-white ${
-                    isAnalyzing ? "border-cyan-300" : "border-neutral-200"
-                  }`
+                ? `rounded-2xl ${isAnalyzing ? "" : "border border-neutral-200"} bg-white`
                 : "rounded-3xl border border-dashed border-neutral-300 bg-neutral-100"
             } items-center justify-center relative`}
             style={{ height: imageUri ? undefined : 200 }}
@@ -697,28 +713,17 @@ export default function AIScreen() {
                       bottom: 0,
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: "rgba(10,10,10,0.5)",
-                      borderRadius: 16,
-                      borderWidth: 1,
-                      borderColor: glowBorderColor,
+                      backgroundColor: glowAnim.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [
+                          "rgba(6,182,212,0.08)",
+                          "rgba(139,92,246,0.15)",
+                          "rgba(6,182,212,0.08)",
+                        ],
+                      }),
+                      borderRadius: 14,
                     }}
                   >
-                    <View className="items-center rounded-3xl border border-cyan-200/40 bg-black/45 px-6 py-5">
-                      <View className="h-12 w-12 items-center justify-center rounded-full bg-cyan-300/20">
-                        <Ionicons name="sparkles" size={24} color="#a5f3fc" />
-                      </View>
-                      <Text className="mt-3 text-base font-semibold text-white">
-                        Analysing face
-                      </Text>
-                      <Text className="mt-1 text-center text-xs font-medium text-cyan-100">
-                        Reading face shape and hair texture
-                      </Text>
-                      <ActivityIndicator
-                        size="small"
-                        color="#a5f3fc"
-                        style={{ marginTop: 12 }}
-                      />
-                    </View>
                   </Animated.View>
                 ) : (
                   <View
@@ -867,7 +872,7 @@ export default function AIScreen() {
             </Text>
 
             {hasUsableAnalysis ? (
-              <>
+              <Reanimated.View entering={FadeInDown.duration(400).springify()}>
                 {/* Face & hair type */}
                 <View className="mt-4 flex-row gap-3">
                   <View className="flex-1 rounded-2xl border border-neutral-200 bg-white p-4">
@@ -986,15 +991,11 @@ export default function AIScreen() {
                               : "self-start bg-white border border-neutral-200"
                           }`}
                         >
-                          <Text
-                            className={`text-sm leading-5 ${
-                              message.role === "user"
-                                ? "text-white"
-                                : "text-neutral-700"
-                            }`}
-                          >
-                            {message.text}
-                          </Text>
+                          {message.role === "user" ? (
+                            <Text className="text-sm leading-5 text-white">{message.text}</Text>
+                          ) : (
+                            renderBoldText(message.text, { fontSize: 14, lineHeight: 20, color: "#404040" })
+                          )}
                         </View>
                       ))}
                       {isAskingFollowUp ? (
@@ -1038,7 +1039,7 @@ export default function AIScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              </>
+              </Reanimated.View>
             ) : (
               <View className="mt-5 rounded-2xl border border-neutral-200 bg-white px-5 py-6">
                 {canChooseManualHairType ? (

@@ -110,8 +110,64 @@ function QueueCard({
         )}
 
         {item.phone && (
-          <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-[12px]">
-            <a href={`tel:${item.phone}`}>Call</a>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-lg text-[12px]"
+            onClick={() => {
+              if (!("speechSynthesis" in window)) return;
+              window.speechSynthesis.cancel();
+              const num = item.queueNumber ?? (index + 1);
+              const label = String(num).padStart(2, "0");
+              const voices = window.speechSynthesis.getVoices();
+              const preferred = voices.find(v =>
+                v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+              ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+              const speak = (text: string, rate: number, pitch: number) => {
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = "en-US"; u.rate = rate; u.pitch = pitch; u.volume = 1;
+                if (preferred) u.voice = preferred;
+                return u;
+              };
+              const ctx = new AudioContext();
+              const chimeDuration = 1.2;
+              [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.connect(gainNode); gainNode.connect(ctx.destination);
+                osc.type = "sine"; osc.frequency.value = freq;
+                gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+                osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + 0.7);
+              });
+              // Broadcast to TV display immediately
+              const bc = new BroadcastChannel("tv_calling_booking");
+              bc.postMessage({ type: "calling_booking_number", value: num });
+              bc.close();
+
+              setTimeout(() => {
+                const digits = label.split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
+                const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+                  for (let i = 0; i < utterances.length - 1; i++) {
+                    const next = utterances[i + 1];
+                    utterances[i].onend = () => window.speechSynthesis.speak(next);
+                  }
+                  window.speechSynthesis.speak(utterances[0]);
+                };
+                const u1 = speak(`Booking number,`, 0.7, 1.05);
+                const bDigits1 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const bDigits2 = [speak(`B,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+                u1.onend = () => {
+                  const last1 = bDigits1[bDigits1.length - 1];
+                  last1.onend = () => setTimeout(() => speakChain([...bDigits2, uEnd]), 600);
+                  speakChain(bDigits1);
+                };
+                window.speechSynthesis.speak(u1);
+              }, chimeDuration * 1000);
+            }}
+          >
+            Call
           </Button>
         )}
 
@@ -227,12 +283,78 @@ function QueueEntryCard({
         )}
 
         <Button
-          asChild
           variant="outline"
           size="sm"
           className="h-8 rounded-lg text-[12px]"
+          onClick={() => {
+            if (!("speechSynthesis" in window)) return;
+            window.speechSynthesis.cancel();
+
+            const num = entry.queue_number;
+
+            // Play chime then speak after it finishes
+            const playChimeThenSpeak = () => {
+              const ctx = new AudioContext();
+              const chimeDuration = 1.2;
+              [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                osc.type = "sine";
+                osc.frequency.value = freq;
+                gainNode.gain.setValueAtTime(0.5, ctx.currentTime + start);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.7);
+                osc.start(ctx.currentTime + start);
+                osc.stop(ctx.currentTime + start + 0.7);
+              });
+
+              setTimeout(() => {
+                const voices = window.speechSynthesis.getVoices();
+                const preferred = voices.find(v =>
+                  v.lang.startsWith("en") && /samantha|karen|victoria|zira|female/i.test(v.name)
+                ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+
+                const speak = (text: string, rate: number, pitch: number) => {
+                  const u = new SpeechSynthesisUtterance(text);
+                  u.lang = "en-US";
+                  u.rate = rate;
+                  u.pitch = pitch;
+                  u.volume = 1;
+                  if (preferred) u.voice = preferred;
+                  return u;
+                };
+
+                const digits = String(num).padStart(2, "0").split("").map(d => d === "0" ? "zero" : d === "1" ? "one" : d === "2" ? "two" : d === "3" ? "three" : d === "4" ? "four" : d === "5" ? "five" : d === "6" ? "six" : d === "7" ? "seven" : d === "8" ? "eight" : "nine");
+                const speakChain = (utterances: SpeechSynthesisUtterance[]) => {
+                  for (let i = 0; i < utterances.length - 1; i++) {
+                    const next = utterances[i + 1];
+                    utterances[i].onend = () => window.speechSynthesis.speak(next);
+                  }
+                  window.speechSynthesis.speak(utterances[0]);
+                };
+                const u1 = speak(`Queue number,`, 0.7, 1.05);
+                const wDigits1 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const wDigits2 = [speak(`W,`, 0.6, 1.0), ...digits.map(d => speak(d, 0.55, 1.0))];
+                const uEnd = speak(`Please proceed to the counter.`, 0.72, 1.05);
+                u1.onend = () => {
+                  const last1 = wDigits1[wDigits1.length - 1];
+                  last1.onend = () => setTimeout(() => speakChain([...wDigits2, uEnd]), 600);
+                  speakChain(wDigits1);
+                };
+                window.speechSynthesis.speak(u1);
+              }, chimeDuration * 1000);
+            };
+
+            // Broadcast to TV display
+            const bc = new BroadcastChannel("tv_calling_walkin");
+            bc.postMessage({ type: "calling_number", value: num });
+            bc.close();
+
+            playChimeThenSpeak();
+          }}
         >
-          <a href={`tel:${entry.phone}`}>Call</a>
+          Call
         </Button>
 
         {entry.status === "waiting" ? (

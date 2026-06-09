@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AdminShell } from "../components/admin-shell";
 import { createAdminAuthClient } from "@/utils/supabase/admin";
-import { createAdminClient, createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 import { loadShopOperatingRules } from "@/utils/shop-operations";
 import { OperationsSettingsPanel } from "./operations-settings-panel";
 import { Skeleton } from "@/components/ui/skeleton";

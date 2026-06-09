@@ -1,3 +1,13 @@
+// Hermes does not implement DOMException; polyfill for packages that expect browser environment.
+if (typeof global.DOMException === "undefined") {
+  global.DOMException = class DOMException extends Error {
+    constructor(message, name) {
+      super(message);
+      this.name = name || "Error";
+    }
+  };
+}
+
 // Patch console.warn before ANY module loads.
 // NativeWind (jsxImportSource: "nativewind") injects react-native-css-interop
 // into every JSX file at Babel transform time, which accesses the deprecated

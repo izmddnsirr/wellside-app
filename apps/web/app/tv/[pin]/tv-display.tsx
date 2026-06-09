@@ -78,6 +78,8 @@ function useClock() {
 }
 
 function BookingPanel({ items }: { items: QueueListItem[] }) {
+  const { callingNumber, visible } = useCallingBookingNumber();
+
   return (
     <div className="flex flex-col h-full">
       <div className="text-xl font-bold tracking-[0.18em] text-purple-400 uppercase mb-4 text-center">
@@ -97,15 +99,40 @@ function BookingPanel({ items }: { items: QueueListItem[] }) {
               <td colSpan={3} className="text-center text-xl text-white/40 py-10">No bookings today</td>
             </tr>
           ) : (
-            items.slice(0, 8).map((item) => (
-              <tr key={item.id} className="border-b border-white/10">
-                <td className="text-center py-4 text-2xl font-mono font-bold text-purple-400">
-                  {item.queueNumber != null ? `B${String(item.queueNumber).padStart(2, "0")}` : "—"}
-                </td>
-                <td className="text-center py-4 text-xl font-mono text-white/80 uppercase">{item.timeLabel}</td>
-                <td className="text-center py-4 text-xl text-white/80">{item.barberLabel.split(" ")[0]}</td>
-              </tr>
-            ))
+            items.slice(0, 8).map((item) => {
+              const isCalling = item.queueNumber != null && callingNumber === item.queueNumber;
+              return (
+                <tr
+                  key={item.id}
+                  className="border-b border-white/10"
+                  style={isCalling ? {
+                    backgroundColor: visible ? "rgba(168,85,247,0.15)" : "transparent",
+                    transition: "background-color 0.7s ease-in-out",
+                  } : undefined}
+                >
+                  <td className="text-center py-4 text-2xl font-mono font-bold text-purple-400">
+                    {isCalling ? (
+                      <span style={{ opacity: visible ? 1 : 0.1, transition: "opacity 0.7s ease-in-out" }}>
+                        B{String(item.queueNumber).padStart(2, "0")}
+                      </span>
+                    ) : (
+                      item.queueNumber != null ? `B${String(item.queueNumber).padStart(2, "0")}` : "—"
+                    )}
+                  </td>
+                  <td
+                    className="text-center py-4 text-xl uppercase"
+                    style={{
+                      color: isCalling ? `rgba(168,85,247,${visible ? 1 : 0.1})` : "rgba(255,255,255,0.8)",
+                      transition: isCalling ? "color 0.7s ease-in-out" : undefined,
+                      fontFamily: isCalling ? "var(--font-jetbrains-mono), monospace" : undefined,
+                    }}
+                  >
+                    {isCalling ? "CALLING..." : item.timeLabel}
+                  </td>
+                  <td className="text-center py-4 text-xl text-white/80">{item.barberLabel.split(" ")[0]}</td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
@@ -113,7 +140,79 @@ function BookingPanel({ items }: { items: QueueListItem[] }) {
   );
 }
 
+function useCallingNumber() {
+  const [callingNumber, setCallingNumber] = useState<number | null>(null);
+  const [visible, setVisible] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel("tv_calling_walkin");
+    const startBlink = (num: number) => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setCallingNumber(num);
+      setVisible(true);
+      let count = 0;
+      intervalRef.current = setInterval(() => {
+        setVisible(v => !v);
+        count++;
+        if (count >= 20) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          setCallingNumber(null);
+          setVisible(true);
+        }
+      }, 750);
+    };
+    channel.onmessage = (e) => {
+      if (e.data?.type === "calling_number") startBlink(e.data.value);
+    };
+    return () => {
+      channel.close();
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return { callingNumber, visible };
+}
+
+function useCallingBookingNumber() {
+  const [callingNumber, setCallingNumber] = useState<number | null>(null);
+  const [visible, setVisible] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel("tv_calling_booking");
+    const startBlink = (num: number) => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setCallingNumber(num);
+      setVisible(true);
+      let count = 0;
+      intervalRef.current = setInterval(() => {
+        setVisible(v => !v);
+        count++;
+        if (count >= 20) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          setCallingNumber(null);
+          setVisible(true);
+        }
+      }, 750);
+    };
+    channel.onmessage = (e) => {
+      if (e.data?.type === "calling_booking_number") startBlink(e.data.value);
+    };
+    return () => {
+      channel.close();
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return { callingNumber, visible };
+}
+
 function QueuePanel({ items }: { items: QueueEntry[] }) {
+  const { callingNumber, visible } = useCallingNumber();
+
   return (
     <div className="flex flex-col h-full">
       <div className="text-xl font-bold tracking-[0.18em] text-amber-400 uppercase mb-4 text-center">
@@ -133,15 +232,48 @@ function QueuePanel({ items }: { items: QueueEntry[] }) {
               <td colSpan={3} className="text-center text-xl text-white/40 py-10">No customers in queue</td>
             </tr>
           ) : (
-            items.slice(0, 8).map((entry) => (
-              <tr key={entry.id} className="border-b border-white/10">
-                <td className="text-center py-4 text-2xl font-mono font-bold text-amber-400">W{String(entry.queue_number).padStart(2, "0")}</td>
-                <td className="text-center py-4 text-xl text-white/80">Walk-In</td>
-                <td className="text-center py-4 text-xl font-mono text-white/80 uppercase">
-                  {timeFormatter.format(new Date(entry.created_at))}
-                </td>
-              </tr>
-            ))
+            items.slice(0, 8).map((entry) => {
+              const isCalling = callingNumber === entry.queue_number;
+              return (
+                <tr
+                  key={entry.id}
+                  className="border-b border-white/10"
+                  style={isCalling ? {
+                    backgroundColor: visible ? "rgba(251,191,36,0.15)" : "transparent",
+                    transition: "background-color 0.7s ease-in-out",
+                  } : undefined}
+                >
+                  <td className="text-center py-4 text-2xl font-mono font-bold text-amber-400">
+                    {isCalling ? (
+                      <span style={{ opacity: visible ? 1 : 0.1, transition: "opacity 0.7s ease-in-out" }}>
+                        W{String(entry.queue_number).padStart(2, "0")}
+                      </span>
+                    ) : (
+                      `W${String(entry.queue_number).padStart(2, "0")}`
+                    )}
+                  </td>
+                  <td
+                    className="text-center py-4 text-xl uppercase"
+                    style={{
+                      color: isCalling ? `rgba(251,191,36,${visible ? 1 : 0.1})` : "rgba(255,255,255,0.8)",
+                      transition: isCalling ? "color 0.7s ease-in-out" : undefined,
+                      fontFamily: isCalling ? "var(--font-jetbrains-mono), monospace" : undefined,
+                    }}
+                  >
+                    {isCalling ? "CALLING..." : "Walk-In"}
+                  </td>
+                  <td
+                    className="text-center py-4 text-xl font-mono uppercase"
+                    style={{
+                      color: isCalling ? `rgba(251,191,36,${visible ? 1 : 0.1})` : "rgba(255,255,255,0.8)",
+                      transition: isCalling ? "color 0.7s ease-in-out" : undefined,
+                    }}
+                  >
+                    {isCalling ? "" : timeFormatter.format(new Date(entry.created_at))}
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
@@ -274,6 +406,8 @@ export function TvDisplay({
   const router = useRouter();
   const now = useClock();
   const refreshRef = useRef<ReturnType<typeof setInterval>>(null);
+  const prevQueueCountRef = useRef<number | null>(null);
+  const prevBookingIdsRef = useRef<string | null>(null);
 
   useEffect(() => {
     refreshRef.current = setInterval(() => {
@@ -284,6 +418,56 @@ export function TvDisplay({
       if (refreshRef.current) clearInterval(refreshRef.current);
     };
   }, [router]);
+
+  // Play sound when a new walk-in joins the queue
+  useEffect(() => {
+    const waitingCount = queueEntries.filter(e => e.status === "waiting").length;
+    if (prevQueueCountRef.current !== null && waitingCount > prevQueueCountRef.current) {
+      try {
+        const ctx = new AudioContext();
+        [[523, 0], [659, 0.2], [784, 0.4]].forEach(([freq, start]) => {
+          const osc = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          osc.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
+          osc.start(ctx.currentTime + start);
+          osc.stop(ctx.currentTime + start + 0.7);
+        });
+      } catch {}
+    }
+    prevQueueCountRef.current = waitingCount;
+  }, [queueEntries]);
+
+  // Play sound when a new booking appears
+  useEffect(() => {
+    const currentIds = checkedInBookings.map(b => b.id).sort().join(",");
+    if (prevBookingIdsRef.current !== null && currentIds !== prevBookingIdsRef.current) {
+      const prevIds = new Set(prevBookingIdsRef.current.split(","));
+      const hasNew = checkedInBookings.some(b => !prevIds.has(b.id));
+      if (hasNew) {
+        try {
+          const ctx = new AudioContext();
+          [[784, 0], [659, 0.2], [523, 0.4]].forEach(([freq, start]) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            gainNode.gain.setValueAtTime(0.4, ctx.currentTime + start);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + 0.6);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + 0.7);
+          });
+        } catch {}
+      }
+    }
+    prevBookingIdsRef.current = currentIds;
+  }, [checkedInBookings]);
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] flex flex-col text-white select-none overflow-hidden">
