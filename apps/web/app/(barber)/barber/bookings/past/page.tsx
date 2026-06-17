@@ -9,10 +9,7 @@ export default async function Page() {
   const { bookings, errorMessage } = await getBarberBookings();
 
   return (
-    <BarberShell
-      title="Past bookings"
-      description="Completed and cancelled bookings."
-    >
+    <BarberShell title="Past bookings">
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <BookingsClient
           bookings={bookings}

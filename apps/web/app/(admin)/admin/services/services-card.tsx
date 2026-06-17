@@ -73,7 +73,7 @@ const priceFormatter = new Intl.NumberFormat("en-MY", {
 
 const formatPrice = (value: number | null) => {
   if (value === null || Number.isNaN(value)) {
-    return "Custom price";
+    return "Custom";
   }
   return `RM ${priceFormatter.format(value)}`;
 };

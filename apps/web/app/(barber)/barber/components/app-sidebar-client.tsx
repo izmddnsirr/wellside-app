@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Folder, History, Home, ListChecks } from "lucide-react";
+import { Calendar, Folder, History, Home, ListChecks, UserCircle } from "lucide-react";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import {
@@ -35,11 +35,21 @@ const data = {
               icon: ListChecks,
             },
             {
+              title: "Calendar",
+              url: "/barber/bookings/calendar",
+              icon: Calendar,
+            },
+            {
               title: "Past",
               url: "/barber/bookings/past",
               icon: History,
             },
           ],
+        },
+        {
+          title: "Account",
+          url: "/barber/account",
+          icon: UserCircle,
         },
       ],
     },
@@ -64,7 +74,7 @@ export function AppSidebarClient({ user, ...props }: AppSidebarClientProps) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              className="data-[slot=sidebar-menu-button]:p-1.5! hover:bg-transparent hover:text-inherit active:bg-transparent active:text-inherit"
             >
               <Link href="/barber">
                 <Image
@@ -91,7 +101,7 @@ export function AppSidebarClient({ user, ...props }: AppSidebarClientProps) {
       <SidebarContent>
         <NavMain groups={data.navMain} />
       </SidebarContent>
-      <SidebarFooter className="">
+      <SidebarFooter className="rounded-2xl">
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

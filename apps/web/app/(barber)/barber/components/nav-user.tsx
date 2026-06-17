@@ -1,12 +1,12 @@
 "use client"
 
 import {
-  Bell,
-  CreditCard,
+  Check,
   LogOut,
   MoreVertical,
-  UserCircle,
+  Sun,
 } from "lucide-react"
+import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 
 import {
@@ -21,6 +21,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -42,6 +45,8 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
+  const { setTheme, theme } = useTheme()
+  const currentTheme = theme ?? "system"
   const initials = user.name
     .split(" ")
     .filter(Boolean)
@@ -105,18 +110,47 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <UserCircle />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Sun />
+                  Theme
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onSelect={() => setTheme("light")}
+                  >
+                    Light
+                    <Check
+                      className={`ml-auto size-4 ${
+                        currentTheme === "light" ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onSelect={() => setTheme("dark")}
+                  >
+                    Dark
+                    <Check
+                      className={`ml-auto size-4 ${
+                        currentTheme === "dark" ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onSelect={() => setTheme("system")}
+                  >
+                    System
+                    <Check
+                      className={`ml-auto size-4 ${
+                        currentTheme === "system" ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={handleLogout}>

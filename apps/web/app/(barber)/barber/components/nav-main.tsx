@@ -15,6 +15,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 type NavItem = {
@@ -31,6 +32,7 @@ type NavGroup = {
 
 export function NavMain({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
+  useSidebar();
   const [openItems, setOpenItems] = React.useState<Record<string, boolean>>({});
 
   return (
@@ -66,7 +68,7 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                             tooltip={item.title}
                             isActive={isActive}
                             className={cn(
-                              "border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground [&>svg]:text-muted-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground data-[active=true]:border-border data-[active=true]:[&>svg]:text-foreground"
+                              "relative border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground group-data-[collapsible=icon]:overflow-visible [&>svg]:text-muted-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground data-[active=true]:border-border data-[active=true]:[&>svg]:text-foreground"
                             )}
                             onClick={() =>
                               setOpenItems((prev) => ({
@@ -79,7 +81,7 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                             <span>{item.title}</span>
                             <ChevronDown
                               className={cn(
-                                "ml-auto size-4 transition-transform",
+                                "ml-auto size-4 transition-transform group-data-[collapsible=icon]:hidden",
                                 isOpen && "rotate-180"
                               )}
                             />

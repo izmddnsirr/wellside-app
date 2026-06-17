@@ -114,7 +114,7 @@ async function ServicesList({ params }: { params: BookingSearchParams }) {
           const durationValue = formatServiceDuration(service.duration_minutes);
           const priceValue = formatServicePrice(service.base_price);
           const durationLabel = durationValue ?? "-";
-          const priceLabel = priceValue ?? "Custom price";
+          const priceLabel = priceValue ?? "Custom";
           const isSelected =
             (serviceId
               ? serviceId === service.id

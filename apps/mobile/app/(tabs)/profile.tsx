@@ -269,12 +269,8 @@ export default function ProfileScreen() {
         throw uploadError;
       }
 
-      console.log("[Avatar] Upload success:", uploadData);
-
       const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-
-      console.log("[Avatar] Public URL:", publicUrl);
 
       const { error: updateError } = await supabase
         .from("profiles")

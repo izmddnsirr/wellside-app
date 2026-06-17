@@ -245,7 +245,9 @@ function useTvCalling(audioCtxRef: React.MutableRefObject<AudioContext | null>) 
 
     return () => {
       supabase.removeChannel(realtimeChannel);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- intervals are set asynchronously via broadcast callback, reading .current at cleanup is intentional
       if (walkinIntervalRef.current) clearInterval(walkinIntervalRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       if (bookingIntervalRef.current) clearInterval(bookingIntervalRef.current);
     };
   }, [audioCtxRef]);

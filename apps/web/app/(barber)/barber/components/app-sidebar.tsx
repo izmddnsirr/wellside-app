@@ -6,8 +6,8 @@ import type { Sidebar } from "@/components/ui/sidebar";
 
 const fallbackUser = {
   name: "Staff",
-  email: "staff@wellside.com",
-  avatar: "/avatars/shadcn.jpg",
+  email: "staff@wellside.my",
+  avatar: "",
 };
 
 type SidebarProps = ComponentProps<typeof Sidebar>;
@@ -24,7 +24,7 @@ export async function AppSidebar(props: SidebarProps) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name,last_name")
+    .select("first_name,last_name,avatar_url")
     .eq("id", authUser.id)
     .maybeSingle();
 
@@ -38,7 +38,7 @@ export async function AppSidebar(props: SidebarProps) {
       user={{
         name: displayName,
         email: authUser.email ?? fallbackUser.email,
-        avatar: fallbackUser.avatar,
+        avatar: profile?.avatar_url ?? "",
       }}
     />
   );

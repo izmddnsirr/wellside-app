@@ -31,7 +31,7 @@ function DashboardSkeleton() {
       </div>
       <div className="px-4 lg:px-6">
         <div className="rounded-xl border border-border/60 bg-card pt-0">
-          <div className="-mx-0 flex flex-col gap-3 border-b border-border/60 px-6 py-6 sm:flex-row sm:items-center">
+          <div className="mx-0 flex flex-col gap-3 border-b border-border/60 px-6 py-6 sm:flex-row sm:items-center">
             <div className="grid flex-1 gap-2">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-4 w-64 max-w-full" />
