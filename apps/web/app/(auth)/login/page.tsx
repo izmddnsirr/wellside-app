@@ -138,8 +138,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       </div>
       <div className="bg-muted relative hidden lg:block">
         <Image
-          src="/placeholder.svg"
-          alt="Image"
+          src="/login.jpg"
+          alt="Wellside Barbershop"
           fill
           className="object-cover dark:brightness-[0.2] dark:grayscale"
           sizes="(min-width: 1024px) 50vw, 100vw"
