@@ -21,6 +21,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.anonymous.wellsidemobile"
@@ -58,6 +60,12 @@
         "projectId": "d45d53b0-a598-4dc2-aa2e-37b5acffa3a9"
       }
     },
-    "owner": "izmddnsirr"
+    "owner": "izmddnsirr",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d45d53b0-a598-4dc2-aa2e-37b5acffa3a9"
+    }
   }
 }

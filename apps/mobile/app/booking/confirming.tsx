@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   AppState,
   Animated,
-  Platform,
   Pressable,
   Text,
   View,
@@ -213,85 +212,20 @@ export default function ConfirmingBookingScreen() {
   );
 
   const sendBookingEmail = useCallback(
-    async ({
-      bookingId,
-      bookingRef,
-    }: {
-      bookingId: string;
-      bookingRef: string | null;
-    }) => {
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-
-      if (sessionError || !accessToken) {
-        console.warn("Booking email skipped: missing auth session.");
-        return;
-      }
-
-      const explicitApiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
-      const localBase = process.env.EXPO_PUBLIC_BASE_URL_LOCAL ?? "";
-      const hostedBase = process.env.EXPO_PUBLIC_BASE_URL ?? "";
-      const apiBase =
-        Platform.OS === "web"
-          ? ""
-          : __DEV__
-          ? localBase || explicitApiBase || hostedBase
-          : explicitApiBase || hostedBase;
-      if (!apiBase && Platform.OS !== "web") {
-        console.warn(
-          "Booking email skipped: API base URL missing. Set EXPO_PUBLIC_BASE_URL_LOCAL or EXPO_PUBLIC_API_BASE_URL."
-        );
-        return;
-      }
-
-      const payload = {
-        bookingId,
-        bookingRef: bookingRef ?? undefined,
-        event: "confirmation" as const,
-      };
-
+    async ({ bookingId }: { bookingId: string }) => {
       try {
-        const [customerRes, adminRes] = await Promise.all([
-          fetch(`${apiBase}/api/booking-email`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              ...payload,
-              audience: "customer",
-            }),
-          }),
-          fetch(`${apiBase}/api/booking-email`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              ...payload,
-              audience: "admin",
-            }),
-          }),
-        ]);
-
-        if (!customerRes.ok) {
-          console.warn(
-            `Customer confirmation email failed (status ${customerRes.status}).`
-          );
+        const { error } = await supabase.functions.invoke(
+          "send-booking-email",
+          { body: { event: "confirmation", bookingId } },
+        );
+        if (error) {
+          console.warn("Booking email failed:", error.message);
         }
-        if (!adminRes.ok) {
-          console.warn(
-            `Admin confirmation email failed (status ${adminRes.status}).`
-          );
-        }
-      } catch (emailError) {
-        console.warn("Booking email request failed:", emailError);
+      } catch (err) {
+        console.warn("Booking email request failed:", err);
       }
     },
-    []
+    [],
   );
 
   const finalizeBooking = useCallback(async () => {
@@ -506,10 +440,7 @@ export default function ConfirmingBookingScreen() {
       return;
     }
 
-    void sendBookingEmail({
-      bookingId: data.id,
-      bookingRef: data.booking_ref ?? null,
-    });
+    void sendBookingEmail({ bookingId: data.id });
 
     void saveConfirmationNotification(
       authData.user.id,

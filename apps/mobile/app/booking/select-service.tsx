@@ -178,7 +178,7 @@ export default function SelectServiceScreen() {
                         </View>
                         <View className="ml-2 rounded-full bg-neutral-900 px-3 py-1">
                           <Text className="text-xs font-semibold text-white">
-                            MYR {service.base_price ?? 0}
+                            {service.base_price ? `MYR ${service.base_price}` : "Custom"}
                           </Text>
                         </View>
                       </View>

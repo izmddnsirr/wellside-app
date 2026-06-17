@@ -18,7 +18,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-type ReminderType = "24h" | "1h";
+type ReminderType = "24h" | "1h" | "15m";
 
 type Booking = {
   id: string;
@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
   const windows: Array<{ type: ReminderType; fromMins: number; toMins: number }> = [
     { type: "24h", fromMins: 23 * 60, toMins: 25 * 60 },
     { type: "1h", fromMins: 45, toMins: 75 },
+    { type: "15m", fromMins: 10, toMins: 20 },
   ];
 
   let sent = 0;
@@ -113,6 +114,10 @@ Deno.serve(async (req) => {
         "1h": {
           title: "Appointment in 1 hour",
           body: `Your ${serviceName} with ${barberName} is at ${timeLabel} today (${dateLabel}).`,
+        },
+        "15m": {
+          title: "Appointment in 15 minutes",
+          body: `Your ${serviceName} with ${barberName} starts soon at ${timeLabel}. Time to head over!`,
         },
       };
 

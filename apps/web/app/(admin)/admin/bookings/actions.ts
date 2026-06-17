@@ -8,6 +8,10 @@ import {
   sendBookingCancellationEmailTo,
 } from "@/utils/email/booking-cancellation";
 import {
+  buildBookingConfirmationPayload,
+  sendBookingConfirmationEmailTo,
+} from "@/utils/email/booking-confirmation";
+import {
   evaluateShopDateStatus,
   hasRestWindowOverlap,
   loadShopOperatingRules,
@@ -393,20 +397,92 @@ export const createBooking = async (formData: FormData) => {
     return { ok: false, error: "Selected slot is marked unavailable." } satisfies BookingMutationResult;
   }
 
-  const { error } = await supabase.from("bookings").insert({
-    customer_id: resolvedCustomerId,
-    walk_in_customer_id: walkInCustomerId,
-    walk_in_name: walkInName ?? null,
-    barber_id: barberId,
-    service_id: serviceId,
-    start_at: startAt,
-    end_at: endAt,
-    status: "scheduled",
-  });
+  const { data: newBooking, error } = await supabase
+    .from("bookings")
+    .insert({
+      customer_id: resolvedCustomerId,
+      walk_in_customer_id: walkInCustomerId,
+      walk_in_name: walkInName ?? null,
+      barber_id: barberId,
+      service_id: serviceId,
+      start_at: startAt,
+      end_at: endAt,
+      status: "scheduled",
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !newBooking) {
     console.error("Failed to create booking", error);
     return { ok: false, error: "Failed to create booking." } satisfies BookingMutationResult;
+  }
+
+  if (resolvedCustomerId) {
+    void sendPushToUser(
+      resolvedCustomerId,
+      "New booking created",
+      "A booking has been made for you. Check your app for details.",
+      { bookingId: newBooking.id, status: "scheduled" },
+    );
+
+    try {
+      const { data: bookingDetails, error: detailsError } = await supabase
+        .from("bookings")
+        .select(
+          `
+          id,
+          booking_ref,
+          start_at,
+          end_at,
+          booking_date,
+          customer:customer_id (first_name, last_name, email, phone),
+          barber:barber_id (display_name, first_name, last_name),
+          service:service_id (name, base_price)
+        `,
+        )
+        .eq("id", newBooking.id)
+        .single();
+
+      if (detailsError || !bookingDetails) {
+        console.error("Failed to load booking details for email", {
+          bookingId: newBooking.id,
+          detailsError,
+        });
+      } else {
+        const { payload, customerEmail } =
+          buildBookingConfirmationPayload(bookingDetails);
+
+        const { data: adminRows, error: adminError } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("role", "admin")
+          .not("email", "is", null);
+
+        if (adminError) {
+          console.error("Failed to load admin emails", adminError);
+        }
+
+        const adminEmails = (adminRows ?? [])
+          .map((row) => row.email)
+          .filter((email): email is string => Boolean(email));
+
+        const sendOps: Promise<unknown>[] = [];
+        if (customerEmail) {
+          sendOps.push(
+            sendBookingConfirmationEmailTo(payload, customerEmail, "Customer"),
+          );
+        }
+        if (adminEmails.length > 0) {
+          sendOps.push(
+            sendBookingConfirmationEmailTo(payload, adminEmails, "Admin"),
+          );
+        }
+
+        await Promise.allSettled(sendOps);
+      }
+    } catch (emailError) {
+      console.error("Failed to send booking confirmation email", emailError);
+    }
   }
 
   revalidateBookings();

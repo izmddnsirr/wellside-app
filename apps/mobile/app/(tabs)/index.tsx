@@ -426,17 +426,6 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              disabled
-              className="flex-1 items-center justify-center rounded-3xl border border-neutral-200 bg-white p-4 opacity-60"
-            >
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-                <Ionicons name="people-outline" size={18} color="#525252" />
-              </View>
-              <Text className="mt-3 text-sm font-semibold text-neutral-900">
-                Queue
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
 

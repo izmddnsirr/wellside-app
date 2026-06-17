@@ -1,9 +1,10 @@
 import { revalidatePath } from "next/cache";
-import { createBarberClient } from "@/utils/supabase/server";
+import { createBarberClient, createAdminClient } from "@/utils/supabase/server";
 import {
   buildBookingCancellationPayload,
   sendBookingCancellationEmailTo,
 } from "@/utils/email/booking-cancellation";
+import { sendPushToUser } from "@/utils/push";
 
 export const allowedStatuses = [
   "scheduled",
@@ -42,6 +43,7 @@ export const updateBookingStatus = async (
     .select(
       `
       id,
+      customer_id,
       barber_id,
       booking_ref,
       start_at,
@@ -69,6 +71,27 @@ export const updateBookingStatus = async (
     return { ok: false, error: "Failed to update booking status." };
   }
 
+  if (booking.customer_id) {
+    const pushMessages: Record<string, { title: string; body: string }> = {
+      in_progress: {
+        title: "Your appointment has started",
+        body: "Head over — your barber is ready for you.",
+      },
+      cancelled: {
+        title: "Booking cancelled",
+        body: "Your booking has been cancelled by the shop.",
+      },
+    };
+
+    const msg = pushMessages[status];
+    if (msg) {
+      void sendPushToUser(booking.customer_id, msg.title, msg.body, {
+        bookingId: id,
+        status,
+      });
+    }
+  }
+
   if (status === "cancelled") {
     try {
       const payload = buildBookingCancellationPayload(booking);
@@ -77,11 +100,36 @@ export const updateBookingStatus = async (
           bookingId: id,
         });
       } else {
-        await sendBookingCancellationEmailTo(
-          payload,
-          payload.customerEmail,
-          "Customer",
-        );
+        const adminSupabase = await createAdminClient();
+        const { data: adminRows, error: adminError } = await adminSupabase
+          .from("profiles")
+          .select("email")
+          .eq("role", "admin")
+          .not("email", "is", null);
+
+        if (adminError) {
+          console.error("Failed to load admin emails", adminError);
+        }
+
+        const adminEmails = (adminRows ?? [])
+          .map((row) => row.email)
+          .filter((email): email is string => Boolean(email));
+
+        const sendOps: Promise<unknown>[] = [
+          sendBookingCancellationEmailTo(
+            payload,
+            payload.customerEmail,
+            "Customer",
+          ),
+        ];
+
+        if (adminEmails.length > 0) {
+          sendOps.push(
+            sendBookingCancellationEmailTo(payload, adminEmails, "Admin"),
+          );
+        }
+
+        await Promise.allSettled(sendOps);
       }
     } catch (emailError) {
       console.error("Failed to send booking cancellation email", emailError);

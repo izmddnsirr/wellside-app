@@ -540,7 +540,7 @@ export default function ProfileScreen() {
                             {item.barberName}
                           </Text>
                           <Text className="text-sm font-semibold text-neutral-900">
-                            {item.basePrice ? `RM${item.basePrice}` : "RM0"}
+                            {item.basePrice ? `RM${item.basePrice}` : "Custom"}
                           </Text>
                         </View>
                         {item.status === "completed" && (

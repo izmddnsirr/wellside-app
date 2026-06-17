@@ -147,24 +147,12 @@ const ServiceAvailabilityFields = ({
 }: {
   service?: Service | null;
 }) => {
-  const [allowInQueue, setAllowInQueue] = useState(Boolean(service?.is_active));
   const [allowInBooking, setAllowInBooking] = useState(
     service?.allow_booking ?? Boolean(service?.is_active),
   );
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-4">
-        <div className="space-y-1 pr-4">
-          <p className="text-base font-medium text-foreground">
-            Allow in Queue
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Enable this service for walk-in queue bookings
-          </p>
-        </div>
-        <Switch checked={allowInQueue} onCheckedChange={setAllowInQueue} />
-      </div>
       <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-4">
         <div className="space-y-1 pr-4">
           <p className="text-base font-medium text-foreground">
@@ -199,7 +187,7 @@ export function ServicesCard({
   const [filters, setFilters] = useState({ status: "all" });
   const [sort, setSort] = useState("code_asc");
   const [serviceAvailabilityOverrides, setServiceAvailabilityOverrides] =
-    useState<Record<string, { queue: boolean; booking: boolean }>>({});
+    useState<Record<string, { booking: boolean }>>({});
   const [isBookingPending, startBookingTransition] = useTransition();
   const router = useRouter();
   const pathname = usePathname();
@@ -415,9 +403,6 @@ export function ServicesCard({
                   Price
                 </TableHead>
                 <TableHead className="w-[10%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Queue
-                </TableHead>
-                <TableHead className="w-[10%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Booking
                 </TableHead>
                 <TableHead className="w-[14%] px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -435,7 +420,6 @@ export function ServicesCard({
                 const availability = serviceAvailabilityOverrides[
                   service.id
                 ] ?? {
-                  queue: Boolean(service.is_active),
                   booking: service.allow_booking ?? Boolean(service.is_active),
                 };
                 return (
@@ -460,25 +444,6 @@ export function ServicesCard({
                     <TableCell className="w-[10%] px-4 py-3 text-center">
                       <div className="flex justify-center">
                         <Switch
-                          checked={availability.queue}
-                          onCheckedChange={(checked) =>
-                            setServiceAvailabilityOverrides((current) => ({
-                              ...current,
-                              [service.id]: {
-                                queue: checked,
-                                booking:
-                                  current[service.id]?.booking ??
-                                  availability.booking,
-                              },
-                            }))
-                          }
-                          aria-label={`Toggle queue availability for ${service.name}`}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[10%] px-4 py-3 text-center">
-                      <div className="flex justify-center">
-                        <Switch
                           checked={availability.booking}
                           disabled={isBookingPending}
                           onCheckedChange={(checked) => {
@@ -486,9 +451,6 @@ export function ServicesCard({
                             setServiceAvailabilityOverrides((current) => ({
                               ...current,
                               [service.id]: {
-                                queue:
-                                  current[service.id]?.queue ??
-                                  availability.queue,
                                 booking: checked,
                               },
                             }));
@@ -503,9 +465,6 @@ export function ServicesCard({
                                 setServiceAvailabilityOverrides((current) => ({
                                   ...current,
                                   [service.id]: {
-                                    queue:
-                                      current[service.id]?.queue ??
-                                      availability.queue,
                                     booking: previousBooking,
                                   },
                                 }));
